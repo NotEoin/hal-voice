@@ -76,8 +76,8 @@ clips rather than in the repo. A fresh clone starts empty:
 3. `python voice-data/prepare_dataset.py` slices, normalises and writes the label file.
 4. Fine-tune — see [gptsovits/train-hal.md](gptsovits/train-hal.md).
 
-About 20–40 clean, well-transcribed clips is enough for a recognisable clone. Consistency matters
-much more than volume.
+Forty-odd clean, well-transcribed clips got me a recognisable clone. Consistency matters much
+more than volume — same source, same delivery.
 
 `transcripts.csv` takes an optional weight column, and it turned out to be the highest-leverage
 thing in the whole project. Oversampling the takes with the delivery you want and zeroing the ones

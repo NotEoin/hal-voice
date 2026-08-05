@@ -1,24 +1,10 @@
 #!/usr/bin/env python3
 """Build the GPT-SoVITS fine-tuning dataset from the clips in voice-data/hal-voice/.
 
-You supply the clips and the transcripts. This converts them to clean 32 kHz
-mono WAV slices, writes the GPT-SoVITS `.list` label file, and picks the runtime
-reference clip that config.yaml points at.
-
-No dialogue is stored in this repo. Put a transcripts.csv next to your clips:
-
-    clip-filename-without-extension,the exact words spoken in that clip
-
-An optional third column is a weight. GPT-SoVITS weights a clip by how often it
-appears as a training item, so `0` drops a clip entirely and `n > 1` oversamples
-it n times (identical audio under a distinct name is real oversampling).
-
-    a-calm-level-line,Everything is running smoothly.,3
-    a-strained-line,I really think I'm entitled to an answer.,0
-
-That column is the most useful knob here. The clone learns whatever is most
-common in the set, so oversample the takes with the delivery you want and zero
-the ones you don't. See ../VOICE-TUNING.md.
+Reads your clips plus the transcripts.csv beside them, converts each to a clean
+32 kHz mono slice, writes the GPT-SoVITS label file and picks the runtime
+reference clip. No dialogue is stored in this repo - see voice-data/README.md
+for the CSV format and the weight column.
 """
 import csv
 import shutil
