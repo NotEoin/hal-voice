@@ -1,0 +1,38 @@
+# hal-voice — Python dependencies (Python 3.10+)
+# Install into the project venv created by setup-voice.sh.
+
+# --- Core / config ---
+PyYAML>=6.0
+numpy>=1.24,<2.0          # GPT-SoVITS + many audio libs are happier on numpy 1.x
+
+# --- Audio capture / playback ---
+sounddevice>=0.4.6        # PortAudio bindings for mic capture + playback
+soundfile>=0.12.1         # read/write WAV
+webrtcvad>=2.0.10         # voice-activity detection (silence trimming)
+
+# --- Speech to text (CPU) ---
+faster-whisper>=1.0.0     # CTranslate2 Whisper — fast int8 on CPU
+
+# --- Wake word ---
+openwakeword>=0.6.0       # "Hello HAL" hands-free trigger (ONNX, CPU)
+
+# --- Push-to-talk key capture ---
+pynput>=1.7.6             # cross-session key listener for push-to-talk
+
+# --- HAL voice FX (DSP) ---
+scipy>=1.10               # filtering / resampling
+pyloudnorm>=0.1.1         # LUFS loudness normalization
+pedalboard>=0.9.0         # Spotify's DSP: reverb, EQ, distortion, pitch (the "HAL effect")
+
+# --- MCP server (speak/listen tools) ---
+mcp>=1.2.0                # Model Context Protocol SDK (FastMCP)
+
+# --- Red-eye UI ---
+pygame>=2.5.0
+
+# --- HTTP to the GPT-SoVITS api_v2 server ---
+requests>=2.31.0
+
+# NOTE: GPT-SoVITS itself is NOT a pip dependency here — it is installed as a
+# separate inference server by setup-voice.sh (it has its own heavy torch stack).
+# hal-voice talks to it over HTTP, so the two environments stay cleanly separated.
