@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+#
+# hal-voice — give Hal a HAL-9000 voice: speak to it, it answers aloud.
+#
+#   hal-voice              start the voice loop (wake word + push-to-talk → Claude Code → spoken reply)
+#   hal-voice repl         alias for the default voice loop
+#   hal-voice mcp          run ONLY the MCP speak/listen server (for use inside a normal `hal` TUI)
+#   hal-voice tts "text"   one-shot: synthesize + speak a line in HAL's voice (no Claude, no mic)
+#   hal-voice listen       one-shot: capture one utterance and print the transcript
+#   hal-voice devices      list audio input/output devices
+#   hal-voice eye          run the red-eye UI on its own (demo the animation states)
+#   hal-voice doctor       check that every dependency + the GPT-SoVITS server are reachable
+#   hal-voice help         show this help
+#
+# This is a SELF-CONTAINED add-on. It does not modify the parent `hal` repo; it only
+# *drives* Claude Code headless the same way `hal` launches it interactively. Ship the
+# whole hal-voice/ directory as its own repo if you like — it has no path dependencies
+# on its parent beyond the env it exports below (which mirror ./hal).
+#
+set -uo pipefail
+
+VOICE_ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+VENV="$VOICE_ROOT/.venv"
+PY="$VENV/bin/python"
+CONFIG="${HALVOICE_CONFIG:-$VOICE_ROOT/config.yaml}"
+
+usage() { sed -n '3,17p' "$0" | sed 's/^# \{0,1\}//'; }
+
+# Fall back to system python if the venv isn't built yet (so `doctor` can still run).
+if [ ! -x "$PY" ]; then PY="$(command -v python3 || true)"; fi
+if [ -z "${PY:-}" ]; then echo "No Python found. Run ./setup-voice.sh first."; exit 1; fi
+
+export HALVOICE_ROOT="$VOICE_ROOT"
+export HALVOICE_CONFIG="$CONFIG"
+# Make the package importable whether or not it was pip-installed.
+export PYTHONPATH="$VOICE_ROOT:${PYTHONPATH:-}"
+
+cmd="${1:-repl}"; shift || true
+case "$cmd" in
+  help|-h|--help) usage; exit 0 ;;
+  repl|"")        exec "$PY" -m halvoice.loop "$@" ;;
+  mcp)            exec "$PY" -m halvoice.mcp_server "$@" ;;
+  tts)            exec "$PY" -m halvoice.tts --say "$*" ;;
+  listen)         exec "$PY" -m halvoice.stt --once ;;
+  devices)        exec "$PY" -m halvoice.devices ;;
+  eye)            exec "$PY" -m halvoice.ui_eye --demo ;;
+  doctor)         exec "$PY" -m halvoice.doctor ;;
+  *)              echo "Unknown command: $cmd"; echo; usage; exit 1 ;;
+esac
