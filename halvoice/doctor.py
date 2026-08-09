@@ -36,15 +36,22 @@ class _Warn(Exception):
 def _imports():
     import numpy, requests, soundfile, sounddevice, yaml  # noqa: F401
     mods = []
-    for m in ("faster_whisper", "openwakeword", "webrtcvad", "pynput",
+    for m in ("faster_whisper", "webrtcvad", "pynput",
               "pedalboard", "pyloudnorm", "pygame", "mcp"):
         try:
             __import__(m)
         except Exception:  # noqa: BLE001
             mods.append(m)
     if mods:
-        raise _Warn("optional modules missing: " + ", ".join(mods))
-    return "all core + optional deps import"
+        raise _Warn("modules missing: " + ", ".join(mods)
+                    + " — re-run ./setup-voice.sh")
+    # Wake word is an opt-in extra (requirements-wake.txt), so its absence is normal
+    # and should not read as a broken install.
+    try:
+        __import__("openwakeword")
+        return "all deps import, including wake word"
+    except Exception:  # noqa: BLE001
+        return "all deps import (wake word not installed — optional, push-to-talk unaffected)"
 
 
 def _audio():
@@ -104,8 +111,31 @@ def _gptsovits_server():
 
 def _claude():
     if not shutil.which(str(config.load().get("claude.command", "claude"))):
-        raise Exception("Claude Code ('claude') not on PATH — run the parent ./setup.sh")
+        raise Exception("Claude Code ('claude') not on PATH — install it from "
+                        "https://claude.com/claude-code")
     return "claude on PATH"
+
+
+def _connection():
+    """What hal-voice will actually drive, and where. See halvoice/connect.py."""
+    from . import connect
+    conn = connect.resolve()
+    if not Path(conn.project_dir).is_dir():
+        raise Exception(f"project_dir does not exist: {conn.project_dir}")
+    return f"{conn.describe()}  [from {' -> '.join(conn.sources)}]"
+
+
+def _voice_profile():
+    """The VRAM profile chosen by setup-voice.sh — separate from the Claude connection."""
+    import os
+    profile = os.environ.get("HALVOICE_PROFILE")
+    cfg = config.load()
+    stt_dev = cfg.get("stt.device", "cpu")
+    tts_dev = os.environ.get("HALVOICE_TTS_DEVICE", "cuda")
+    detail = f"speech recognition on {stt_dev}, voice on {tts_dev}"
+    if not profile:
+        raise _Warn(f"no voice.conf yet (run ./setup-voice.sh) — defaults: {detail}")
+    return f"{profile} — {detail}"
 
 
 def main() -> None:
@@ -113,8 +143,10 @@ def main() -> None:
     results = [
         _check("python dependencies", _imports),
         _check("audio devices", _audio),
+        _check("voice profile", _voice_profile),
         _check("speech-to-text", _stt_model),
         _check("Claude Code", _claude),
+        _check("Claude Code connection", _connection),
         _check("GPT-SoVITS server", _gptsovits_server),
         _check("HAL reference clip", _reference_clip),
         _check("HAL fine-tuned weights", _weights),

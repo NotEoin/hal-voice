@@ -1,5 +1,11 @@
-# hal-voice — Python dependencies (Python 3.10+)
-# Install into the project venv created by setup-voice.sh.
+# hal-voice — Python dependencies
+#
+# REQUIRES PYTHON 3.10–3.12. Not 3.13+: numpy 1.x publishes no wheels past cp312, and
+# several of the audio libraries below are still on numpy 1.x. setup-voice.sh finds a
+# suitable interpreter for you and refuses to build against one that cannot work.
+#
+# Wake-word support is NOT here — see requirements-wake.txt. It is optional, off by
+# default, and its tflite-runtime dependency is the least portable thing in the project.
 
 # --- Core / config ---
 PyYAML>=6.0
@@ -8,13 +14,11 @@ numpy>=1.24,<2.0          # GPT-SoVITS + many audio libs are happier on numpy 1.
 # --- Audio capture / playback ---
 sounddevice>=0.4.6        # PortAudio bindings for mic capture + playback
 soundfile>=0.12.1         # read/write WAV
-webrtcvad>=2.0.10         # voice-activity detection (silence trimming)
+webrtcvad-wheels>=2.0.14  # voice-activity detection. The '-wheels' fork ships prebuilt
+                          # binaries; plain `webrtcvad` needs a C compiler and often fails.
 
 # --- Speech to text (CPU) ---
 faster-whisper>=1.0.0     # CTranslate2 Whisper — fast int8 on CPU
-
-# --- Wake word ---
-openwakeword>=0.6.0       # "Hello HAL" hands-free trigger (ONNX, CPU)
 
 # --- Push-to-talk key capture ---
 pynput>=1.7.6             # cross-session key listener for push-to-talk

@@ -3,6 +3,9 @@
 __pycache__/
 *.pyc
 
+# Resolved voice profile for THIS machine (written by setup-voice.sh)
+voice.conf
+
 # GPT-SoVITS clone + its big pretrained models
 gptsovits/GPT-SoVITS/
 

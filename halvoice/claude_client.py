@@ -7,8 +7,11 @@ memory of the whole spoken conversation.
 
 Why headless instead of the interactive TUI: it gives us the assistant's text
 *deterministically* and *incrementally*, so HAL can start speaking sentence 1 while the
-model is still generating sentence 2. The env we export mirrors ./hal exactly, so the
-same local Ollama model answers.
+model is still generating sentence 2.
+
+hal-voice runs no model itself — Claude Code is the brain in every configuration. Which
+Claude Code, in which directory, and against which model is decided by halvoice/connect.py;
+by default that is "whatever Claude Code you already have, in the current directory".
 
 This module yields *text deltas*; the loop reassembles them into sentences for TTS.
 """
@@ -21,7 +24,7 @@ import subprocess
 import threading
 from typing import Iterator
 
-from . import config
+from . import config, connect
 from .util import get_logger
 
 log = get_logger(__name__)
@@ -33,19 +36,23 @@ class ClaudeSession:
     def __init__(self, cwd: str | None = None) -> None:
         cfg = config.load()
         self.c = cfg.claude
-        self.cwd = cwd or os.environ.get("HAL_VAULT") or os.getcwd()
+        # Which Claude Code, and where — see halvoice/connect.py for the full order.
+        self.conn = connect.resolve()
+        self.cwd = cwd or self.conn.project_dir
         self.session_id: str | None = None
         self._env = self._build_env()
+        log.info("Claude Code: %s", self.conn.describe())
 
     def _build_env(self) -> dict:
         env = dict(os.environ)
-        for k, v in (self.c.get("model_env", {}) or {}).items():
-            env[str(k)] = str(v)
-        env["ANTHROPIC_MODEL"] = str(self.c.get("model", "qwen3-coder-hal"))
-        env["HAL_MODEL"] = env["ANTHROPIC_MODEL"]
-        env["ANTHROPIC_SMALL_FAST_MODEL"] = str(self.c.get("small_fast_model", "llama3.2:3b"))
+        env.update(self.conn.env)
         env["CLAUDE_CODE_MAX_OUTPUT_TOKENS"] = str(self.c.get("max_output_tokens", 8192))
-        # Stay fully local — no telemetry/auto-update (matches ./hal).
+        if self.conn.is_cloud:
+            # Cloud: leave Claude Code's own configuration completely alone. Suppressing
+            # its traffic here would also disable things a hosted setup relies on.
+            return env
+        # Local model: nothing should phone home.
+        env["HAL_MODEL"] = self.conn.model
         env["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
         env["DISABLE_TELEMETRY"] = "1"
         env["DISABLE_ERROR_REPORTING"] = "1"

@@ -81,14 +81,41 @@ tts:
 
 # ---- Claude Code wiring -----------------------------------------------------
 claude:
-  # The voice loop drives Claude Code headless. These mirror what `hal` already exports.
+  # hal-voice runs NO model of its own — it drives Claude Code headless and speaks the
+  # reply. This block decides *which* Claude Code, running *where*. The defaults below
+  # mean "whatever Claude Code you already have, in the current directory", so a fresh
+  # clone works with no configuration at all.
+  #
+  # Full resolution order is documented in halvoice/connect.py. Check what you actually
+  # got at any time with:   ./hal-voice connection
   command: claude
-  model_env:                # exported before launching claude (points it at local Ollama).
-    ANTHROPIC_BASE_URL: "http://localhost:11434"
-    ANTHROPIC_AUTH_TOKEN: "ollama"
-    ANTHROPIC_API_KEY: "ollama"
-  model: "qwen3-coder-hal"
-  small_fast_model: "llama3.2:3b"
+
+  # ---- Where Claude Code runs ------------------------------------------------
+  # null = the directory you launched hal-voice from. This is the whole integration
+  # mechanism: Claude Code picks up that directory's CLAUDE.md, .mcp.json and .claude/
+  # settings automatically. Point it at a Hal vault, or at any project of your own, and
+  # HAL gains that project's memory and tools. Override per-run with --project DIR.
+  project_dir: null
+
+  # ---- Which brain answers ---------------------------------------------------
+  # Empty model + empty base_url = plain Claude Code with your own login (the default).
+  # To use a local model instead, set base_url to your Ollama and name the model:
+  #   base_url: "http://localhost:11434"
+  #   model: "qwen3.5-hal"
+  model: ""
+  small_fast_model: ""
+  base_url: ""
+  model_env: {}             # raw extra env for the claude subprocess (advanced; wins over all)
+
+  # ---- Borrowing someone else's configuration --------------------------------
+  # hal_root: path to a Hal checkout, or "auto" to look for a sibling ../Hal. When set,
+  # hal-voice reads that install's hal.conf for the model + endpoint and uses its Vault
+  # as project_dir — so you pick your profile ONCE in Hal and hal-voice follows.
+  hal_root: "../Hal"
+  # env_file: any KEY=VALUE file to load into the claude subprocess. Use this to plug
+  # into a setup that isn't Hal — your own launcher's env, a proxy, a gateway token.
+  env_file: null
+
   max_output_tokens: 8192
   permission_mode: acceptEdits   # default|acceptEdits|plan|bypassPermissions (headless needs a non-interactive choice)
   allowed_tools: []         # optionally restrict tools in voice mode, e.g. ["Read","mcp__hal__ask_vault"]

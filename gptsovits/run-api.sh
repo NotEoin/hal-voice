@@ -22,6 +22,16 @@ if [ ! -d "$GPTSOVITS_DIR" ]; then
   exit 1
 fi
 
+# Voice profile (written by ../setup-voice.sh). Decides whether the engine runs on the
+# GPU or the CPU — GPT-SoVITS ships configured for CUDA and cannot start without it.
+VOICE_CONF="${HALVOICE_CONF:-$HERE/../voice.conf}"
+if [ -f "$VOICE_CONF" ]; then
+  # shellcheck disable=SC1090
+  . "$VOICE_CONF"
+fi
+TTS_DEVICE="${HALVOICE_TTS_DEVICE:-cuda}"
+TTS_HALF="${HALVOICE_TTS_HALF:-true}"
+
 cd "$GPTSOVITS_DIR" || exit 1
 
 # torch >= 2.6 defaults torch.load(weights_only=True); the checkpoints pickle a
@@ -62,6 +72,45 @@ PYEOF
 # applied at runtime by hal-voice via /set_gpt_weights and /set_sovits_weights
 # (halvoice/tts.py: ensure_weights), so no preload flags are needed here.
 ARGS=(api_v2.py -a "$HOST" -p "$PORT")
+
+# api_v2 reads device, precision AND its startup weights from the `custom:` block of
+# tts_infer.yaml, with no CLI flag for any of them — so apply them here before starting.
+# Idempotent. The weight paths matter because that block stores ABSOLUTE paths: a
+# GPT-SoVITS checkout that has been copied or moved will otherwise load the weights of
+# whatever install wrote it last. (hal-voice hot-swaps the correct ones on first synth,
+# so this is about the server being self-consistent from the moment it starts.)
+TTS_DEVICE="$TTS_DEVICE" TTS_HALF="$TTS_HALF" GPT_W="$GPT_W" SOVITS_W="$SOVITS_W" \
+  "$PY" - <<'PYEOF' || echo "  ! could not update tts_infer.yaml — check it by hand"
+import os, pathlib
+try:
+    import yaml
+except ImportError:
+    raise SystemExit(0)          # not fatal; the file's existing setting stands
+p = pathlib.Path("GPT_SoVITS/configs/tts_infer.yaml")
+if not p.exists():
+    raise SystemExit(0)
+cfg = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+custom = cfg.setdefault("custom", {})
+device = os.environ["TTS_DEVICE"]
+half = os.environ["TTS_HALF"].lower() == "true"
+# fp16 on the CPU is not supported by torch and fails at load time.
+if device == "cpu":
+    half = False
+wanted = {"device": device, "is_half": half}
+# Only point at trained weights that actually exist here; otherwise leave whatever the
+# file has, so an untrained clone still starts on the pretrained base models.
+for key, env in (("t2s_weights_path", "GPT_W"), ("vits_weights_path", "SOVITS_W")):
+    path = os.environ.get(env, "")
+    if path and pathlib.Path(path).is_file():
+        wanted[key] = str(pathlib.Path(path).resolve())
+
+if any(custom.get(k) != v for k, v in wanted.items()):
+    custom.update(wanted)
+    p.write_text(yaml.safe_dump(cfg, sort_keys=True), encoding="utf-8")
+    print(f"  config: device={device} is_half={half} (updated)")
+else:
+    print(f"  config: device={device} is_half={half}")
+PYEOF
 
 echo "Starting GPT-SoVITS api_v2 on http://$HOST:$PORT"
 [ -f "$GPT_W" ] && echo "  GPT weights:    $GPT_W (hot-swapped by hal-voice on first synth)" \
