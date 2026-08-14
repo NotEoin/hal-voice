@@ -1,127 +1,180 @@
-# hal-voice
+# 🔴 hal-voice
 
-A HAL 9000 voice interface for Claude Code. Hold a key or say the wake word, talk to it, and it
-answers out loud — calm, unhurried and slightly too pleased with itself — while a red lens watches
-you from the corner of the screen.
+![licence](https://img.shields.io/badge/licence-MIT-blue?style=flat-square)
+![platform](https://img.shields.io/badge/platform-Linux-lightgrey?style=flat-square)
+![python](https://img.shields.io/badge/python-3.10--3.12-blue?style=flat-square)
+![voice](https://img.shields.io/badge/voice-100%25%20local-success?style=flat-square)
 
-Fan work, built for my own machine. Everything runs locally.
+> *"I am completely operational, and all my circuits are functioning perfectly."*
+
+Talk to [Claude Code](https://claude.ai/code) and have it answer out loud, in the voice of HAL 9000,
+with a red lens watching you from the corner of the screen. Speech recognition and synthesis always
+run on your own machine; the thinking is done by whatever Claude Code you already have — cloud by
+default, or a local model if you point it at one.
+
+![The eye reacting to what it's doing](./media/eye.gif)
+
+## 🌟 Highlights
+
+- **It starts speaking before it's finished thinking.** Replies are synthesised sentence by sentence
+  as they're generated, so you hear the first words in about a second rather than waiting for the
+  whole answer.
+- **Interrupt it whenever you like** — speaking again cuts it off mid-sentence.
+- **A red eye that reacts** — idle, listening, thinking, speaking.
+- **Your voice never leaves the machine.** Speech recognition and synthesis are both local. What
+  Claude Code does with the transcript is between you and your existing setup.
+- **Works with the Claude Code you already have.** No model to install, nothing to configure —
+  clone it and talk. Point it at a local model later if you want to.
+- **Drop it into a normal session.** Run it as an MCP server and get speak/listen as tools inside a
+  regular Claude Code session, without the full voice loop.
+- **Bring your own voice.** Train it on any voice data you have the rights to.
+- **One config file**, with environment variable overrides for everything in it.
+
+## ℹ️ Overview
 
 ```
-wake word / push-to-talk  ->  faster-whisper  ->  Claude Code (headless)
-                                                        |
-                       speakers  <-  HAL FX  <-  GPT-SoVITS
+push-to-talk  →  faster-whisper  →  Claude Code (cloud, or your local model)
+                                              ↓
+                     speakers  ←  FX chain  ←  GPT-SoVITS
 ```
 
-It started as an add-on inside my [hal](../Hal) repo — a local Claude Code setup pointed at Ollama —
-and got pulled out into its own project once it stopped being a weekend experiment.
+You hold a key, ask a question, and it answers aloud. Underneath, speech is transcribed with
+faster-whisper, handed to Claude Code running headless, and the reply is streamed back out through
+GPT-SoVITS and a small effects chain that gives it the right weight and room.
 
-## The interesting part is the latency
+hal-voice runs **no model of its own**. It is a voice on the front of a Claude Code session, so
+whatever that session can already do — your tools, your MCP servers, your project's memory — it can
+now do out loud.
 
-A naive version waits for the whole reply, synthesises it, then plays it. On a long answer that's
-several seconds of dead air, and dead air kills the illusion completely — HAL doesn't buffer.
+### ✍️ Author
 
-So the reply is streamed out of Claude Code, split into sentences as they arrive, and sentence one
-goes to the synthesiser while the model is still writing sentence two. First audio lands about as
-fast as the model can finish a sentence. Barge-in works too: talking over a long answer stops
-playback, which you need, because a machine that can't be interrupted is genuinely irritating.
+Built by [@NotEoin](https://github.com/NotEoin).
 
-## What's in it
+### Pointing it at a project
 
-| Stage | Default | Notes |
-|---|---|---|
-| Activation | push-to-talk | or openWakeWord for "Hello, HAL" |
-| STT | faster-whisper `small.en` | on CPU, so the GPU stays free |
-| LLM | Claude Code, headless | pointed at local Ollama |
-| TTS | GPT-SoVITS | fine-tuned on voice data you supply |
-| FX | pedalboard | EQ voicing, cabin reverb, loudness matching |
-| UI | pygame | the red eye, reacting to state |
-
-Everything lives in `config.yaml`. Any value takes an environment override of the form
-`HALVOICE_<SECTION>_<KEY>`, e.g. `HALVOICE_TTS_SPEED=0.9`, which is how most of the tuning got done.
-
-## Install
+Claude Code is launched *inside a directory*, and picks up that directory's `CLAUDE.md`, `.mcp.json`
+and `.claude/` settings automatically. That is the whole integration mechanism:
 
 ```bash
+./hal-voice --project ~/code/my-project   # HAL gains that project's memory and tools
+./hal-voice connection                    # show what it resolved, and why
+```
+
+Set it permanently as `claude.project_dir` in [`config.yaml`](config.yaml).
+
+It also pairs with [Hal](https://github.com/NotEoin/Hal) — a local Claude Code setup with an
+Obsidian vault as its memory. Point `claude.hal_root` at a Hal checkout (or run
+`./setup-voice.sh --hal auto`) and hal-voice reads that install's `hal.conf`, following its
+24GB/12GB/cloud profile automatically so you only choose once. To plug into a setup that isn't Hal,
+set `claude.env_file` to any `KEY=VALUE` file of `ANTHROPIC_*` settings.
+
+## 🚀 Usage
+
+```bash
+./hal-voice doctor       # check your audio devices, models and TTS server
+./hal-voice              # start the voice loop
+./hal-voice tts "hello"  # speak one line, no mic or model needed
+./hal-voice mcp          # run just the speak/listen MCP server
+./hal-voice eye          # run the eye on its own
+./hal-voice connection   # show which Claude Code setup it will drive, and why
+```
+
+**Run `doctor` first.** Almost every problem in a voice pipeline turns out to be an audio device
+problem, and it'll tell you in two seconds.
+
+Hold **space** to talk, release to send. Speaking again while it's replying interrupts it.
+
+### Configuration
+
+Everything lives in [`config.yaml`](config.yaml) — audio devices, activation, model choices, voice
+tuning, the effects chain and the eye. Any value can be overridden with an environment variable:
+
+```bash
+HALVOICE_TTS_SPEED=0.9 ./hal-voice        # slow it down
+HALVOICE_STT_MODEL=medium.en ./hal-voice  # more accurate transcription
+```
+
+## ⬇️ Installation
+
+```bash
+git clone https://github.com/NotEoin/hal-voice.git
+cd hal-voice
 ./setup-voice.sh
 ```
 
-You need PortAudio and FFmpeg from your package manager, a working mic and speakers, and a
-GPT-SoVITS checkout with its pretrained models. The script walks through it.
+**Requirements:**
 
-## Use
+| | |
+|---|---|
+| **OS** | Linux, with PulseAudio or PipeWire |
+| **Python** | 3.10–3.12. **Not 3.13+** — numpy 1.x has no wheels there, and parts of the audio stack still need it. `setup-voice.sh` finds a suitable interpreter, or falls back to conda |
+| **System packages** | PortAudio and FFmpeg |
+| **GPU** | Optional — see the profiles below. Voice synthesis wants ~2GB of VRAM but will run on CPU |
+| **Hardware** | A working microphone and speakers |
+| **Also needed** | A [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS) checkout with its pretrained models |
 
-```bash
-./hal-voice              # the full voice loop
-./hal-voice tts "hello"  # one-shot synthesis, no mic, no model
-./hal-voice mcp          # just the speak/listen MCP server
-./hal-voice doctor       # check audio devices, models and the TTS server
-```
+`setup-voice.sh` reads your GPU and proposes a profile; `--profile <name>` overrides it. This is
+about **VRAM only** — it does not change which model does the thinking.
 
-Run `doctor` first. Nearly every problem in a voice pipeline turns out to be an audio device
-problem, and it'll tell you in two seconds what would otherwise cost an hour.
+| Profile | Speech recognition | Voice synthesis | |
+|---|---|---|---|
+| `24gb` | GPU | GPU (fp16) | Fastest |
+| `12gb` | CPU | GPU (fp16) | Leaves room for a local LLM beside it |
+| `cloud` | CPU | CPU | No NVIDIA GPU required at all |
 
-MCP mode is the one worth knowing about: rather than running the whole loop, register hal-voice as
-an MCP server inside a normal Claude Code session and you get speak/listen as tools. You keep the
-TUI and drop into voice only when you want it.
+The `cloud` profile is not cosmetic: GPT-SoVITS ships configured for CUDA and won't start without
+it, so this rewrites its device settings. Synthesis on CPU is slower than real time, so expect HAL
+to pause before speaking.
 
-## The voice
+Developed on an RTX 4070 (12GB); originally built on an RTX 3090.
 
-**There is no audio in this repository, and no dialogue either.** You supply both.
+## 🎙️ Giving it a voice
 
-The clips are gitignored, the trained weights are gitignored, and the transcripts live with your
-clips rather than in the repo. A fresh clone starts empty:
+**No audio ships with this repository.** You supply the voice data.
 
 1. Put your clips and a `transcripts.csv` somewhere, and point `voice-source.local` at it.
-2. `python voice-data/fetch-voice-lines.py` imports them.
-3. `python voice-data/prepare_dataset.py` slices, normalises and writes the label file.
-4. Fine-tune — see [gptsovits/train-hal.md](gptsovits/train-hal.md).
+2. `python voice-data/fetch-voice-lines.py` — imports them.
+3. `python voice-data/prepare_dataset.py` — slices, cleans and labels them.
+4. Fine-tune — see **[gptsovits/train-hal.md](gptsovits/train-hal.md)**.
 
-Forty-odd clean, well-transcribed clips got me a recognisable clone. Consistency matters much
-more than volume — same source, same delivery.
+Around forty clean, well-transcribed clips is enough for a recognisable result. Consistency matters
+more than quantity — same microphone, same room, same delivery.
 
-`transcripts.csv` takes an optional weight column, and it turned out to be the highest-leverage
-thing in the whole project. Oversampling the takes with the delivery you want and zeroing the ones
-you don't moved the result further than any amount of sampler tuning.
+**→ Full guide: [voice-data/README.md](voice-data/README.md)**
 
-### On the voice itself
+### ⚖️ Please use this responsibly
 
-HAL was performed by the late Douglas Rain. This repo is a homage: it ships the *pipeline*, not the
-performance. No audio, no transcripts and no trained weights are committed, and
-`fetch-voice-lines.py` deliberately won't pull audio from a public host — moving a recording to a
-different URL doesn't change who owns it.
+HAL was performed by the late Douglas Rain. This repository ships the *pipeline*, never the
+performance — no audio, no transcripts and no trained models are included, and the import script
+will not download audio from public sources.
 
-If you point this at Rain's performance, keep the result local and personal. Don't distribute the
-model or its output, don't pass it off as him, and don't use it commercially — that's where homage
-stops and likeness rights start. The same applies to anyone else's voice: use audio you recorded
-yourself or have clear permission for.
+Use voice data you recorded yourself or have clear permission to use. Keep anything you train
+private and personal: don't distribute the model or its output, don't present it as someone else,
+and don't use it commercially. In most places a person's voice is protected, and cloning one you
+don't have rights to is not okay.
 
-## Tuning
+## 🧭 Limitations
 
-The clone gets you timbre. Pace, weight and how present it sounds in the room all come from the FX
-chain and the sampler. [VOICE-TUNING.md](VOICE-TUNING.md) is the log of what worked and what didn't.
+- **Wake word doesn't work yet.** The code is there and "Hey HAL" is configurable, but detection is
+  unreliable and it's disabled by default, so its dependencies aren't installed either — run
+  `./setup-voice.sh --with-wake` if you want to experiment. **Push-to-talk is the supported way in.**
+- **It's not instant.** Streaming hides a lot of the delay, but synthesis still has to happen —
+  and on the `cloud` (CPU) profile it runs slower than real time, so HAL pauses before answering.
+- **The voice effects are tuned to one voice.** Treat the defaults as a starting point.
+- Interrupting can clip the first syllable of your next sentence.
+- Linux only.
 
-The short version: EQ does more than pitch shifting, and three of the FX parameters ended up at
-zero because they sounded worse than doing nothing. The one that caused the most trouble —
-`pitch_flatten` — was reconstructing from the Hilbert analytic signal, which is only valid for
-narrowband signals. Speech is broadband, so it was smearing artefacts across the spectrum and I
-spent a while blaming the clone for it.
+## 🔗 Related projects
 
-## Hardware
+- **[Hal](https://github.com/NotEoin/Hal)** — a local Claude Code setup with an Obsidian vault as
+  its memory. hal-voice sits on top of it, or runs perfectly well without it.
 
-Built on an RTX 3090 with STT on CPU, leaving the card for the LLM and TTS. It runs on less — use a
-smaller Whisper model and a smaller LLM. GPT-SoVITS inference is the expensive part; the rest of the
-pipeline is cheap.
+## 💭 Feedback and contributing
 
-## Status
+Got it working with a different TTS backend, or trained a wake word that actually fires? Open an
+[issue](https://github.com/NotEoin/hal-voice/issues) or start a
+[discussion](https://github.com/NotEoin/hal-voice/discussions).
 
-Works end to end. Known rough edges:
+## 📄 Licence
 
-- Wake-word mode uses a stock openWakeWord model unless you train your own, and the stock ones are
-  noticeably worse at rejecting false positives.
-- The FX chain was tuned by ear against one voice. The defaults are a starting point, not a preset.
-- Barge-in can clip the first syllable of the new turn.
-- Linux only, tested with PulseAudio/PipeWire.
-
-## Licence
-
-MIT — see [LICENSE](LICENSE). Covers the code. It does not cover any voice data you bring to it.
+MIT — see [LICENSE](LICENSE). This covers the code only, not any voice data you bring to it.

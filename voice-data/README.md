@@ -20,12 +20,11 @@ GPT-SoVITS can fine-tune into an uncanny HAL.
 
 ## Step 1 — Source the audio
 
-In rough order of cleanliness:
+You have 2 viable options:
 
-1. **Isolated/looped dialogue collections.** Fan and sound-design communities have extracted
+1. **Isolated/looped dialogue collections (Recommended)** Fan and sound-design communities have extracted
    clean HAL line packs. If you have a source of dry HAL lines, that's ideal — skip to Step 3.
 2. **The film's audio**, then isolate the voice (Step 2). Use a copy you legally own.
-3. **Re-performances** are off-limits if you want *Rain's* exact timbre — they won't match.
 
 Drop whatever you gather into `voice-data/raw/`.
 
