@@ -7,10 +7,10 @@ __pycache__/
 voice.conf
 
 # GPT-SoVITS clone + its big pretrained models
-gptsovits/GPT-SoVITS/
+gptsovits/GPT-SoVITS
 
 # Trained HAL voice (sensitive — do NOT distribute; see voice-data/README.md)
-gptsovits/weights/
+gptsovits/weights
 
 # ---------------------------------------------------------------------------
 # HAL voice audio — NEVER commit. This is Douglas Rain's performance from the
