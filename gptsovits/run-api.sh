@@ -40,11 +40,19 @@ export TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1
 
 # Prefer the repo's own venv/conda env if present; otherwise activate the conda
 # env created by setup (install.sh), falling back to whatever 'python' is active.
-if [ -d "$GPTSOVITS_DIR/runtime" ]; then
+if [ -n "${GPTSOVITS_PYTHON:-}" ]; then
+  PY="$GPTSOVITS_PYTHON"
+elif [ -d "$GPTSOVITS_DIR/runtime" ]; then
   PY="$GPTSOVITS_DIR/runtime/python"
 elif [ -z "${CONDA_PREFIX:-}" ] || [ "$(basename "${CONDA_PREFIX:-}")" != "gptsovits" ]; then
-  # Not already inside the gptsovits env — activate it.
-  CONDA_SH="$(conda info --base 2>/dev/null)/etc/profile.d/conda.sh"
+  # Not already inside the gptsovits env: activate it. A systemd service has no
+  # conda on its PATH, so also look in the usual install locations.
+  CONDA_BASE="$(conda info --base 2>/dev/null)"
+  for dir in "$HOME/miniconda3" "$HOME/anaconda3" "$HOME/miniforge3" "$HOME/mambaforge"; do
+    [ -n "$CONDA_BASE" ] && break
+    [ -f "$dir/etc/profile.d/conda.sh" ] && CONDA_BASE="$dir"
+  done
+  CONDA_SH="$CONDA_BASE/etc/profile.d/conda.sh"
   if [ -f "$CONDA_SH" ]; then
     # shellcheck disable=SC1090
     source "$CONDA_SH" && conda activate gptsovits 2>/dev/null
