@@ -1,15 +1,19 @@
 """Activation: decide when a turn begins.
 
-Two triggers, either/both per config.activation.mode:
-  * wake_word   — openWakeWord listens continuously for "Hello, HAL" (ONNX, CPU, cheap).
-  * push_to_talk — hold a key (default: space) to start a turn.
+Three triggers, combined per config.activation:
+  * keyword      - hands-free: short speech bursts are transcribed on the CPU and a
+                   turn starts when one begins with HAL's name. Words after the name
+                   become the request, so "Hal, what's new?" is a single turn.
+  * wake_word    - openWakeWord listens for a trained wake-word model (ONNX, CPU).
+  * push_to_talk - hold a key (default: space) to start a turn.
 
-`wait_for_activation()` blocks until either fires, then returns the trigger name.
-Both run on background listeners so they race naturally.
+`wait_for_activation()` blocks until one fires, then returns the trigger name.
+All run on background listeners so they race naturally.
 """
 
 from __future__ import annotations
 
+import re
 import threading
 import time
 
@@ -113,6 +117,84 @@ class _WakeWord:
         self._stop.set()
 
 
+DEFAULT_KEYWORD = r"^\W*(?:(?:hey|hi|hello|ok|okay)\W+)?(?:hal|hall|howl)\b[\s,.!?]*"
+_FRAME_MS = 30            # webrtcvad accepts 10, 20 or 30 ms frames
+_END_SILENCE_MS = 450     # a pause this long ends a burst
+
+
+class _Keyword:
+    """Hands-free trigger that matches HAL's name in transcribed speech."""
+
+    def __init__(self) -> None:
+        cfg = config.load()
+        self.sr = int(cfg.get("audio.sample_rate", 16000))
+        self.device = cfg.get("audio.input_device")
+        self.vad_level = int(cfg.get("audio.vad_aggressiveness", 2))
+        self.model_name = str(cfg.get("activation.keyword.model", "tiny.en"))
+        self.max_seconds = float(cfg.get("activation.keyword.max_seconds", 8))
+        self.pattern = re.compile(str(cfg.get("activation.keyword.pattern", DEFAULT_KEYWORD)), re.I)
+        self.detected = threading.Event()
+        self.paused = threading.Event()
+        self.command = ""
+        self._stop = threading.Event()
+        self._thread = None
+
+    def start(self) -> None:
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def _run(self) -> None:
+        import sounddevice as sd
+        import webrtcvad
+        from faster_whisper import WhisperModel
+
+        model = WhisperModel(self.model_name, device="cpu", compute_type="int8")
+        vad = webrtcvad.Vad(self.vad_level)
+        frame = int(self.sr * _FRAME_MS / 1000)
+        end_frames = _END_SILENCE_MS // _FRAME_MS
+        max_frames = int(self.max_seconds * 1000 / _FRAME_MS)
+        voiced: list[np.ndarray] = []
+        silent = 0
+        with sd.InputStream(samplerate=self.sr, channels=1, dtype="int16",
+                            blocksize=frame, device=self.device) as stream:
+            log.info("listening for HAL's name (%s)", self.model_name)
+            while not self._stop.is_set():
+                block, _ = stream.read(frame)
+                if self.paused.is_set() or self.detected.is_set():
+                    voiced, silent = [], 0
+                    continue
+                if vad.is_speech(block.tobytes(), self.sr):
+                    voiced.append(block[:, 0].copy())
+                    silent = 0
+                elif voiced:
+                    voiced.append(block[:, 0].copy())
+                    silent += 1
+                if voiced and (silent >= end_frames or len(voiced) >= max_frames):
+                    audio = np.concatenate(voiced).astype(np.float32) / 32768.0
+                    voiced, silent = [], 0
+                    if len(audio) >= self.sr * 0.3:
+                        self._check(model, audio)
+
+    def _check(self, model, audio: np.ndarray) -> None:
+        segments, _ = model.transcribe(audio, language="en", beam_size=1,
+                                       initial_prompt="Hey Hal.", vad_filter=False,
+                                       condition_on_previous_text=False)
+        text = " ".join(seg.text for seg in segments).strip()
+        match = self.pattern.match(text)
+        if match:
+            self.command = text[match.end():].strip(" ,.!?")
+            log.info("heard HAL's name: %r", text)
+            self.detected.set()
+
+    def take_command(self) -> str:
+        """Returns and clears any request spoken in the same breath as the name."""
+        command, self.command = self.command, ""
+        return command
+
+    def stop(self) -> None:
+        self._stop.set()
+
+
 class Activator:
     """Combines the enabled triggers and exposes a single blocking wait()."""
 
@@ -121,20 +203,38 @@ class Activator:
         self.mode = str(cfg.get("activation.mode", "both"))
         self.ptt = None
         self.wake = None
+        self.keyword = None
         if self.mode in ("push_to_talk", "both"):
             self.ptt = _PushToTalk(str(cfg.get("activation.push_to_talk_key", "space")))
         if self.mode in ("wake_word", "both") and cfg.get("activation.wake.enabled", True):
             self.wake = _WakeWord()
+        if cfg.get("activation.keyword.enabled", False):
+            self.keyword = _Keyword()
 
     def start(self) -> None:
         if self.ptt:
             self.ptt.start()
         if self.wake:
             self.wake.start()
+        if self.keyword:
+            self.keyword.start()
+
+    def heard(self) -> bool:
+        """True while a hands-free trigger has fired and not been consumed."""
+        return bool((self.wake and self.wake.detected.is_set())
+                    or (self.keyword and self.keyword.detected.is_set()))
+
+    def pause_keyword(self, paused: bool) -> None:
+        """Stops the keyword listener transcribing while a turn is recorded."""
+        if self.keyword:
+            (self.keyword.paused.set if paused else self.keyword.paused.clear)()
 
     def wait_for_activation(self) -> str:
-        """Block until a trigger fires; return 'push_to_talk' or 'wake_word'."""
+        """Block until a trigger fires; return 'push_to_talk', 'wake_word' or 'keyword'."""
         while True:
+            if self.keyword and self.keyword.detected.is_set():
+                self.keyword.detected.clear()
+                return "keyword"
             if self.ptt and self.ptt.pressed.is_set():
                 return "push_to_talk"
             if self.wake and self.wake.detected.is_set():
@@ -147,3 +247,5 @@ class Activator:
             self.ptt.stop()
         if self.wake:
             self.wake.stop()
+        if self.keyword:
+            self.keyword.stop()

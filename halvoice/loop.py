@@ -82,7 +82,7 @@ class VoiceLoop:
             if self.activator.ptt and self.activator.ptt.pressed.is_set():
                 self.player.stop()
                 return
-            if self.activator.wake and self.activator.wake.detected.is_set():
+            if self.activator.heard():
                 self.player.stop()
                 return
             time.sleep(0.03)
@@ -90,15 +90,9 @@ class VoiceLoop:
     # -- one full turn ---------------------------------------------------------
     def _handle_turn(self, trigger: str = "push_to_talk") -> None:
         self.bus.set("listening")
-        # Hold-to-talk: record only while the key stays held; release ends the turn.
-        hold_check = None
-        if trigger == "push_to_talk" and self.activator.ptt is not None:
-            hold_check = self.activator.ptt.pressed.is_set
-            log.info("listening… (hold to talk; release to send)")
-        else:
-            log.info("listening…")
-        audio = self.recorder.record_utterance(hold_check=hold_check)
-        text = self.transcriber.transcribe(audio)
+        text = self.activator.keyword.take_command() if trigger == "keyword" else ""
+        if not text:
+            text = self._record(trigger)
         if not text:
             log.info("(heard nothing)")
             self.bus.set("idle")
@@ -129,6 +123,21 @@ class VoiceLoop:
         if not spoke_any:
             log.info("(no reply)")
         self.bus.set("idle")
+
+    def _record(self, trigger: str) -> str:
+        # Hold-to-talk records only while the key stays held; release ends the turn.
+        hold_check = None
+        if trigger == "push_to_talk" and self.activator.ptt is not None:
+            hold_check = self.activator.ptt.pressed.is_set
+            log.info("listening… (hold to talk; release to send)")
+        else:
+            log.info("listening…")
+        self.activator.pause_keyword(True)
+        try:
+            audio = self.recorder.record_utterance(hold_check=hold_check)
+            return self.transcriber.transcribe(audio)
+        finally:
+            self.activator.pause_keyword(False)
 
     # -- main ------------------------------------------------------------------
     def run(self) -> None:

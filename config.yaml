@@ -25,6 +25,12 @@ activation:
     threshold: 0.6          # 0..1 detection confidence.
     # Train a custom "Hello, HAL" model — see voice-data/README.md.
     custom_model_path: null # e.g. models/hello_hal.onnx ; overrides `model` when set.
+  keyword:
+    # Hands-free without a trained model: speech bursts are transcribed on the CPU and
+    # a turn starts when one begins with HAL's name. Runs alongside `mode`.
+    enabled: false
+    model: tiny.en          # faster-whisper model for the listener; tiny.en is ~75 MB.
+    max_seconds: 8          # longest burst checked; covers "Hal, <request>" in one breath.
 
 # ---- Speech-to-text ---------------------------------------------------------
 stt:

@@ -155,9 +155,11 @@ don't have rights to is not okay.
 
 ## 🧭 Limitations
 
-- **Wake word doesn't work yet.** The code is there and "Hey HAL" is configurable, but detection is
-  unreliable and it's disabled by default, so its dependencies aren't installed either — run
-  `./setup-voice.sh --with-wake` if you want to experiment. **Push-to-talk is the supported way in.**
+- **The trained wake word is unreliable.** openWakeWord detection is disabled by default, and its
+  dependencies aren't installed; run `./setup-voice.sh --with-wake` to experiment. For hands-free
+  use, set `activation.keyword.enabled: true` instead: it transcribes short speech bursts on the
+  CPU and starts a turn when one begins with "Hal", taking any words after the name as the request.
+  It costs some CPU whenever someone is speaking nearby.
 - **It's not instant.** Streaming hides a lot of the delay, but synthesis still has to happen —
   and on the `cloud` (CPU) profile it runs slower than real time, so HAL pauses before answering.
 - **The voice effects are tuned to one voice.** Treat the defaults as a starting point.
