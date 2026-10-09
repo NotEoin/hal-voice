@@ -143,7 +143,8 @@ class Ears:
                 audio, overlapped = self._audio.get(timeout=0.5)
             except queue.Empty:
                 continue
-            text = self.transcribe(audio, prompt="Hal,").strip()
+            # No prompt: a prompt naming HAL makes Whisper hear "Hal" in background noise.
+            text = self.transcribe(audio).strip()
             if not text or re.fullmatch(r"\W*(you|thank you|thanks for watching)?\W*", text, re.I):
                 continue
             if self._is_echo(text):
@@ -154,6 +155,9 @@ class Ears:
             named = bool(lead or trail)
             request = text[lead.end():] if lead else text[:trail.start()] if trail else text
             request = request.strip(" ,.!?")
+            # "Hal, Hal" is the name said twice (or noise heard as it), not a request.
+            if re.fullmatch(rf"(?:\W*{NAME}\W*)*", request, re.I):
+                request = ""
             now = time.time()
             if self.speaking.is_set() or (overlapped and not named):
                 if named and not self._is_echo(text):

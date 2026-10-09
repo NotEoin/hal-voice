@@ -21,6 +21,8 @@ from .util import get_logger
 log = get_logger(__name__)
 
 _FRAME_MS = 30  # webrtcvad accepts 10/20/30 ms frames
+NO_SPEECH_MAX = 0.5   # segments Whisper thinks are more likely silence than speech are dropped
+MIN_LOGPROB = -1.0    # and so are segments it was very unsure of
 
 
 class Recorder:
@@ -171,7 +173,11 @@ class Transcriber:
         segments, _info = model.transcribe(
             audio, beam_size=self.beam_size, language=self.language, initial_prompt=prompt,
             hotwords=self.hotwords or None, vad_filter=False, condition_on_previous_text=False)
-        return " ".join(s.text.strip() for s in segments).strip()
+        # Noise and silence come back as confident-sounding words; Whisper's own scores
+        # say which segments were really speech.
+        kept = [s.text.strip() for s in segments
+                if s.no_speech_prob < NO_SPEECH_MAX and s.avg_logprob > MIN_LOGPROB]
+        return " ".join(kept).strip()
 
 
 def listen_once(on_first_voice=None) -> str:
