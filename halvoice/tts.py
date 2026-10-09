@@ -49,6 +49,8 @@ class GPTSoVITSClient:
         self.text_lang = str(t.get("text_lang", "en"))
         self.prompt_lang = str(t.get("prompt_lang", "en"))
         self.ref_audio = config.resolve(t.get("ref_audio_path"))
+        # Extra references blended in for timbre; the main one still sets the cadence.
+        self.aux_refs = [config.resolve(p) for p in (t.get("aux_ref_audio_paths") or [])]
         self.prompt_text = str(t.get("prompt_text", ""))
         self.split_method = str(t.get("text_split_method", "cut2"))
         self.batch_size = int(t.get("batch_size", 1))
@@ -89,6 +91,7 @@ class GPTSoVITSClient:
             "text": text,
             "text_lang": self.text_lang,
             "ref_audio_path": self.ref_audio,
+            "aux_ref_audio_paths": self.aux_refs,
             "prompt_text": self.prompt_text,
             "prompt_lang": self.prompt_lang,
             "text_split_method": self.split_method,
@@ -109,6 +112,36 @@ class GPTSoVITSClient:
         return audio.astype(np.float32), int(sr)
 
 
+EDGE_GATE_DB = 38.0   # audio this far below the line's peak, before speech or after it, is cut
+EDGE_FADE_S = 0.012
+
+
+def gate_edges(audio: np.ndarray, sr: int) -> np.ndarray:
+    """Trims the faint noise bed before the first word and after the last, with short fades.
+
+    The bed is quiet under speech but audible on its own, so it is removed only where
+    nothing else is playing: at the start and end of each synthesised line.
+    """
+    if audio.size < sr // 10:
+        return audio
+    frame = sr // 100
+    n = audio.size // frame
+    rms = np.sqrt(np.mean(audio[:n * frame].reshape(n, frame) ** 2, axis=1) + 1e-12)
+    db = 20 * np.log10(rms)
+    loud = np.flatnonzero(db > db.max() - EDGE_GATE_DB)
+    if loud.size == 0:
+        return audio
+    start = max(0, loud[0] - 2) * frame
+    end = min(audio.size, (loud[-1] + 3) * frame)
+    out = audio[start:end].copy()
+    fade = min(int(EDGE_FADE_S * sr), out.size // 2)
+    if fade:
+        ramp = np.linspace(0.0, 1.0, fade, dtype=np.float32)
+        out[:fade] *= ramp
+        out[-fade:] *= ramp[::-1]
+    return out
+
+
 def synth(text: str) -> tuple[np.ndarray, int]:
     """Synthesize the whole text (joined) + HAL FX. Returns (audio, sr)."""
     client = GPTSoVITSClient()
@@ -116,7 +149,7 @@ def synth(text: str) -> tuple[np.ndarray, int]:
     sr = 32000
     for chunk in split_sentences(text) or [text]:
         audio, sr = client.synth_raw(chunk)
-        parts.append(audio)
+        parts.append(gate_edges(audio, sr))
     full = np.concatenate(parts) if parts else np.zeros(0, dtype=np.float32)
     return hal_fx.apply(full, sr), sr
 
@@ -126,7 +159,7 @@ def synth_stream(text: str) -> Iterator[tuple[np.ndarray, int]]:
     client = GPTSoVITSClient()
     for chunk in split_sentences(text):
         audio, sr = client.synth_raw(chunk)
-        yield hal_fx.apply(audio, sr), sr
+        yield hal_fx.apply(gate_edges(audio, sr), sr), sr
 
 
 class Player:

@@ -19,6 +19,7 @@ gptsovits/weights
 # ---------------------------------------------------------------------------
 voice-data/raw/
 voice-data/separated/
+voice-data/denoised/
 voice-data/clean/
 voice-data/reference/
 voice-data/hal-voice/          # your clips + transcripts.csv, read by prepare_dataset.py

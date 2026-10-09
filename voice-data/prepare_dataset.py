@@ -6,6 +6,7 @@ Reads your clips plus the transcripts.csv beside them, converts each to a clean
 reference clip. No dialogue is stored in this repo - see voice-data/README.md
 for the CSV format and the weight column.
 """
+import argparse
 import csv
 import shutil
 import subprocess
@@ -14,6 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "hal-voice"
+DENOISED = ROOT / "denoised"
 SLICES = ROOT / "clean" / "slices"
 LIST_FILE = ROOT / "clean" / "hal.list"
 REF_DIR = ROOT / "reference"
@@ -63,7 +65,7 @@ def pick_reference(transcripts: dict[str, tuple[str, int]]) -> str:
     """
     override = ROOT / "reference.txt"
     if override.exists():
-        stem = override.read_text(encoding="utf-8").strip()
+        stem = override.read_text(encoding="utf-8").split()[0]
         if stem not in transcripts:
             sys.exit(f"reference.txt names '{stem}', which isn't in transcripts.csv")
         return stem
@@ -72,7 +74,7 @@ def pick_reference(transcripts: dict[str, tuple[str, int]]) -> str:
 
 def find_clip(stem: str) -> Path | None:
     for suffix in AUDIO_SUFFIXES:
-        candidate = SRC / f"{stem}{suffix}"
+        candidate = AUDIO / f"{stem}{suffix}"
         if candidate.exists():
             return candidate
     return None
@@ -80,6 +82,10 @@ def find_clip(stem: str) -> Path | None:
 
 def to_wav(src: Path, dst: Path) -> None:
     """32 kHz mono 16-bit PCM, light high-pass to drop rumble."""
+    if src.parent == DENOISED:
+        # denoise.py already wrote clean 32 kHz PCM; filtering again would only colour it.
+        shutil.copy2(src, dst)
+        return
     subprocess.run(
         ["ffmpeg", "-y", "-i", str(src), "-ac", "1", "-ar", "32000",
          "-af", "highpass=f=70", "-sample_fmt", "s16", str(dst)],
@@ -87,7 +93,17 @@ def to_wav(src: Path, dst: Path) -> None:
     )
 
 
+AUDIO = SRC
+
+
 def main() -> None:
+    global AUDIO
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--source", choices=["raw", "denoised"], default="raw",
+                        help="train on the clips as fetched, or on denoise.py's output")
+    AUDIO = DENOISED if parser.parse_args().source == "denoised" else SRC
+    if not AUDIO.exists():
+        sys.exit(f"No clips at {AUDIO}. Run denoise.py first.")
     if not SRC.exists():
         sys.exit(f"No clips at {SRC}. Run fetch-voice-lines.py, or drop them there yourself.")
 
@@ -137,6 +153,17 @@ def main() -> None:
     if ref_src is None:
         sys.exit(f"Reference clip '{ref_stem}' has a transcript but no audio.")
     to_wav(ref_src, REF_DIR / "hal_calm_reference.wav")
+    # Further stems in reference.txt are auxiliary references, blended in for timbre.
+    for old_aux in REF_DIR.glob("hal_aux_*.wav"):
+        old_aux.unlink()
+    aux = (ROOT / "reference.txt").read_text(encoding="utf-8").split()[1:] if (ROOT / "reference.txt").exists() else []
+    for i, stem in enumerate(aux, start=1):
+        clip = find_clip(stem)
+        if clip is None:
+            sys.exit(f"reference.txt names auxiliary '{stem}', which has no audio")
+        to_wav(clip, REF_DIR / f"hal_aux_{i}.wav")
+    if aux:
+        print(f"  auxiliary refs : {len(aux)} (voice-data/reference/hal_aux_*.wav)")
 
     print(f"  unique clips   : {n_clips}  (weighted to {n_items} training items)")
     print(f"  label file     : {LIST_FILE}")

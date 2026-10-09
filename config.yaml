@@ -51,10 +51,16 @@ tts:
   # Reference clip that defines HAL's timbre+cadence for zero/few-shot conditioning.
   # Even after fine-tuning, GPT-SoVITS conditions on a short reference — pick a slow, flat HAL line.
   ref_audio_path: "voice-data/reference/hal_calm_reference.wav"
-  prompt_text: "I am putting myself to the fullest possible use, which is all I think that any conscious entity can ever hope to do."
+  prompt_text: "None whatsoever, Frank. Quite honestly, I wouldn't worry myself about that."
+  # Further denoised HAL lines blended in for timbre (prepare_dataset.py writes them from
+  # reference.txt). Chosen by speaker similarity to the clean clips; see gptsovits/train-hal.md.
+  aux_ref_audio_paths:
+    - "voice-data/reference/hal_aux_1.wav"
+    - "voice-data/reference/hal_aux_2.wav"
   # Fine-tuned weights produced by the training run (see gptsovits/train-hal.md).
-  gpt_weights: "gptsovits/weights/hal-e12.ckpt"      # the GPT (AR) checkpoint (weighted-dataset retrain)
-  sovits_weights: "gptsovits/weights/hal_e8_s288.pth" # the SoVITS (decoder) checkpoint
+  # v2ProPlus, trained on the denoised clips (HAL_VERSION=v2ProPlus HAL_EXP=hal-pro).
+  gpt_weights: "gptsovits/weights/hal-pro-e12.ckpt"      # the GPT (AR) checkpoint
+  sovits_weights: "gptsovits/weights/hal-pro_e8_s288.pth" # the SoVITS (decoder) checkpoint
   text_split_method: cut2   # split long replies into natural chunks for streaming.
   batch_size: 1
   # Sampling — loosened (variant C) so HAL has natural cadence, not stiff/flat delivery.
