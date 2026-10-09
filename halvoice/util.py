@@ -42,11 +42,15 @@ class StateBus:
         self._q: "queue.Queue[tuple[str, float]]" = queue.Queue()
         self.state: State = "idle"
         self.level: float = 0.0
+        self.on_change = None   # called with the new state whenever it changes
 
     def set(self, state: State, level: float = 0.0) -> None:
+        changed = state != self.state
         self.state = state
         self.level = level
         self._q.put((state, level))
+        if changed and self.on_change:
+            self.on_change(state)
 
     def drain(self) -> tuple[State, float]:
         last = (self.state, self.level)

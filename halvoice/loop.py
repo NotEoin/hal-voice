@@ -75,6 +75,11 @@ class VoiceLoop:
             self.recorder = Recorder()
         if hasattr(self.brain, "on_deep_done"):
             self.brain.on_deep_done = self._deep_done
+        if self.cfg.get("ui.rgb_follow", False) and getattr(self.brain, "hub", None):
+            hub = self.brain.hub
+            # The lights show HAL's state through hal-rgb; a slow or missing light never holds up speech.
+            self.bus.on_change = lambda state: threading.Thread(
+                target=hub.call, args=("rgb_state", {"state": state}), daemon=True).start()
         self._speak_lock = threading.Lock()
 
     # -- UI --------------------------------------------------------------------

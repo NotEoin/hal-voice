@@ -224,6 +224,7 @@ ui:
   height: 480
   fullscreen: false
   eye_color: [220, 30, 20]  # HAL red.
+  rgb_follow: false         # true: RGB lights show HAL's state through hal-rgb (direct brain only).
   # States animate the lens: idle (slow breathe), listening (bright steady),
   # thinking (slow flicker), speaking (pulse with audio envelope).
 
