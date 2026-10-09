@@ -11,6 +11,7 @@ HAL has spoken. While HAL speaks, only his name counts, which interrupts him.
 from __future__ import annotations
 
 import collections
+import difflib
 import queue
 import re
 import threading
@@ -27,6 +28,7 @@ log = get_logger(__name__)
 FRAME_MS = 30           # webrtcvad accepts 10, 20 or 30 ms frames
 PRE_ROLL_MS = 360       # audio kept from before the detector fired
 MIN_SPEECH_MS = 240     # shorter bursts are clicks and coughs
+ECHO_TAIL_S = 0.6       # speech starting this soon after HAL stops is his own echo and reverb
 
 # Whisper's usual spellings of a spoken "Hal", alone or after a greeting.
 NAME = r"(?:hal|hall|hale|haul|howl|hull|hel|hell|al|owl|hel|hol)"
@@ -59,6 +61,8 @@ class Ears:
         self.interrupt = threading.Event()
         self.speaking = threading.Event()
         self._armed_until = 0.0         # a request without the name is accepted until then
+        self._quiet_since = 0.0         # when HAL last stopped speaking
+        self._said: collections.deque = collections.deque(maxlen=12)   # HAL's recent sentences
         self._stop = threading.Event()
         self._audio: "queue.Queue[np.ndarray]" = queue.Queue()
 
@@ -69,6 +73,19 @@ class Ears:
 
     def disarm(self) -> None:
         self._armed_until = 0.0
+
+    def spoke(self, sentence: str) -> None:
+        """Records a sentence HAL said, so it is not taken for the user when the mic hears it."""
+        self._said.append(sentence.lower())
+
+    def stopped_speaking(self) -> None:
+        self._quiet_since = time.time()
+
+    def _is_echo(self, text: str) -> bool:
+        """True when a transcript matches something HAL said: the mic heard the speakers."""
+        low = text.lower()
+        return any(difflib.SequenceMatcher(None, low, said).ratio() > 0.55 or (len(low) > 12 and low in said)
+                   for said in self._said)
 
     # -- threads ----------------------------------------------------------------
     def start(self) -> None:
@@ -111,7 +128,10 @@ class Ears:
                     silent += 1
                 if silent >= end_frames or len(voiced) >= max_frames:
                     if speech_frames * FRAME_MS >= MIN_SPEECH_MS:
-                        self._audio.put(np.concatenate(voiced).astype(np.float32) / 32768.0)
+                        began = time.time() - len(voiced) * FRAME_MS / 1000
+                        # Started while HAL was talking (or just after): mostly his own voice.
+                        overlapped = self.speaking.is_set() or began < self._quiet_since + ECHO_TAIL_S
+                        self._audio.put((np.concatenate(voiced).astype(np.float32) / 32768.0, overlapped))
                     voiced, speech_frames, silent = [], 0, 0
                     pre.clear()
 
@@ -120,11 +140,14 @@ class Ears:
         pending_name_at = 0.0
         while not self._stop.is_set():
             try:
-                audio = self._audio.get(timeout=0.5)
+                audio, overlapped = self._audio.get(timeout=0.5)
             except queue.Empty:
                 continue
             text = self.transcribe(audio, prompt="Hal,").strip()
             if not text or re.fullmatch(r"\W*(you|thank you|thanks for watching)?\W*", text, re.I):
+                continue
+            if self._is_echo(text):
+                log.debug("ignored (HAL's own voice): %r", text)
                 continue
             lead = LEADING.match(text)
             trail = TRAILING.search(text)
@@ -132,8 +155,8 @@ class Ears:
             request = text[lead.end():] if lead else text[:trail.start()] if trail else text
             request = request.strip(" ,.!?")
             now = time.time()
-            if self.speaking.is_set():
-                if named:
+            if self.speaking.is_set() or (overlapped and not named):
+                if named and not self._is_echo(text):
                     log.info("heard HAL's name while speaking: interrupting")
                     self.interrupt.set()
                     if request:

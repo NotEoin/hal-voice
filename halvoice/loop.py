@@ -123,6 +123,8 @@ class VoiceLoop:
                     if cancel.is_set():
                         break
                     log.info("HAL: %s", sentence)
+                    if self.ears:
+                        self.ears.spoke(sentence)
                     for seg in tts.synth_stream(sentence):
                         audio_q.put(seg)
             except Exception as e:  # noqa: BLE001 - a failed reply is logged, the loop carries on
@@ -153,6 +155,7 @@ class VoiceLoop:
         finally:
             stop_flag.set()
             if self.ears:
+                self.ears.stopped_speaking()
                 self.ears.speaking.clear()
         return finished
 

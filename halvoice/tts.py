@@ -154,9 +154,20 @@ def synth(text: str) -> tuple[np.ndarray, int]:
     return hal_fx.apply(full, sr), sr
 
 
+_client: "GPTSoVITSClient | None" = None
+
+
+def _shared_client() -> "GPTSoVITSClient":
+    """One client per process, so HAL's weights are sent to the server once, not per sentence."""
+    global _client
+    if _client is None:
+        _client = GPTSoVITSClient()
+    return _client
+
+
 def synth_stream(text: str) -> Iterator[tuple[np.ndarray, int]]:
     """Yield (audio, sr) per sentence, FX applied — lets the loop start playback early."""
-    client = GPTSoVITSClient()
+    client = _shared_client()
     for chunk in split_sentences(text):
         audio, sr = client.synth_raw(chunk)
         yield hal_fx.apply(gate_edges(audio, sr), sr), sr
