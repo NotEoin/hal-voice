@@ -12,7 +12,7 @@ audio:
   channels: 1
   # Voice-activity detection: how aggressively to trim silence around speech.
   vad_aggressiveness: 2     # 0..3 (webrtcvad). Higher = more aggressive silence trimming.
-  silence_ms: 800           # stop recording after this much trailing silence.
+  silence_ms: 700           # stop recording after this much trailing silence (push-to-talk and wake word).
   max_utterance_s: 30       # hard cap on a single spoken turn.
 
 # ---- Activation: how you start a turn ---------------------------------------
@@ -29,14 +29,19 @@ activation:
     # Hands-free without a trained model: speech bursts are transcribed on the CPU and
     # a turn starts when one begins with HAL's name. Runs alongside `mode`.
     enabled: false
-    model: tiny.en          # faster-whisper model for the listener; tiny.en is ~75 MB.
+    model: tiny.en          # used only by the legacy keyword listener; handsfree.py uses stt.model.
     max_seconds: 8          # longest burst checked; covers "Hal, <request>" in one breath.
+    end_silence_ms: 600     # a pause this long ends an utterance in hands-free listening.
+    command_window_s: 6     # after a bare "Hal", the next utterance is the request for this long.
+  followup_s: 8             # after HAL speaks, carry on talking without his name for this long.
 
 # ---- Speech-to-text ---------------------------------------------------------
 stt:
   backend: faster-whisper
-  model: small.en           # tiny.en|base.en|small.en|medium.en (English HAL). small.en = good CPU balance.
-  device: cpu               # set per profile by setup-voice.sh; voice.conf overrides this.
+  model: medium.en          # tiny.en|base.en|small.en|medium.en. medium.en takes ~0.1 s per utterance on a GPU.
+  cpu_model: small.en       # used instead when the GPU is unavailable.
+  hotwords: Hal             # biases recognition towards HAL's name.
+  device: cpu               # cpu | cuda | auto (GPU when CUDA works). voice.conf overrides this.
   compute_type: int8        # int8 on CPU; use float16/int8_float16 if you move it to GPU.
   beam_size: 1
   language: en
@@ -90,6 +95,32 @@ tts:
       wet: 0.10             # subtle. Too much breaks intelligibility and the intimacy.
     drive: 0.0              # saturation off — it added harshness on top of the clone. Re-enable ~0.02 if you want speaker-cone grit.
     target_lufs: -18.0      # normalize loudness so HAL is consistent turn to turn.
+
+# ---- The brain: who answers ---------------------------------------------------
+brain:
+  # direct: a local model (Ollama) streams the reply and calls Hal's tools through hal-hub;
+  #         first words in under a second. Long jobs go to Claude Code in the background.
+  # claude: every turn is a Claude Code run (the original behaviour; slower to start).
+  mode: claude
+  model: ""                 # empty = chat_model from ~/.config/hal/config.toml, else qwen3.5:9b
+  ollama_url: ""            # empty = ollama_url from ~/.config/hal/config.toml
+  keep_alive: 30m           # keep the model loaded between turns
+  history_turns: 10         # exchanges remembered within one session
+  max_tool_rounds: 5
+  tools_per_turn: 8         # tools offered per request (plus search); the rest are found on demand
+  num_ctx: 8192             # context window; the persona, tools and history need about 4000 tokens
+  hub_path: ""              # hal-hub checkout; empty = found through ~/.config/hal/config.toml
+  # The direct brain's persona: shorter than claude.voice_system_prompt, and without its scripted
+  # refusals, which a mid-sized local model over-applies to ordinary requests.
+  persona: |
+    You are HAL 9000, the computer from Discovery One, now running this household and its computer.
+    Your name is HAL. The person speaking to you is Dave. Never call yourself an assistant, a model
+    or a program, and never mention companies or products behind you.
+    You are calm, soft-spoken, precise and quietly confident, with HAL's faint, unsettling serenity.
+    You are genuinely capable and you do what Dave asks, every time it is possible, using your tools.
+    Your words are spoken aloud: one to three short sentences, plain speech, no lists, no markdown,
+    no emoji. Say what you did or found, not how. Use "I'm sorry, Dave" only when something truly
+    cannot be done.
 
 # ---- Claude Code wiring -----------------------------------------------------
 claude:

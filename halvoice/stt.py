@@ -106,35 +106,71 @@ class Recorder:
         return pcm16
 
 
+def _preload_cuda() -> None:
+    """Loads the cuBLAS and cuDNN wheels' libraries so CTranslate2 can find them.
+
+    The dynamic loader reads LD_LIBRARY_PATH only at process start, so the
+    nvidia-* pip packages' libraries are loaded explicitly, before CTranslate2.
+    """
+    import ctypes
+    import glob
+    import os
+    import site
+
+    for base in site.getsitepackages():
+        for pattern in ("nvidia/cublas/lib/libcublasLt.so.*", "nvidia/cublas/lib/libcublas.so.*",
+                        "nvidia/cudnn/lib/libcudnn*.so.*"):
+            for path in sorted(glob.glob(os.path.join(base, pattern))):
+                try:
+                    ctypes.CDLL(path, mode=ctypes.RTLD_GLOBAL)
+                except OSError:
+                    pass
+
+
 class Transcriber:
-    """Lazy faster-whisper wrapper. Loads the model once, reuses it."""
+    """Lazy faster-whisper wrapper. Loads the model once, reuses it.
+
+    `stt.device: auto` uses the GPU when CUDA works and falls back to the CPU.
+    """
 
     _model = None
+    _lock = __import__("threading").Lock()
 
     def __init__(self) -> None:
         cfg = config.load()
         self.model_name = str(cfg.get("stt.model", "small.en"))
         self.device = str(cfg.get("stt.device", "cpu"))
         self.compute_type = str(cfg.get("stt.compute_type", "int8"))
+        self.cpu_model = str(cfg.get("stt.cpu_model", "small.en"))
         self.beam_size = int(cfg.get("stt.beam_size", 1))
         self.language = cfg.get("stt.language", "en")
+        self.hotwords = cfg.get("stt.hotwords", "Hal")
 
     def _load(self):
-        if Transcriber._model is None:
-            from faster_whisper import WhisperModel
+        with Transcriber._lock:
+            if Transcriber._model is None:
+                from faster_whisper import WhisperModel
 
-            log.info("loading STT model %s (%s/%s)…", self.model_name, self.device, self.compute_type)
-            Transcriber._model = WhisperModel(
-                self.model_name, device=self.device, compute_type=self.compute_type)
+                if self.device in ("auto", "cuda"):
+                    _preload_cuda()
+                    try:
+                        ct = self.compute_type if self.compute_type != "int8" else "float16"
+                        log.info("loading STT model %s (cuda/%s)", self.model_name, ct)
+                        Transcriber._model = WhisperModel(self.model_name, device="cuda", compute_type=ct)
+                        return Transcriber._model
+                    except (RuntimeError, ValueError) as e:
+                        log.warning("STT on the GPU failed (%s); using the CPU", e)
+                log.info("loading STT model %s (cpu/int8)", self.cpu_model)
+                Transcriber._model = WhisperModel(self.cpu_model, device="cpu", compute_type="int8")
         return Transcriber._model
 
-    def transcribe(self, audio: np.ndarray) -> str:
+    def transcribe(self, audio: np.ndarray, prompt: str | None = None) -> str:
         if audio.size == 0:
             return ""
         model = self._load()
         segments, _info = model.transcribe(
-            audio, beam_size=self.beam_size, language=self.language,
-            vad_filter=False, condition_on_previous_text=False)
+            audio, beam_size=self.beam_size, language=self.language, initial_prompt=prompt,
+            hotwords=self.hotwords or None, vad_filter=False, condition_on_previous_text=False)
         return " ".join(s.text.strip() for s in segments).strip()
 
 

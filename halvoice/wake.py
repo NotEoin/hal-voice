@@ -198,7 +198,8 @@ class _Keyword:
 class Activator:
     """Combines the enabled triggers and exposes a single blocking wait()."""
 
-    def __init__(self) -> None:
+    def __init__(self, keyword: bool = True) -> None:
+        """`keyword=False` leaves name detection to handsfree.Ears, which the voice loop uses."""
         cfg = config.load()
         self.mode = str(cfg.get("activation.mode", "both"))
         self.ptt = None
@@ -208,7 +209,7 @@ class Activator:
             self.ptt = _PushToTalk(str(cfg.get("activation.push_to_talk_key", "space")))
         if self.mode in ("wake_word", "both") and cfg.get("activation.wake.enabled", True):
             self.wake = _WakeWord()
-        if cfg.get("activation.keyword.enabled", False):
+        if keyword and cfg.get("activation.keyword.enabled", False):
             self.keyword = _Keyword()
 
     def start(self) -> None:

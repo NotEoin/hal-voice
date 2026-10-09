@@ -19,7 +19,12 @@ default, or a local model if you point it at one.
 - **It starts speaking before it's finished thinking.** Replies are synthesised sentence by sentence
   as they're generated, so you hear the first words in about a second rather than waiting for the
   whole answer.
-- **Interrupt it whenever you like** — speaking again cuts it off mid-sentence.
+- **Talk at a normal pace.** Say "Hal" at the start or end of a sentence and the request is heard in
+  the same breath; after he answers, carry on for a few seconds without his name.
+- **A fast local brain with tools.** In `direct` mode a local model answers and calls the tools of
+  the Hal ecosystem itself (calendar, memory, computer, lights and more), with first words in about a
+  second. Long jobs go to Claude Code in the background.
+- **Interrupt it whenever you like**: say his name while he talks and he stops to listen.
 - **A red eye that reacts** — idle, listening, thinking, speaking.
 - **Your voice never leaves the machine.** Speech recognition and synthesis are both local. What
   Claude Code does with the transcript is between you and your existing setup.
@@ -61,6 +66,20 @@ and `.claude/` settings automatically. That is the whole integration mechanism:
 ```
 
 Set it permanently as `claude.project_dir` in [`config.yaml`](config.yaml).
+
+### Choosing a brain
+
+`brain.mode` decides who answers:
+
+- `claude` (the default) runs Claude Code for every turn, so HAL has that project's full toolset and
+  memory, at the cost of a few seconds' start-up per turn.
+- `direct` streams the reply from a local Ollama model and lets it call the tools of
+  [hal-hub](../../hal-ecosystem/hal-hub) directly, so first words arrive in about a second. Tasks with
+  many steps go to Claude Code through a `deep_work` tool, and HAL tells you when they finish.
+
+```bash
+HALVOICE_BRAIN_MODE=direct HALVOICE_BRAIN_MODEL=mistral-small3.2:24b ./hal-voice
+```
 
 It also pairs with [Hal](https://github.com/NotEoin/Hal) — a local Claude Code setup with an
 Obsidian vault as its memory. Point `claude.hal_root` at a Hal checkout (or run
@@ -157,9 +176,12 @@ don't have rights to is not okay.
 
 - **The trained wake word is unreliable.** openWakeWord detection is disabled by default, and its
   dependencies aren't installed; run `./setup-voice.sh --with-wake` to experiment. For hands-free
-  use, set `activation.keyword.enabled: true` instead: it transcribes short speech bursts on the
-  CPU and starts a turn when one begins with "Hal", taking any words after the name as the request.
-  It costs some CPU whenever someone is speaking nearby.
+  use, set `activation.keyword.enabled: true` instead: one microphone stream is cut into utterances,
+  each transcribed once (on the GPU with `stt.device: auto`), and a turn starts when one begins or
+  ends with "Hal". It costs some GPU or CPU time whenever someone is speaking nearby.
+- **The direct brain needs a model that calls tools reliably.** Smaller models tend to say they did
+  something instead of doing it; hal-voice holds back such replies and retries once, but a 20B-class
+  model with good tool use (mistral-small3.2 measured best here) is the practical minimum.
 - **It's not instant.** Streaming hides a lot of the delay, but synthesis still has to happen —
   and on the `cloud` (CPU) profile it runs slower than real time, so HAL pauses before answering.
 - **The voice effects are tuned to one voice.** Treat the defaults as a starting point.
