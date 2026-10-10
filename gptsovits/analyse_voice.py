@@ -132,6 +132,12 @@ def mapping(film: dict, cand: dict) -> np.ndarray:
     return out
 
 
+def speech_level(fr: dict) -> float:
+    """Mean loudness of the speech alone, so silent stretches (room noise or digital zero) don't count."""
+    db = fr["db"]
+    return float(np.mean(db[db > db.max() - 25]))
+
+
 def word_stats(fr: dict, start: int, end: int, line_db: float) -> dict:
     st = fr["st"][start:end]
     voiced = st[np.isfinite(st)]
@@ -198,7 +204,7 @@ def compare(name: str, y: np.ndarray, fp: dict, film_fr: dict) -> dict:
         if abs(d) > max(2.0, 1.5 * s):
             gaps.append((abs(d) / max(s, 1.0), f"spectrum at {f} Hz: {d:+.1f} dB vs film"))
     mel = melody(film_fr, fr, m)
-    film_db, cand_db = np.mean(film_fr["db"]), np.mean(fr["db"])
+    film_db, cand_db = speech_level(film_fr), speech_level(fr)
     rows, prev_end, prev_cend = [], None, None
     for word, s, e in FILM_WORDS:
         fs, fe = int(s / HOP), min(int(e / HOP), len(m) - 1)
@@ -239,7 +245,7 @@ def match(y: np.ndarray, fp: dict, film_fr: dict) -> dict:
     v, fr = voice(y), frames(y)
     m = mapping(film_fr, fr)
     mel = melody(film_fr, fr, m)
-    film_db, cand_db = np.mean(film_fr["db"]), np.mean(fr["db"])
+    film_db, cand_db = speech_level(film_fr), speech_level(fr)
     lens, louds, pause = [], [], 0.0
     prev_c = None
     for k, (word, s, e) in enumerate(FILM_WORDS):
