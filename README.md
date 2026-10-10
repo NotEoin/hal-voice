@@ -7,10 +7,10 @@
 
 > *"I am completely operational, and all my circuits are functioning perfectly."*
 
-Talk to [Claude Code](https://claude.ai/code) and have it answer out loud, in the voice of HAL 9000,
-with a red lens watching you from the corner of the screen. Speech recognition and synthesis always
-run on your own machine; the thinking is done by whatever Claude Code you already have — cloud by
-default, or a local model if you point it at one.
+Talk to Hal and have it answer out loud, in the voice of HAL 9000, with a red lens watching you
+from the corner of the screen. Speech recognition and synthesis always run on your own machine; the
+thinking is done by core Hal's local brain with the tools of your installed extensions, or by
+whatever [Claude Code](https://claude.ai/code) you already have.
 
 ![The eye reacting to what it's doing](./media/eye.gif)
 
@@ -21,9 +21,10 @@ default, or a local model if you point it at one.
   whole answer.
 - **Talk at a normal pace.** Say "Hal" at the start or end of a sentence and the request is heard in
   the same breath; after he answers, carry on for a few seconds without his name.
-- **A fast local brain with tools.** In `direct` mode a local model answers and calls the tools of
-  the Hal ecosystem itself (calendar, memory, computer, lights and more), with first words in about a
-  second. Long jobs go to Claude Code in the background.
+- **A fast local brain with tools.** In `direct` mode (the default) core Hal's brain answers with a
+  local model and calls the tools of the extensions installed through hal-hub (calendar, memory,
+  computer, lights and more), with first words in about a second. Long jobs go to Claude Code in the
+  background.
 - **Interrupt it whenever you like**: say his name while he talks and he stops to listen.
 - **A red eye that reacts** — idle, listening, thinking, speaking.
 - **Your voice never leaves the machine.** Speech recognition and synthesis are both local. What
@@ -38,18 +39,17 @@ default, or a local model if you point it at one.
 ## ℹ️ Overview
 
 ```
-push-to-talk  →  faster-whisper  →  Claude Code (cloud, or your local model)
+"Hal, ..."  →  faster-whisper  →  core Hal's brain + hal-hub tools (or Claude Code)
                                               ↓
                      speakers  ←  FX chain  ←  GPT-SoVITS
 ```
 
-You hold a key, ask a question, and it answers aloud. Underneath, speech is transcribed with
-faster-whisper, handed to Claude Code running headless, and the reply is streamed back out through
+You say HAL's name (or hold a key), ask a question, and it answers aloud. Underneath, speech is
+transcribed with faster-whisper, handed to the brain, and the reply is streamed back out through
 GPT-SoVITS and a small effects chain that gives it the right weight and room.
 
-hal-voice runs **no model of its own**. It is a voice on the front of a Claude Code session, so
-whatever that session can already do — your tools, your MCP servers, your project's memory — it can
-now do out loud.
+hal-voice runs **no language model of its own**. It is a voice on the front of a brain: core Hal's
+agent loop in `direct` mode, or a headless Claude Code session in `claude` mode.
 
 ### ✍️ Author
 
@@ -57,8 +57,9 @@ Built by [@NotEoin](https://github.com/NotEoin).
 
 ### Pointing it at a project
 
-Claude Code is launched *inside a directory*, and picks up that directory's `CLAUDE.md`, `.mcp.json`
-and `.claude/` settings automatically. That is the whole integration mechanism:
+In `claude` mode, Claude Code is launched *inside a directory*, and picks up that directory's
+`CLAUDE.md`, `.mcp.json` and `.claude/` settings automatically. By default that is the vault named in
+`~/.config/hal/config.toml` (`[hal].vault`), else the current directory. To choose another:
 
 ```bash
 ./hal-voice --project ~/code/my-project   # HAL gains that project's memory and tools
@@ -71,21 +72,26 @@ Set it permanently as `claude.project_dir` in [`config.yaml`](config.yaml).
 
 `brain.mode` decides who answers:
 
-- `claude` (the default) runs Claude Code for every turn, so HAL has that project's full toolset and
-  memory, at the cost of a few seconds' start-up per turn.
-- `direct` streams the reply from a local Ollama model and lets it call the tools of
-  [hal-hub](../../hal-ecosystem/hal-hub) directly, so first words arrive in about a second. Tasks with
-  many steps go to Claude Code through a `deep_work` tool, and HAL tells you when they finish.
+- `direct` (the default) uses core Hal's brain (`halcore.brain`, in `core/hal` of the ecosystem). It
+  streams the reply from a local Ollama model and calls the tools of the extensions installed
+  through hal-hub, so first words arrive in about a second. Tasks with many steps go to Claude Code
+  through a `deep_work` tool, and HAL tells you when they finish. The model and the other brain
+  settings come from `[brain]` in `~/.config/hal/config.toml`, shared with Hal's chat and Telegram;
+  `brain.*` in `config.yaml` overrides them for voice only, and keeps HAL's persona.
+- `claude` runs Claude Code for every turn, so HAL has that project's full toolset and memory, at the
+  cost of a few seconds' start-up per turn.
 
 ```bash
-HALVOICE_BRAIN_MODE=direct HALVOICE_BRAIN_MODEL=mistral-small3.2:24b ./hal-voice
+HALVOICE_BRAIN_MODEL=mistral-small3.2:24b ./hal-voice   # another model, for this run only
+HALVOICE_BRAIN_MODE=claude ./hal-voice                  # Claude Code for every turn
 ```
 
-It also pairs with [Hal](https://github.com/NotEoin/Hal) — a local Claude Code setup with an
-Obsidian vault as its memory. Point `claude.hal_root` at a Hal checkout (or run
-`./setup-voice.sh --hal auto`) and hal-voice reads that install's `hal.conf`, following its
-24GB/12GB/cloud profile automatically so you only choose once. To plug into a setup that isn't Hal,
-set `claude.env_file` to any `KEY=VALUE` file of `ANTHROPIC_*` settings.
+Core Hal is found at `HAL_CORE`, else at `core/hal` in the ecosystem folder, else at `[hal].core` in
+the shared config. Without it, `direct` mode logs why and falls back to `claude` mode.
+
+In `claude` mode it can also follow a [Hal](https://github.com/NotEoin/Hal) install's profile: point
+`claude.hal_root` at a checkout with a `hal.conf` (or run `./setup-voice.sh --hal auto`). To plug into
+a setup that isn't Hal, set `claude.env_file` to any `KEY=VALUE` file of `ANTHROPIC_*` settings.
 
 ## 🚀 Usage
 
@@ -96,7 +102,10 @@ set `claude.env_file` to any `KEY=VALUE` file of `ANTHROPIC_*` settings.
 ./hal-voice mcp          # run just the speak/listen MCP server
 ./hal-voice eye          # run the eye on its own
 ./hal-voice connection   # show which Claude Code setup it will drive, and why
+bin/hal-say "hello"      # speak a line if the voice server is up; silent in quiet hours
 ```
+
+Through hal-hub, other modules and the brain can speak with the `voice_say` tool.
 
 **Run `doctor` first.** Almost every problem in a voice pipeline turns out to be an audio device
 problem, and it'll tell you in two seconds.
@@ -115,18 +124,29 @@ HALVOICE_STT_MODEL=medium.en ./hal-voice  # more accurate transcription
 
 ## ⬇️ Installation
 
+hal-voice is a Hal ecosystem extension: it lives in `extensions/hal-voice` and is installed by the
+ecosystem installer, which also renders its systemd units:
+
 ```bash
-git clone https://github.com/NotEoin/hal-voice.git
-cd hal-voice
-./setup-voice.sh
+hal ext add voice
+cd ~/src/hal-ecosystem/extensions/hal-voice
+./setup-voice.sh          # the virtualenv, GPT-SoVITS and the voice profile
 ```
+
+The units in `systemd/` are templates: the installer replaces `@ROOT@` with this folder and `@CORE@`
+with core Hal's, and copies them to `~/.config/systemd/user`. `hal-tts.service` runs the GPT-SoVITS
+server and `hal-voice.service` the hands-free loop; both belong to `hal.target` and use the GPU, so
+`hal off` stops them.
+
+It still runs on its own (`git clone https://github.com/NotEoin/hal-voice.git`, then
+`./setup-voice.sh`), in `claude` mode.
 
 **Requirements:**
 
 | | |
 |---|---|
 | **OS** | Linux, with PulseAudio or PipeWire |
-| **Python** | 3.10–3.12. **Not 3.13+** — numpy 1.x has no wheels there, and parts of the audio stack still need it. `setup-voice.sh` finds a suitable interpreter, or falls back to conda |
+| **Python** | 3.10–3.12, and 3.11 or later for `direct` mode. **Not 3.13+** — numpy 1.x has no wheels there, and parts of the audio stack still need it. `setup-voice.sh` finds a suitable interpreter, or falls back to conda |
 | **System packages** | PortAudio and FFmpeg |
 | **GPU** | Optional — see the profiles below. Voice synthesis wants ~2GB of VRAM but will run on CPU |
 | **Hardware** | A working microphone and speakers |
@@ -180,7 +200,7 @@ don't have rights to is not okay.
   each transcribed once (on the GPU with `stt.device: auto`), and a turn starts when one begins or
   ends with "Hal". It costs some GPU or CPU time whenever someone is speaking nearby.
 - **The direct brain needs a model that calls tools reliably.** Smaller models tend to say they did
-  something instead of doing it; hal-voice holds back such replies and retries once, but a 20B-class
+  something instead of doing it; the brain holds back such replies and retries once, but a 20B-class
   model with good tool use (mistral-small3.2 measured best here) is the practical minimum.
 - **It's not instant.** Streaming hides a lot of the delay, but synthesis still has to happen —
   and on the `cloud` (CPU) profile it runs slower than real time, so HAL pauses before answering.
@@ -190,8 +210,8 @@ don't have rights to is not okay.
 
 ## 🔗 Related projects
 
-- **[Hal](https://github.com/NotEoin/Hal)** — a local Claude Code setup with an Obsidian vault as
-  its memory. hal-voice sits on top of it, or runs perfectly well without it.
+- **[Hal](https://github.com/NotEoin/Hal)** — a local assistant with an Obsidian vault as its memory.
+  Its brain answers in `direct` mode, and hal-hub gives it the tools of the other Hal extensions.
 
 ## 💭 Feedback and contributing
 
