@@ -47,3 +47,7 @@ CC-Session-Logs/
 
 # Logs / scratch
 *.log
+
+# Tuning runs: synthesised samples, scores and cached film measurements
+gptsovits/tuning/
+voice-data/reference.october-backup/

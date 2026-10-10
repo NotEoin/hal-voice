@@ -101,7 +101,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", choices=["raw", "denoised"], default="raw",
                         help="train on the clips as fetched, or on denoise.py's output")
-    AUDIO = DENOISED if parser.parse_args().source == "denoised" else SRC
+    parser.add_argument("--exclude", nargs="*", default=[], help="clip stems to hold out of training")
+    parser.add_argument("--keep-reference", action="store_true",
+                        help="leave voice-data/reference/ (the live voice's references) untouched")
+    args = parser.parse_args()
+    AUDIO = DENOISED if args.source == "denoised" else SRC
     if not AUDIO.exists():
         sys.exit(f"No clips at {AUDIO}. Run denoise.py first.")
     if not SRC.exists():
@@ -126,7 +130,7 @@ def main() -> None:
         if clip is None:
             missing.append(stem)
             continue
-        if weight <= 0:
+        if weight <= 0 or stem in args.exclude:
             excluded.append(stem)
             continue
 
@@ -147,6 +151,12 @@ def main() -> None:
         sys.exit("Nothing to train on - no clip matched a transcript.")
 
     LIST_FILE.write_text("\n".join(rows) + "\n", encoding="utf-8")
+
+    if args.keep_reference:
+        print(f"  unique clips   : {n_clips}  (weighted to {n_items} training items)")
+        print(f"  label file     : {LIST_FILE}")
+        print(f"  held out       : {', '.join(excluded) or 'nothing'}")
+        return
 
     ref_stem = pick_reference(transcripts)
     ref_src = find_clip(ref_stem)

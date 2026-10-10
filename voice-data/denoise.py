@@ -6,7 +6,11 @@ hum, then DeepFilterNet 3 to remove what noise is left, then an edge trim, short
 fades and loudness matching. prepare_dataset.py --source denoised trains on the
 result. Needs demucs, deepfilternet, soundfile and librosa (see train-hal.md).
 
-    python voice-data/denoise.py [--atten-db 40] [--only STEM ...]
+    python voice-data/denoise.py [--atten-db 40] [--no-demucs] [--out DIR] [--only STEM ...]
+
+Gentler cleaning keeps more of the voice's character: --no-demucs skips the
+separation step (the clips are mostly dialogue already) and a lower --atten-db
+limits how far DeepFilterNet may cut.
 """
 import argparse
 import sys
@@ -65,6 +69,8 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--atten-db", type=float, default=40.0,
                    help="most DeepFilterNet may attenuate; lower keeps more air in the voice")
+    p.add_argument("--no-demucs", action="store_true", help="skip separating the voice from music and hum")
+    p.add_argument("--out", type=Path, default=OUT, help=f"where the cleaned clips go (default {OUT.name}/)")
     p.add_argument("--only", nargs="*", help="clip stems to process")
     args = p.parse_args()
 
@@ -72,9 +78,9 @@ def main() -> None:
     from df.enhance import init_df
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    demucs_model = get_model("htdemucs").to(device).eval()
+    demucs_model = None if args.no_demucs else get_model("htdemucs").to(device).eval()
     df_model, df_state, _ = init_df()
-    OUT.mkdir(exist_ok=True)
+    args.out.mkdir(parents=True, exist_ok=True)
 
     clips = sorted(c for c in SRC.iterdir() if c.suffix in AUDIO_SUFFIXES)
     if args.only:
@@ -83,11 +89,12 @@ def main() -> None:
         sys.exit(f"no clips in {SRC}")
     for clip in clips:
         wav, sr = librosa.load(clip, sr=None, mono=True)
-        vocals = separate(demucs_model, wav, sr, device)
-        clean = enhance(df_model, df_state, vocals, demucs_model.samplerate, args.atten_db)
-        sf.write(OUT / f"{clip.stem}.wav", finish(clean, df_state.sr()), OUT_SR, subtype="PCM_16")
+        if demucs_model is not None:
+            wav, sr = separate(demucs_model, wav, sr, device), demucs_model.samplerate
+        clean = enhance(df_model, df_state, wav, sr, args.atten_db)
+        sf.write(args.out / f"{clip.stem}.wav", finish(clean, df_state.sr()), OUT_SR, subtype="PCM_16")
         print(f"  {clip.stem}", flush=True)
-    print(f"{len(clips)} clips written to {OUT}")
+    print(f"{len(clips)} clips written to {args.out}")
 
 
 if __name__ == "__main__":
