@@ -82,7 +82,7 @@ def find_clip(stem: str) -> Path | None:
 
 def to_wav(src: Path, dst: Path) -> None:
     """32 kHz mono 16-bit PCM, light high-pass to drop rumble."""
-    if src.parent == DENOISED:
+    if src.parent != SRC:
         # denoise.py already wrote clean 32 kHz PCM; filtering again would only colour it.
         shutil.copy2(src, dst)
         return
@@ -101,11 +101,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", choices=["raw", "denoised"], default="raw",
                         help="train on the clips as fetched, or on denoise.py's output")
+    parser.add_argument("--source-dir", type=Path, help="train on cleaned clips in this folder (overrides --source)")
     parser.add_argument("--exclude", nargs="*", default=[], help="clip stems to hold out of training")
     parser.add_argument("--keep-reference", action="store_true",
                         help="leave voice-data/reference/ (the live voice's references) untouched")
     args = parser.parse_args()
-    AUDIO = DENOISED if args.source == "denoised" else SRC
+    AUDIO = args.source_dir.resolve() if args.source_dir else DENOISED if args.source == "denoised" else SRC
     if not AUDIO.exists():
         sys.exit(f"No clips at {AUDIO}. Run denoise.py first.")
     if not SRC.exists():

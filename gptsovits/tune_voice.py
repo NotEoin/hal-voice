@@ -209,8 +209,9 @@ def run_pairs(run: str) -> list[tuple[str, str]]:
 def train(name: str, version: str, sovits_epochs: int, gpt_epochs: int, source: str) -> None:
     """Rebuilds the dataset without the target line, then trains a new model under `name`."""
     venv_py = ROOT / ".venv" / "bin" / "python"
+    where = ["--source", source] if source in ("raw", "denoised") else ["--source-dir", source]
     subprocess.run([str(venv_py if venv_py.exists() else "python3"), str(ROOT / "voice-data" / "prepare_dataset.py"),
-                    "--source", source, "--exclude", TARGET, "--keep-reference"], check=True)
+                    *where, "--exclude", TARGET, "--keep-reference"], check=True)
     env = {**os.environ, "HAL_EXP": name, "HAL_VERSION": version,
            "HAL_SOVITS_EPOCHS": str(sovits_epochs), "HAL_GPT_EPOCHS": str(gpt_epochs)}
     subprocess.run([sys.executable, str(HERE / "train_hal.py")], check=True, env=env)
@@ -237,7 +238,7 @@ def main() -> None:
     t.add_argument("--version", default="v2", choices=["v2", "v2Pro", "v2ProPlus"])
     t.add_argument("--sovits-epochs", type=int, default=16)
     t.add_argument("--gpt-epochs", type=int, default=20)
-    t.add_argument("--source", default="raw", choices=["raw", "denoised"])
+    t.add_argument("--source", default="raw", help="raw, denoised, or a folder of cleaned clips")
     sub.add_parser("report")
     sub.add_parser("self-check")
     args = ap.parse_args()
