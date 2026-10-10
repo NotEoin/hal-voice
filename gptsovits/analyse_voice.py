@@ -109,8 +109,10 @@ def frames(y: np.ndarray) -> dict:
     n = int(snd.duration / HOP)
     ts = (np.arange(n) + 0.5) * HOP
     f0 = np.array([pitch.get_value_at_time(t) for t in ts])
-    db = np.array([inten.get_value(t) for t in ts])
-    db = np.nan_to_num(db, nan=np.nanmin(db) if np.isfinite(np.nanmin(db)) else 0.0)
+    db = np.array([inten.get_value(t) for t in ts], dtype=float)
+    top = np.nanmax(db[np.isfinite(db)]) if np.isfinite(db).any() else 0.0
+    # Synthesised audio has true digital silence, which Praat reads as about -300 dB.
+    db = np.clip(np.nan_to_num(db, nan=top - 60, neginf=top - 60), top - 60, None)
     st = 12 * np.log2(f0 / 100.0)
     st[(db < db.max() - 15) | ~np.isfinite(st)] = np.nan
     mfcc = librosa.feature.mfcc(y=y.astype(np.float32), sr=SR, n_mfcc=14, hop_length=int(HOP * SR),
