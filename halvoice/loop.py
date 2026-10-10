@@ -12,7 +12,10 @@ The red-eye UI (if enabled) runs in its own thread and reflects the state via St
 
 from __future__ import annotations
 
+import logging
+import os
 import queue
+import sys
 import threading
 import time
 
@@ -252,6 +255,11 @@ class VoiceLoop:
 
 def main() -> None:
     VoiceLoop().run()
+    # CTranslate2's CUDA state crashes the interpreter's own teardown (SIGSEGV), which systemd
+    # records as a failure with a core dump; everything worth closing is closed by now.
+    logging.shutdown()
+    sys.stdout.flush()
+    os._exit(0)
 
 
 if __name__ == "__main__":
