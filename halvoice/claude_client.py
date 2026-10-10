@@ -9,7 +9,7 @@ Why headless instead of the interactive TUI: it gives us the assistant's text
 *deterministically* and *incrementally*, so HAL can start speaking sentence 1 while the
 model is still generating sentence 2.
 
-hal-voice runs no model itself — Claude Code is the brain in every configuration. Which
+In claude mode Claude Code is the brain (direct mode uses core Hal's; see brain.py). Which
 Claude Code, in which directory, and against which model is decided by halvoice/connect.py;
 by default that is "whatever Claude Code you already have, in the current directory".
 

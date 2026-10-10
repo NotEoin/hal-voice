@@ -98,18 +98,21 @@ tts:
 
 # ---- The brain: who answers ---------------------------------------------------
 brain:
-  # direct: a local model (Ollama) streams the reply and calls Hal's tools through hal-hub;
-  #         first words in under a second. Long jobs go to Claude Code in the background.
+  # direct: core Hal's brain (halcore) streams the reply from a local Ollama model and calls the
+  #         tools of the extensions installed through hal-hub; first words in about a second.
+  #         Long jobs go to Claude Code in the background. Needs core hal (see README).
   # claude: every turn is a Claude Code run (the original behaviour; slower to start).
-  mode: claude
-  model: ""                 # empty = chat_model from ~/.config/hal/config.toml, else qwen3.5:9b
-  ollama_url: ""            # empty = ollama_url from ~/.config/hal/config.toml
-  keep_alive: 30m           # keep the model loaded between turns
-  history_turns: 10         # exchanges remembered within one session
-  max_tool_rounds: 5
-  tools_per_turn: 8         # tools offered per request (plus search); the rest are found on demand
-  num_ctx: 8192             # context window; the persona, tools and history need about 4000 tokens
-  hub_path: ""              # hal-hub checkout; empty = found through ~/.config/hal/config.toml
+  mode: direct
+  # Empty values below leave the shared ~/.config/hal/config.toml in charge ([brain], then [hal]).
+  model: ""                 # empty = [brain].model, else [hal].chat_model
+  ollama_url: ""            # empty = [hal].ollama_url
+  keep_alive: ""            # how long the model stays loaded between turns; empty = [brain].keep_alive
+  history_turns: ""         # exchanges remembered within one session
+  max_tool_rounds: ""
+  tools_per_turn: ""        # tools offered per request (plus search); the rest are found on demand
+  num_ctx: ""               # context window; the persona, tools and history need about 4000 tokens
+  user_name: Dave           # how HAL addresses you in the tool rules; the persona below calls you Dave
+  hub_path: ""              # hal-hub checkout; empty = core/hal-hub beside core hal, or [hub].module_paths
   # The direct brain's persona: shorter than claude.voice_system_prompt, and without its scripted
   # refusals, which a mid-sized local model over-applies to ordinary requests.
   persona: |
@@ -134,7 +137,8 @@ claude:
   command: claude
 
   # ---- Where Claude Code runs ------------------------------------------------
-  # null = the directory you launched hal-voice from. This is the whole integration
+  # null = the vault in ~/.config/hal/config.toml ([hal].vault) when there is one, else the
+  # directory you launched hal-voice from. This is the whole integration
   # mechanism: Claude Code picks up that directory's CLAUDE.md, .mcp.json and .claude/
   # settings automatically. Point it at a Hal vault, or at any project of your own, and
   # HAL gains that project's memory and tools. Override per-run with --project DIR.

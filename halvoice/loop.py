@@ -49,10 +49,13 @@ def _accumulate_sentences(delta_iter):
 
 def make_brain():
     """Returns the configured brain: 'direct' (local model with tools) or 'claude' (Claude Code)."""
-    mode = str(config.load().get("brain.mode", "claude"))
+    mode = str(config.load().get("brain.mode", "direct"))
     if mode == "direct":
-        from .brain import DirectBrain
-        return DirectBrain()
+        from .brain import CoreNotFound, DirectBrain
+        try:
+            return DirectBrain()
+        except CoreNotFound as e:
+            log.error("%s. Falling back to claude mode.", e)
     from .claude_client import ClaudeSession
     return ClaudeSession()
 

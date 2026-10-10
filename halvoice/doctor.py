@@ -1,8 +1,8 @@
 """`hal-voice doctor` — check that everything voice-related is wired up and reachable.
 
-Verifies: python deps, audio I/O, the STT model, the GPT-SoVITS server + HAL weights,
-the reference clip, and Claude Code on PATH. Prints a tidy pass/fail report; exits non-zero
-if anything essential is missing.
+Verifies: python deps, audio I/O, the STT model, the direct brain (core hal, Ollama,
+hal-hub), the GPT-SoVITS server + HAL weights, the reference clip, and Claude Code on
+PATH. Prints a tidy pass/fail report; exits non-zero if anything essential is missing.
 """
 
 from __future__ import annotations
@@ -109,10 +109,37 @@ def _gptsovits_server():
     return f"reachable at {url}"
 
 
+def _direct() -> bool:
+    return str(config.load().get("brain.mode", "direct")) == "direct"
+
+
+def _brain():
+    """The direct brain: core hal, its model in Ollama, and the tools hal-hub found."""
+    if not _direct():
+        raise _Warn("brain.mode is claude: every turn is a Claude Code run")
+    import json
+    import urllib.request
+
+    from . import brain
+    core = brain.find_core()
+    b = brain.direct_brain()
+    try:
+        with urllib.request.urlopen(f"{b.url}/api/tags", timeout=3) as r:
+            names = {m["name"] for m in json.loads(r.read()).get("models", [])}
+    except OSError as e:
+        raise Exception(f"Ollama not reachable at {b.url}: {e}")
+    if b.model not in names and f"{b.model}:latest" not in names:
+        raise Exception(f"model {b.model} is not in Ollama (ollama pull {b.model})")
+    tools = f"{len(b.hub.all_tools())} tools" if b.hub else "no tools (hal-hub not found)"
+    return f"core hal at {core}; {b.model} via {b.url}; {tools}"
+
+
 def _claude():
     if not shutil.which(str(config.load().get("claude.command", "claude"))):
-        raise Exception("Claude Code ('claude') not on PATH — install it from "
-                        "https://claude.com/claude-code")
+        msg = "Claude Code ('claude') not on PATH — install it from https://claude.com/claude-code"
+        if _direct():
+            raise _Warn(msg + " (direct mode needs it only for long background jobs)")
+        raise Exception(msg)
     return "claude on PATH"
 
 
@@ -145,6 +172,7 @@ def main() -> None:
         _check("audio devices", _audio),
         _check("voice profile", _voice_profile),
         _check("speech-to-text", _stt_model),
+        _check("brain", _brain),
         _check("Claude Code", _claude),
         _check("Claude Code connection", _connection),
         _check("GPT-SoVITS server", _gptsovits_server),

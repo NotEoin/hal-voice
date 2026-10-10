@@ -2,7 +2,7 @@
 #
 # hal-voice — a HAL-9000 voice for Claude Code: speak to it, it answers aloud.
 #
-#   hal-voice              start the voice loop (wake word + push-to-talk → Claude Code → spoken reply)
+#   hal-voice              start the voice loop (wake word + push-to-talk → the brain → spoken reply)
 #   hal-voice repl         alias for the default voice loop
 #   hal-voice mcp          run ONLY the MCP speak/listen server (for use inside a normal `hal` TUI)
 #   hal-voice tts "text"   one-shot: synthesize + speak a line in HAL's voice (no Claude, no mic)
@@ -13,13 +13,12 @@
 #   hal-voice connection   show which Claude Code setup it will drive, and why
 #   hal-voice help         show this help
 #
-# Global option:  --project DIR   run Claude Code in DIR (its CLAUDE.md / .mcp.json apply)
+# Global option:  --project DIR   run Claude Code in DIR (claude mode; default: [hal].vault)
 #
-# SELF-CONTAINED. hal-voice runs no model of its own: it records you, hands the words to
-# Claude Code, and speaks the reply in HAL's voice. Out of the box that means whatever
-# Claude Code you already have logged in, running in the current directory — so it works
-# on its own with zero configuration. Point it at a project (or at a Hal vault) with
-# --project, config.yaml's claude.project_dir, or claude.hal_root. See halvoice/connect.py.
+# hal-voice runs no language model of its own: it records you, hands the words to a brain,
+# and speaks the reply in HAL's voice. In direct mode (the default) that brain is core Hal's
+# (halcore, found through HAL_CORE or the ecosystem layout) with the hal-hub tools; in claude
+# mode it is Claude Code, run headless. See README.md and halvoice/connect.py.
 #
 set -uo pipefail
 
