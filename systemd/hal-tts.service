@@ -1,0 +1,14 @@
+[Unit]
+Description=Hal voice server (GPT-SoVITS)
+PartOf=hal.target
+RequiresMountsFor=/mnt/data
+X-HalGPU=yes
+
+[Service]
+WorkingDirectory=@ROOT@
+ExecStart=@ROOT@/gptsovits/run-api.sh
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=hal.target

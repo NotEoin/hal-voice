@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Speaks a line in HAL's voice if the voice server is running; silent otherwise.
+#
+#   hal-say "text"
+set -uo pipefail
+
+VOICE="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+QUIET_FROM="${HAL_QUIET_FROM:-22}"
+QUIET_UNTIL="${HAL_QUIET_UNTIL:-8}"
+
+hour=$((10#$(date +%H)))
+if [ "$hour" -ge "$QUIET_FROM" ] || [ "$hour" -lt "$QUIET_UNTIL" ]; then
+  exit 0
+fi
+# The server answers 404 on / when it is up; curl fails only when it is down.
+curl -s -o /dev/null -m 2 http://127.0.0.1:9880/ || exit 0
+exec "$VOICE/hal-voice" tts "$*"

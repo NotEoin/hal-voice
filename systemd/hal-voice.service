@@ -1,0 +1,28 @@
+[Unit]
+Description=Hal voice loop, hands-free
+PartOf=hal.target graphical-session.target
+After=hal-tts.service graphical-session.target
+Wants=hal-tts.service
+X-HalGPU=yes
+
+[Service]
+WorkingDirectory=@ROOT@
+# Push-to-talk cannot read global keys under Wayland, so listen for HAL's name only.
+Environment=HALVOICE_ACTIVATION_MODE=wake_word
+Environment=HALVOICE_ACTIVATION_KEYWORD_ENABLED=true
+# The brain is core hal's; its model comes from [brain].model in ~/.config/hal/config.toml.
+Environment=HAL_CORE=@CORE@
+# hal-voice's virtualenv Python has no CA bundle of its own.
+Environment=SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+# The user manager's PATH omits npm's global bin, where the claude CLI lives.
+Environment=PATH=%h/.npm-global/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+# Claude Code runs in [hal].vault from the shared config, so no --project is needed.
+ExecStart=@ROOT@/hal-voice
+# The loop shuts down on KeyboardInterrupt; SIGTERM leaves the audio threads hanging.
+KillSignal=SIGINT
+TimeoutStopSec=15
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=hal.target
