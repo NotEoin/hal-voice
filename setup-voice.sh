@@ -17,13 +17,12 @@
 #
 # TWO SEPARATE QUESTIONS, and it matters that they're separate:
 #
-# 1. WHO THINKS?  hal-voice runs no model of its own — it always drives Claude Code.
-#    Out of the box that is whatever Claude Code you already have logged in, so this
-#    works on a laptop with no GPU. To use a LOCAL model instead, point it at an
-#    install that already made that choice: `--hal <path>` reads that install's
-#    hal.conf, so you pick 24gb/12gb/cloud once in Hal and hal-voice follows. For a
-#    setup that isn't Hal, set claude.env_file in config.yaml to any KEY=VALUE file
-#    of ANTHROPIC_* settings. Full order: halvoice/connect.py.
+# 1. WHO THINKS?  By default (brain.mode: direct) core Hal's brain answers: a local
+#    model that calls the tools of your extensions, set in ~/.config/hal/config.toml.
+#    brain.mode: claude drives Claude Code instead; `--hal <path>` then reads that
+#    install's hal.conf so Claude Code uses the same local model, and claude.env_file
+#    in config.yaml takes any KEY=VALUE file of ANTHROPIC_* settings for other setups.
+#    Full order: halvoice/connect.py.
 #
 # 2. WHO SPEAKS?  That is what --profile below controls, and it is about VRAM:
 #

@@ -2,6 +2,8 @@
 name = "voice"
 summary = "Talk to Hal out loud: wake word, local speech recognition and HAL's voice"
 exec = ["{root}/.venv/bin/python", "-m", "halvoice.tools", "--stdin"]
+# `hal ext add voice` runs this: the venv, the speech models and GPT-SoVITS (several GB).
+install = ["{root}/setup-voice.sh", "--yes", "--with-wake"]
 
 [[tools]]
 name = "voice_say"
