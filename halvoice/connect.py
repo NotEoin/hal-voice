@@ -148,6 +148,20 @@ def _from_hal_conf(hal_root: Path) -> tuple[dict[str, str], str | None]:
     return values, str(vault) if vault.is_dir() else None
 
 
+def _shared_vault() -> str | None:
+    """Returns [hal].vault from ~/.config/hal/config.toml when that folder exists."""
+    try:
+        import tomllib  # Python 3.11+; without it there is no shared vault to find
+    except ImportError:
+        return None
+    path = Path(os.environ.get("HAL_CONFIG", "~/.config/hal/config.toml")).expanduser()
+    try:
+        vault = tomllib.loads(path.read_text()).get("hal", {}).get("vault")
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+    return vault if vault and Path(vault).expanduser().is_dir() else None
+
+
 def resolve() -> Connection:
     """Figure out where and how to run Claude Code. Safe to call repeatedly."""
     cfg = config.load()
@@ -207,8 +221,11 @@ def resolve() -> Connection:
         sources.append("inherited from your environment")
 
     # --- project dir --------------------------------------------------------
-    # HAL_VAULT is still honoured so older setups keep working unchanged.
-    project_dir = project_dir or os.environ.get("HAL_VAULT") or os.getcwd()
+    # HAL_VAULT is still honoured so older setups keep working unchanged; then the vault
+    # named in the shared Hal config, so a service needs no --project.
+    if not project_dir and not os.environ.get("HAL_VAULT") and _shared_vault():
+        sources.append("[hal].vault (~/.config/hal/config.toml)")
+    project_dir = project_dir or os.environ.get("HAL_VAULT") or _shared_vault() or os.getcwd()
     # Always absolute: this becomes a subprocess cwd, so a relative path would depend on
     # where hal-voice was launched from.
     project_dir = str(Path(project_dir).expanduser().resolve())
