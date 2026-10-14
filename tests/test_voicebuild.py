@@ -2,6 +2,7 @@
 
 Run with: python3 -m unittest discover -s tests
 """
+
 import sys
 import unittest
 from pathlib import Path
@@ -103,12 +104,14 @@ class CueTest(unittest.TestCase):
 class StreamTest(unittest.TestCase):
     def streams(self):
         S = media.Stream
-        return [S(1, "audio", "aac", "eng", "", 6, "5.1", default=True),
-                S(2, "audio", "aac", "eng", "Commentary", 2, "stereo"),
-                S(3, "subtitle", "dvd_subtitle", "eng", ""),
-                S(4, "subtitle", "subrip", "eng", "Forced", forced=True),
-                S(5, "subtitle", "subrip", "eng", "English SDH", hearing_impaired=True),
-                S(6, "subtitle", "subrip", "fre", "")]
+        return [
+            S(1, "audio", "aac", "eng", "", 6, "5.1", default=True),
+            S(2, "audio", "aac", "eng", "Commentary", 2, "stereo"),
+            S(3, "subtitle", "dvd_subtitle", "eng", ""),
+            S(4, "subtitle", "subrip", "eng", "Forced", forced=True),
+            S(5, "subtitle", "subrip", "eng", "English SDH", hearing_impaired=True),
+            S(6, "subtitle", "subrip", "fre", ""),
+        ]
 
     def test_picks_dialogue_track_and_full_english_text_subtitles(self):
         self.assertEqual(media.pick_audio(self.streams()).index, 1)
@@ -120,15 +123,20 @@ class StreamTest(unittest.TestCase):
 
     def test_centre_channel_for_surround(self):
         S = media.Stream
-        self.assertEqual(media.dialogue_filter(S(0, "audio", "ac3", "eng", "", 6, "5.1(side)")), "pan=mono|c0=FC")
+        self.assertEqual(
+            media.dialogue_filter(S(0, "audio", "ac3", "eng", "", 6, "5.1(side)")), "pan=mono|c0=FC"
+        )
         self.assertIn("0.5*c0", media.dialogue_filter(S(0, "audio", "aac", "eng", "", 2, "stereo")))
 
 
 def film(offset: float, drift: float, jump_at: float = 1e9, jump: float = 0.0, slip: bool = False):
     """Returns subtitle cues and recognised words for a synthetic film with known timing errors."""
     import random
+
     rnd = random.Random(1)
-    vocab = "open the pod bay doors hal i am sorry dave afraid cannot do that mission important".split()
+    vocab = (
+        "open the pod bay doors hal i am sorry dave afraid cannot do that mission important".split()
+    )
     cues, words = [], []
     for n in range(60):
         t = 30.0 + n * 40.0
@@ -139,7 +147,9 @@ def film(offset: float, drift: float, jump_at: float = 1e9, jump: float = 0.0, s
         cues.append(subtitles.Cue(start=t, end=t + 0.4 * len(said), text=text, cue=n))
         real = t + offset + drift * t + (jump if t > jump_at else 0.0)
         for k, w in enumerate(said):
-            words.append({"start": real + 0.4 * k, "end": real + 0.4 * k + 0.3, "word": w, "prob": 0.9})
+            words.append(
+                {"start": real + 0.4 * k, "end": real + 0.4 * k + 0.3, "word": w, "prob": 0.9}
+            )
     return cues, words
 
 
@@ -159,13 +169,32 @@ class SyncTest(unittest.TestCase):
         self.assertTrue(all(abs(ln.start - (c.start + 3.0)) < 0.01 for ln, c in late))
 
     def test_ocr_slips_take_the_heard_word(self):
-        self.assertEqual(sync.correct("The radio ts still dead.", ["the", "radio", "is", "still", "dead"]),
-                         "The radio is still dead.")
-        self.assertEqual(sync.correct("Imagine what we fold them.", ["imagine", "what", "we", "told", "them"]),
-                         "Imagine what we told them.")
+        self.assertEqual(
+            sync.correct("The radio ts still dead.", ["the", "radio", "is", "still", "dead"]),
+            "The radio is still dead.",
+        )
+        self.assertEqual(
+            sync.correct("Imagine what we fold them.", ["imagine", "what", "we", "told", "them"]),
+            "Imagine what we told them.",
+        )
+
+    def test_short_ocr_slips_become_i(self):
+        self.assertEqual(
+            sync.correct(
+                "! enjoy working with people.", ["i", "enjoy", "working", "with", "people"]
+            ),
+            "I enjoy working with people.",
+        )
+        self.assertEqual(
+            sync.tidy("...whether you might be having second thoughts..."),
+            "Whether you might be having second thoughts.",
+        )
 
     def test_lines_without_subtitles(self):
-        words = [{"start": 0.0, "end": 0.3, "word": "Hello.", "prob": 1}, {"start": 2.0, "end": 2.3, "word": "Dave", "prob": 1}]
+        words = [
+            {"start": 0.0, "end": 0.3, "word": "Hello.", "prob": 1},
+            {"start": 2.0, "end": 2.3, "word": "Dave", "prob": 1},
+        ]
         self.assertEqual(len(sync.from_transcript(words)), 2)
 
 
