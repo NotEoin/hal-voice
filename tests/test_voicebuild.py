@@ -345,17 +345,17 @@ class MonologueTest(unittest.TestCase):
 
 
 class SignatureLineTest(unittest.TestCase):
-    def build(self, d, hold_out):
+    def build(self, d, hold_out, verbatim=False):
         import json
 
         from voicebuild import build
 
         film = Path(d, "film.mkv")
-        b = build.Build(films=[film], subtitles=[], work=Path(d, "work"), hold_out=hold_out)
-        texts = {
-            "sorry": "I'm sorry, Dave. I'm afraid I can't do that.",
-            "other": "Good evening, Dave.",
-        }
+        b = build.Build(
+            films=[film], subtitles=[], work=Path(d, "work"), hold_out=hold_out, verbatim=verbatim
+        )
+        sorry = "I'm sorry, Dave. I'm afraid I can't do that."
+        texts = {build.clip_name(sorry, set()): sorry, "good-evening-dave": "Good evening, Dave."}
         cleaned = {}
         for k in texts:
             wav = Path(d, f"{k}.wav")
@@ -390,6 +390,21 @@ class SignatureLineTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             rows = self.build(d, hold_out=True)
         self.assertEqual(rows, ['good-evening-dave,"Good evening, Dave.",1'])
+
+    def test_verbatim_trains_on_what_is_heard(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as d:
+            rows = self.build(d, hold_out=True, verbatim=True)
+        self.assertEqual(rows, ['good-evening-dave,"Good evening, Dave.",1'])
+
+    def test_last_checkpoint_is_by_epoch_not_name(self):
+        from voicebuild import build
+
+        gpts = [Path(f"hal-film-v2-e{n}.ckpt") for n in (12, 4, 8)]
+        sovs = [Path(f"hal-film-v2_e{n}_s{n * 24}.pth") for n in (4, 8, 12)]
+        self.assertEqual(build.last(sorted(gpts)).name, "hal-film-v2-e12.ckpt")
+        self.assertEqual(build.last(sorted(sovs)).name, "hal-film-v2_e12_s288.pth")
 
 
 class ExcludeTest(unittest.TestCase):

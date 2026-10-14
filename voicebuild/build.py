@@ -1,9 +1,9 @@
 """Runs the voice build from film to installed weights, one cached stage at a time.
 
 Stages: find (lines HAL speaks clearly, per film), clean (Demucs and DeepFilterNet, in the
-denoise environment), dataset, train (GPT-SoVITS), select (the checkpoint and reference clip
-whose speech is closest to a held-out line from the film) and install (into config.yaml, with
-the previous voice kept). Every stage writes its result into the work folder, so a run that
+denoise environment), dataset, train (GPT-SoVITS), select (the checkpoints, reference clip and
+pace, with samples to compare with the film) and install (into config.yaml, with the previous
+voice kept). Every stage writes its result into the work folder, so a run that
 stops resumes where it left off.
 """
 
@@ -35,6 +35,10 @@ MIN_SNR_DB = 10.0
 MAX_SPOKEN_GAP = 0.5  # share of subtitle words a line's own transcript may differ by
 SIGNATURE_WEIGHT = 3  # times "I'm sorry, Dave" appears in training, so its delivery is learnt
 MUFFLED_DB = 10.0  # less 4-8 kHz energy than the film's typical HAL line: speaker or radio
+# How the chosen voice speaks: the pace and sampling it was chosen at by ear. With these and
+# "I'm sorry, Dave" as its reference, the voice says that line as the film does.
+SPEED = 0.92
+SAMPLING = {"top_k": 15, "top_p": 0.9, "temperature": 0.8}
 
 
 @dataclass
@@ -50,6 +54,7 @@ class Build:
     use_ocr: bool = False
     install: bool = True
     hold_out: bool = False
+    verbatim: bool = False
     exclude: list[str] = field(default_factory=list)
     denoise_python: str = ""
     log: list[str] = field(default_factory=list)
@@ -311,40 +316,54 @@ def dataset(b: Build) -> None:
     "I'm sorry, Dave. I'm afraid I can't do that." is trained on, weighted, so HAL says it the
     way the film does, and the selection then judges how closely each voice reproduces it. With
     --hold-out it is left out instead, and the selection judges a line the voice never heard.
+
+    The training text is the subtitle's, as for the chosen voice; with --verbatim it is what
+    each clip is heard to say instead.
     """
     from . import quality, sync
     from .sync import tokens
-    from .verbatim import Verbatim
 
     ds = b.path("dataset", "transcripts.csv").parent
     for old in ds.glob("*.wav"):
         old.unlink()
+    b.path("spoken.json").unlink(missing_ok=True)
     ok, why = usable(b)
-    # The training text is what HAL says in exactly the audio trained on, so each cleaned clip is
-    # transcribed again; subtitles condense speech.
-    b.say("writing down each clip as spoken")
-    verbatim, taken, spoken = Verbatim(b.asr_model), set(), {}
+    verbatim, taken, spoken = None, set(), {}
+    if b.verbatim:
+        from .verbatim import Verbatim
+
+        # Each cleaned clip is transcribed again, so the text is what HAL says in exactly the
+        # audio trained on; subtitles condense speech.
+        b.say("writing down each clip as spoken")
+        verbatim = Verbatim(b.asr_model)
     rows, held, seconds = [], None, 0.0
-    for cid, (it, c) in sorted(ok.items(), key=lambda kv: kv[1][0]["start"]):
-        said = sync.tidy(verbatim.clip(Path(c["path"]), it["text"]))
-        gap = quality.word_error(tokens(it["text"]), tokens(said))
-        if not said or gap > MAX_SPOKEN_GAP:
-            why[cid] = f"heard as '{said}', too far from the subtitle"
-            continue
+    # The default order and names are those the chosen voice was trained with; the order sets
+    # how GPT-SoVITS shuffles the clips, so it is kept for the same voice.
+    order = (lambda kv: kv[1][0]["start"]) if b.verbatim else (lambda kv: kv[0])
+    for cid, (it, c) in sorted(ok.items(), key=order):
+        said = it["text"]
+        if verbatim:
+            said = sync.tidy(verbatim.clip(Path(c["path"]), it["text"]))
+            gap = quality.word_error(tokens(it["text"]), tokens(said))
+            if not said or gap > MAX_SPOKEN_GAP:
+                why[cid] = f"heard as '{said}', too far from the subtitle"
+                continue
         weight = 1
         if held is None and " ".join(tokens(it["text"])) == HELD_OUT:
             held = (c["path"], it)
             if b.hold_out:
                 continue
             weight = SIGNATURE_WEIGHT
-        name = clip_name(said, taken)
+        name = clip_name(said, taken) if verbatim else cid
         shutil.copy2(c["path"], ds / f"{name}.wav")
         rows.append((name, said, weight))
-        spoken[name] = {"spoken": said, "subtitle": it["text"], "start": it["start"]}
         seconds += c["seconds"]
-    b.path("spoken.json").write_text(json.dumps(spoken, indent=1))
-    verbatim = None
-    release_gpu()
+        if verbatim:
+            spoken[name] = {"spoken": said, "subtitle": it["text"], "start": it["start"]}
+    if verbatim:
+        b.path("spoken.json").write_text(json.dumps(spoken, indent=1))
+        verbatim = None
+        release_gpu()
     with (ds / "transcripts.csv").open("w", newline="", encoding="utf-8") as fh:
         csv.writer(fh).writerows(rows)
     if held:
@@ -520,13 +539,12 @@ def synth(server: Server, text: str, ref: tuple[Path, str], speed: float) -> "ob
             "ref_audio_path": str(ref[0]),
             "prompt_text": ref[1],
             "prompt_lang": "en",
-            "text_split_method": "cut4",
+            # Each request is one line said whole; splitting it lets a sentence drop out.
+            "text_split_method": "cut0",
             "batch_size": 1,
             "media_type": "wav",
             "streaming_mode": False,
-            "top_k": 15,
-            "top_p": 0.9,
-            "temperature": 0.8,
+            **SAMPLING,
             "speed_factor": speed,
             "fragment_interval": 0.3,
         },
@@ -537,8 +555,18 @@ def synth(server: Server, text: str, ref: tuple[Path, str], speed: float) -> "ob
     return np.asarray(librosa.resample(y, orig_sr=sr, target_sr=16000), dtype=np.float64)
 
 
+def last(paths: list[Path]) -> Path:
+    """Returns the checkpoint of the latest epoch; names sort e12 before e4."""
+    return max(paths, key=lambda p: int(re.search(r"[-_]e(\d+)(?:_s\d+)?$", p.stem).group(1)))
+
+
 def select(b: Build) -> None:
-    """Scores each checkpoint and reference against the held-out line; saves the best's samples."""
+    """Chooses the checkpoints, reference clip and pace, and saves samples beside the film's line.
+
+    By default this is the chosen voice's recipe: the last checkpoints, "I'm sorry, Dave" itself
+    as the reference, and SPEED. With --hold-out the voice has never heard that line, so every
+    checkpoint pair and calm reference is scored on how closely it says it instead.
+    """
     import numpy as np
     import soundfile as sf
 
@@ -554,97 +582,103 @@ def select(b: Build) -> None:
             "no held-out line to judge against; add a film with 'I'm sorry, Dave...' in it"
         )
     held = json.loads(b.path("held-out.json").read_text())
-    clips = sorted(b.path("dataset", "transcripts.csv").parent.glob("*.wav"))
-    fp = av.fingerprint(clips)
     asr = WhisperModel(b.asr_model, device="cuda", compute_type="float16")
-    target = av.load(b.path("held-out.wav"))
-    film_fr = av.frames(target)
-    segs, _ = asr.transcribe(target.astype(np.float32), language="en", word_timestamps=True)
-    ws = [w for s in segs for w in s.words]
-    film_words = [
-        (
-            w.word.strip().lower(),
-            w.start,
-            max(w.end, ws[k + 1].start - 0.02) if k + 1 < len(ws) else len(target) / 16000 - 0.1,
-        )
-        for k, w in enumerate(ws)
-    ]
 
-    def score(y) -> dict:
-        m = av.match(y, fp, film_fr, film_words)
+    def errors(y, text: str) -> float:
         said = asr.transcribe(y.astype(np.float32), language="en", beam_size=1)[0]
-        return m, word_error(tokens(held["text"]), tokens(" ".join(s.text for s in said)))
+        return word_error(tokens(text), tokens(" ".join(s.text for s in said)))
+
+    def checked(text: str, ref: tuple[Path, str], speed: float, tries: int = 4):
+        """Says a line until the recogniser hears it whole; a take can lose its place."""
+        best = None
+        for _ in range(tries):
+            y = synth(server, text, ref, speed)
+            wer = errors(y, text)
+            if best is None or wer < best[1]:
+                best = (y, wer)
+            if wer <= 0.15:
+                break
+        return best
+
+    def use(gpt, sov) -> None:
+        urllib.request.urlopen(f"{server.url}/set_gpt_weights?weights_path={gpt}", timeout=180)
+        urllib.request.urlopen(f"{server.url}/set_sovits_weights?weights_path={sov}", timeout=180)
 
     results = []
     server = Server()
     try:
-        refs = references(b)
         pairs = checkpoints(b)
-        b.say(f"selecting from {len(pairs)} checkpoint pairs and {len(refs)} reference clips")
-        for gpt, sov in pairs:
-            urllib.request.urlopen(f"{server.url}/set_gpt_weights?weights_path={gpt}", timeout=180)
-            urllib.request.urlopen(
-                f"{server.url}/set_sovits_weights?weights_path={sov}", timeout=180
-            )
-            for ref in refs:
-                for speed in (0.92, 1.0):
-                    takes = [score(synth(server, held["text"], ref, speed)) for _ in range(2)]
-                    novel = [
-                        word_error(
-                            tokens(t),
-                            tokens(
-                                " ".join(
-                                    s.text
-                                    for s in asr.transcribe(
-                                        synth(server, t, ref, speed).astype(np.float32),
-                                        language="en",
-                                        beam_size=1,
-                                    )[0]
-                                )
-                            ),
+        if not b.hold_out:
+            best = {
+                "gpt": str(last([g for g, _ in pairs])),
+                "sovits": str(last([s for _, s in pairs])),
+                "ref": str(b.path("held-out.wav")),
+                "prompt": held["text"],
+                "speed": SPEED,
+            }
+            b.say(f"using {Path(best['gpt']).name} and {Path(best['sovits']).name}")
+        else:
+            clips = sorted(b.path("dataset", "transcripts.csv").parent.glob("*.wav"))
+            fp = av.fingerprint(clips)
+            target = av.load(b.path("held-out.wav"))
+            film_fr = av.frames(target)
+            segs, _ = asr.transcribe(target.astype(np.float32), language="en", word_timestamps=True)
+            ws = [w for s in segs for w in s.words]
+            film_words = [
+                (
+                    w.word.strip().lower(),
+                    w.start,
+                    max(w.end, ws[k + 1].start - 0.02)
+                    if k + 1 < len(ws)
+                    else len(target) / 16000 - 0.1,
+                )
+                for k, w in enumerate(ws)
+            ]
+            refs = references(b)
+            b.say(f"selecting from {len(pairs)} checkpoint pairs and {len(refs)} reference clips")
+            for gpt, sov in pairs:
+                use(gpt, sov)
+                for ref in refs:
+                    for speed in (SPEED, 1.0):
+                        takes = []
+                        for _ in range(2):
+                            y = synth(server, held["text"], ref, speed)
+                            m = av.match(y, fp, film_fr, film_words)
+                            takes.append((m, errors(y, held["text"])))
+                        novel = [errors(synth(server, t, ref, speed), t) for t in NOVEL]
+                        wer = float(np.mean([w for _, w in takes] + novel))
+                        match = float(np.mean([m["match_pct"] for m, _ in takes]))
+                        row = {
+                            "gpt": str(gpt),
+                            "sovits": str(sov),
+                            "ref": str(ref[0]),
+                            "prompt": ref[1],
+                            "speed": speed,
+                            "match_pct": round(match, 1),
+                            "wer": round(wer, 3),
+                            "score": round(match if wer <= 0.15 else 0.0, 1),
+                        }
+                        results.append(row)
+                        b.say(
+                            f"  {row['score']:5.1f}  match {match:4.1f}% wer {wer:.2f}  "
+                            f"{gpt.name} {sov.name} "
+                            f"ref {Path(ref[0]).stem} speed {speed}"
                         )
-                        for t in NOVEL
-                    ]
-                    wer = float(np.mean([w for _, w in takes] + novel))
-                    match = float(np.mean([m["match_pct"] for m, _ in takes]))
-                    row = {
-                        "gpt": str(gpt),
-                        "sovits": str(sov),
-                        "ref": str(ref[0]),
-                        "prompt": ref[1],
-                        "speed": speed,
-                        "match_pct": round(match, 1),
-                        "wer": round(wer, 3),
-                        "score": round(match if wer <= 0.15 else 0.0, 1),
-                    }
-                    results.append(row)
-                    b.say(
-                        f"  {row['score']:5.1f}  match {match:4.1f}% wer {wer:.2f}  "
-                        f"{gpt.name} {sov.name} "
-                        f"ref {Path(ref[0]).stem} speed {speed}"
-                    )
-        best = max(results, key=lambda r: (r["score"], -r["wer"]))
+            best = max(results, key=lambda r: (r["score"], -r["wer"]))
+        best.update(SAMPLING)
+        use(best["gpt"], best["sovits"])
+        samples = b.path("samples", experiment(b), "film.wav").parent
+        shutil.copy2(b.path("held-out.wav"), samples / "0-film-held-out.wav")
+        wers = []
+        for k, text in enumerate([held["text"]] + NOVEL, start=1):
+            y, wer = checked(text, (Path(best["ref"]), best["prompt"]), best["speed"])
+            sf.write(samples / f"{k}-hal.wav", y, 16000)
+            wers.append(wer)
+        best["sample_wer"] = round(float(np.mean(wers)), 3)
         b.path(f"selection-{experiment(b)}.json").write_text(
             json.dumps({"best": best, "all": results}, indent=1)
         )
-        urllib.request.urlopen(
-            f"{server.url}/set_gpt_weights?weights_path={best['gpt']}", timeout=180
-        )
-        urllib.request.urlopen(
-            f"{server.url}/set_sovits_weights?weights_path={best['sovits']}", timeout=180
-        )
-        samples = b.path("samples", experiment(b), "film.wav").parent
-        shutil.copy2(b.path("held-out.wav"), samples / "0-film-held-out.wav")
-        for k, text in enumerate([held["text"]] + NOVEL, start=1):
-            sf.write(
-                samples / f"{k}-hal.wav",
-                synth(server, text, (Path(best["ref"]), best["prompt"]), best["speed"]),
-                16000,
-            )
-        b.say(
-            f"best: {best['match_pct']}% match to the film, {best['wer']:.0%} word errors; "
-            f"samples in {samples}"
-        )
+        b.say(f"samples in {samples}, {best['sample_wer']:.0%} word errors")
     finally:
         server.stop()
 
@@ -653,7 +687,8 @@ def select(b: Build) -> None:
 
 
 def install(b: Build) -> None:
-    """Points hal-voice's config.yaml at the chosen weights and reference, keeping a backup."""
+    """Points hal-voice's config.yaml at the chosen weights, reference, pace and sampling,
+    keeping a backup."""
     best = json.loads(b.path(f"selection-{experiment(b)}.json").read_text())["best"]
     weights = GPTSOVITS / "weights"
     gpt, sov = Path(best["gpt"]), Path(best["sovits"])
@@ -673,6 +708,7 @@ def install(b: Build) -> None:
         ("ref_audio_path", '"voice-data/reference/hal_film_reference.wav"'),
         ("prompt_text", f'"{prompt}"'),
         ("speed", str(best["speed"])),
+        *((k, str(best.get(k, v))) for k, v in SAMPLING.items()),
     ):
         text = re.sub(
             rf"^(  {key}:\s*)[^#\n]*?(\s*(#.*)?)$",

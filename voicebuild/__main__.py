@@ -182,6 +182,11 @@ def main() -> int:
         help="leave out lines containing this phrase; remembered in the build folder (repeatable)",
     )
     ap.add_argument(
+        "--verbatim",
+        action="store_true",
+        help="train on what each clip is heard to say rather than its subtitle text",
+    )
+    ap.add_argument(
         "--hold-out",
         action="store_true",
         help='leave "I\'m sorry, Dave" out of training and judge voices on it as an unheard line',
@@ -207,6 +212,7 @@ def main() -> int:
         use_ocr=args.ocr,
         install="install" in stages,
         hold_out=args.hold_out,
+        verbatim=args.verbatim,
         exclude=args.exclude,
     )
     b.work.mkdir(parents=True, exist_ok=True)
