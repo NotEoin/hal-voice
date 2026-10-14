@@ -111,6 +111,19 @@ def report(b: build.Build) -> Path:
         ]
         out += [f"| {d['start']:.1f} | {d['why']} | {d['text']} |" for d in lines["dropped"]]
         out.append("")
+    unusable = b.work / "unusable.json"
+    if unusable.exists():
+        why = json.loads(unusable.read_text())
+        out += ["## Found but not trained on", "", "| Line | Reason |", "| --- | --- |"]
+        for film in b.films:
+            f = b.work / build.slug(film) / "lines.json"
+            if f.exists():
+                out += [
+                    f"| {it['text']} | {why[it['id']]} |"
+                    for it in json.loads(f.read_text())["kept"]
+                    if it["id"] in why
+                ]
+        out.append("")
     path = b.work / "report.md"
     path.write_text("\n".join(out))
     return path

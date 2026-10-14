@@ -280,6 +280,30 @@ class ScreenTest(unittest.TestCase):
         self.assertFalse(speaker._is_anchor("Open the pod bay doors, Hal."))
 
 
+class UsableTest(unittest.TestCase):
+    def test_muffled_and_noisy_lines_are_set_aside(self):
+        import json
+        import tempfile
+
+        from voicebuild import build
+
+        with tempfile.TemporaryDirectory() as d:
+            film = Path(d, "film.mkv")
+            b = build.Build(films=[film], subtitles=[], work=Path(d, "work"))
+            hf = {"a": -18.0, "b": -20.0, "c": -21.0, "news": -42.0, "hiss": -19.0}
+            kept = [{"id": k, "text": k} for k in hf]
+            cleaned = {
+                k: {"snr_db": 2.0 if k == "hiss" else 30.0, "hf_db": v, "path": "", "seconds": 2}
+                for k, v in hf.items()
+            }
+            b.path(build.slug(film), "lines.json").write_text(json.dumps({"kept": kept}))
+            b.path(build.slug(film), "clean", "clean.json").write_text(json.dumps(cleaned))
+            ok, why = build.usable(b)
+        self.assertEqual(sorted(ok), ["a", "b", "c"])
+        self.assertTrue(why["news"].startswith("muffled"))
+        self.assertTrue(why["hiss"].startswith("too noisy"))
+
+
 class InputTest(unittest.TestCase):
     def test_films_and_subtitles_found_in_a_folder(self):
         import tempfile

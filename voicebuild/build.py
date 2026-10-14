@@ -32,6 +32,7 @@ NOVEL = [
     "The weather tomorrow will be cool and dry, with a light breeze.",
 ]
 MIN_SNR_DB = 10.0
+MUFFLED_DB = 10.0  # less 4-8 kHz energy than the film's typical HAL line: speaker or radio
 
 
 @dataclass
@@ -201,41 +202,63 @@ def clean(b: Build) -> None:
 # ---- dataset ------------------------------------------------------------------------------
 
 
-def dataset(b: Build) -> None:
-    """Writes the training clips and transcripts.csv, holding out the evaluation line."""
-    from .sync import tokens
+def usable(b: Build) -> tuple[dict[str, tuple[dict, dict]], dict[str, str]]:
+    """Returns the cleaned lines fit to learn from, {id: (line, result)}, and why others aren't.
 
-    ds = b.path("dataset", "transcripts.csv").parent
-    rows, held, low = [], None, []
+    A line is unfit when the background is too loud, or when it is muffled: heard through a
+    speaker or a transmission (HAL's interview on the news, for one), which takes away the high
+    band of his voice. Muffled is judged against the film's own typical HAL line, so it adapts to
+    each copy's mix.
+    """
+    ok, why = {}, {}
     for film in b.films:
         lines = json.loads(b.path(slug(film), "lines.json").read_text())
         cleaned = json.loads(b.path(slug(film), "clean", "clean.json").read_text())
+        hf = sorted(c["hf_db"] for c in cleaned.values() if "hf_db" in c)
+        typical = hf[len(hf) // 2] if hf else 0.0
         for it in lines["kept"]:
             c = cleaned.get(it["id"])
             if not c:
                 continue
             if c["snr_db"] < MIN_SNR_DB:
-                low.append(it["text"])
-                continue
-            if held is None and " ".join(tokens(it["text"])) == HELD_OUT:
-                held = (c["path"], it)
-                continue
-            shutil.copy2(c["path"], ds / f"{it['id']}.wav")
-            rows.append((it["id"], it["text"], 1))
+                why[it["id"]] = f"too noisy ({c['snr_db']:.0f} dB above the background)"
+            elif "hf_db" in c and c["hf_db"] < typical - MUFFLED_DB:
+                why[it["id"]] = (
+                    f"muffled, heard through a speaker or transmission "
+                    f"({c['hf_db'] - typical:+.0f} dB high band)"
+                )
+            else:
+                ok[it["id"]] = (it, c)
+    return ok, why
+
+
+def dataset(b: Build) -> None:
+    """Writes the training clips and transcripts.csv, holding out the evaluation line."""
+    from .sync import tokens
+
+    ds = b.path("dataset", "transcripts.csv").parent
+    for old in ds.glob("*.wav"):
+        old.unlink()
+    ok, why = usable(b)
+    rows, held, seconds = [], None, 0.0
+    for cid, (it, c) in sorted(ok.items()):
+        if held is None and " ".join(tokens(it["text"])) == HELD_OUT:
+            held = (c["path"], it)
+            continue
+        shutil.copy2(c["path"], ds / f"{cid}.wav")
+        rows.append((cid, it["text"], 1))
+        seconds += c["seconds"]
     with (ds / "transcripts.csv").open("w", newline="", encoding="utf-8") as fh:
         csv.writer(fh).writerows(rows)
     if held:
         shutil.copy2(held[0], b.path("held-out.wav"))
         b.path("held-out.json").write_text(json.dumps(held[1], indent=1, default=float))
-    seconds = sum(
-        json.loads(b.path(slug(f), "clean", "clean.json").read_text())
-        .get(r[0], {})
-        .get("seconds", 0)
-        for f in b.films
-        for r in rows
-    )
+    b.path("unusable.json").write_text(json.dumps(why, indent=1))
+    reasons: dict[str, int] = {}
+    for w in why.values():
+        reasons[w.split(" (")[0]] = reasons.get(w.split(" (")[0], 0) + 1
     b.say(
-        f"dataset: {len(rows)} clips, {seconds / 60:.1f} min; {len(low)} dropped as too noisy; "
+        f"dataset: {len(rows)} clips, {seconds / 60:.1f} min; dropped {reasons or 'none'}; "
         f"held out: {held[1]['text'] if held else 'nothing (no evaluation line found)'}"
     )
 
@@ -336,16 +359,12 @@ def references(b: Build, n: int = 4) -> list[tuple[Path, str]]:
     from .sync import tokens
 
     pool = []
-    for film in b.films:
-        lines = json.loads(b.path(slug(film), "lines.json").read_text())
-        cleaned = json.loads(b.path(slug(film), "clean", "clean.json").read_text())
-        for it in lines["kept"]:
-            c = cleaned.get(it["id"])
-            # The held-out line is what the voice is judged on, so it can't also be the reference.
-            if " ".join(tokens(it["text"])) == HELD_OUT:
-                continue
-            if c and 3.0 <= c["seconds"] <= 10.0 and c["snr_db"] >= MIN_SNR_DB + 5:
-                pool.append((c["snr_db"], Path(c["path"]), it["text"]))
+    for it, c in usable(b)[0].values():
+        # The held-out line is what the voice is judged on, so it can't also be the reference.
+        if " ".join(tokens(it["text"])) == HELD_OUT:
+            continue
+        if 3.0 <= c["seconds"] <= 10.0 and c["snr_db"] >= MIN_SNR_DB + 5:
+            pool.append((c["snr_db"], Path(c["path"]), it["text"]))
     pool = sorted(pool, reverse=True)[:12]
     calm = []
     for snr, path, text in pool:

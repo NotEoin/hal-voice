@@ -29,6 +29,26 @@ PEAK = 0.7
 VOICE_DB = 35  # below the line's peak, the separated voice counts as silent
 
 
+def clarity(seg: np.ndarray, rate: int) -> tuple[float, float]:
+    """Returns the line's 4-8 kHz energy against its 0.3-3 kHz energy (dB), and the frequency
+    below which 99% of its energy lies (Hz), over its louder half.
+
+    A voice heard through a speaker or a transmission loses the high band that makes speech
+    crisp, so both fall well below the film's clear lines.
+    """
+    import librosa
+
+    spec = np.abs(librosa.stft(seg, n_fft=2048)) ** 2
+    freqs = librosa.fft_frequencies(sr=rate, n_fft=2048)
+    frames = spec.sum(axis=0)
+    power = spec[:, frames >= np.percentile(frames, 50)].mean(axis=1) + 1e-12
+    hf = (
+        power[(freqs >= 4000) & (freqs < 8000)].sum() / power[(freqs >= 300) & (freqs < 3000)].sum()
+    )
+    bandwidth = freqs[np.searchsorted(np.cumsum(power) / power.sum(), 0.99)]
+    return float(10 * np.log10(hf)), float(bandwidth)
+
+
 def main() -> int:
     import librosa
     import soundfile as sf
@@ -61,6 +81,9 @@ def main() -> int:
         voice = stems[separator.sources.index("vocals")].mean(0).cpu().numpy()
         rest = x[: voice.size] - voice
         snr = float(10 * np.log10((np.sum(voice**2) + 1e-9) / (np.sum(rest**2) + 1e-9)))
+        hf_db, bandwidth = clarity(
+            mix[int((item["start"] - start) * rate) : int((item["end"] - start) * rate)], rate
+        )
         y = librosa.resample(voice, orig_sr=separator.samplerate, target_sr=df_state.sr())
         y = (
             enhance(
@@ -99,6 +122,8 @@ def main() -> int:
         path = out / f"{item['id']}.wav"
         sf.write(path, y, OUT_RATE, subtype="PCM_16")
         results[item["id"]] = {
+            "hf_db": round(hf_db, 1),
+            "bandwidth_hz": round(bandwidth),
             "path": str(path),
             "snr_db": round(snr, 1),
             "seconds": round(y.size / OUT_RATE, 2),
