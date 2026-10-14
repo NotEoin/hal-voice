@@ -171,6 +171,18 @@ Developed on an RTX 4070 (12GB); originally built on an RTX 3090.
 
 **No audio ships with this repository.** You supply the voice data.
 
+The quickest route is your own copy of *2001: A Space Odyssey*. Put the film (and any subtitle
+files) in `voice-data/film/` and run:
+
+```bash
+./make-hal-voice
+```
+
+It finds every line HAL speaks clearly, cleans and trains on them, and installs the result.
+**-> How it works and what it accepts: [VOICE-BUILD.md](VOICE-BUILD.md)**
+
+To train on clips you already have instead:
+
 1. Put your clips and a `transcripts.csv` somewhere, and point `voice-source.local` at it.
 2. `python voice-data/fetch-voice-lines.py` — imports them.
 3. `python voice-data/prepare_dataset.py` — slices, cleans and labels them.
