@@ -93,6 +93,21 @@ def excluded(text: str, phrases: list[str]) -> bool:
     return any(" " + " ".join(tokens(p)) + " " in said for p in phrases if tokens(p))
 
 
+def release_gpu() -> None:
+    """Frees the GPU memory of models a stage has dropped, so the next stage (training runs as its
+    own process) can have it; torch and CTranslate2 both keep freed memory cached otherwise."""
+    import gc
+
+    gc.collect()
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except ImportError:
+        pass
+
+
 def slug(path: Path) -> str:
     return re.sub(r"[^a-z0-9]+", "-", path.stem.lower()).strip("-")[:40] or "film"
 
@@ -222,6 +237,8 @@ def find(b: Build) -> None:
                 default=float,
             )
         )
+    embed = None
+    release_gpu()
 
 
 # ---- clean --------------------------------------------------------------------------------
@@ -326,6 +343,8 @@ def dataset(b: Build) -> None:
         spoken[name] = {"spoken": said, "subtitle": it["text"], "start": it["start"]}
         seconds += c["seconds"]
     b.path("spoken.json").write_text(json.dumps(spoken, indent=1))
+    verbatim = None
+    release_gpu()
     with (ds / "transcripts.csv").open("w", newline="", encoding="utf-8") as fh:
         csv.writer(fh).writerows(rows)
     if held:
