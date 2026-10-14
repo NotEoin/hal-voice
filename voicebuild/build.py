@@ -60,6 +60,18 @@ class Build:
         return p
 
 
+def clip_name(text: str, taken: set[str]) -> str:
+    """Returns a file name from what HAL says ("im-sorry-dave-im-afraid-i-cant-do-that"),
+    numbered when the line recurs ("none-whatsoever-frank-2")."""
+    base = re.sub(r"[^a-z0-9]+", "-", text.lower().replace("'", "")).strip("-")[:80].rstrip("-")
+    name, n = base or "line", 1
+    while name in taken:
+        n += 1
+        name = f"{base or 'line'}-{n}"
+    taken.add(name)
+    return name
+
+
 def slug(path: Path) -> str:
     return re.sub(r"[^a-z0-9]+", "-", path.stem.lower()).strip("-")[:40] or "film"
 
@@ -137,13 +149,20 @@ def find(b: Build) -> None:
             for w in ln.words
         )
         items = []
+        # Names stay unique across films; each film's own earlier run doesn't count.
+        taken = {
+            it["id"]
+            for f in b.films
+            if f != film and b.path(slug(f), "lines.json").exists()
+            for it in json.loads(b.path(slug(f), "lines.json").read_text())["kept"]
+        }
         for n, (ln, rec) in enumerate(kept):
             before = max((e for s, e in others if e <= ln.start), default=ln.start - 1.0)
             after = min((s for s, e in others if s >= ln.end), default=ln.end + 1.0)
             items.append(
                 {
                     **rec,
-                    "id": f"{slug(film)}-{n:03d}",
+                    "id": clip_name(ln.text, taken),
                     "start": ln.start,
                     "end": ln.end,
                     "earliest": max(before + 0.05, ln.start - 0.6),

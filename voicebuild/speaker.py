@@ -28,8 +28,13 @@ ANCHORS = [
     "i'm afraid that's something i cannot allow to happen",
     "thank you for a very enjoyable game",
 ]
-MIN_SECONDS = 0.8
-MARGIN = 0.08  # how much closer to HAL than to anyone else a line must be
+MIN_SECONDS = 0.8  # shortest line whose voice print feeds the thresholds and centroids
+MIN_SHORT_SECONDS = 0.3  # shortest line judged at all ("Yes.", "Certainly.")
+MARGIN = 0.07  # how much closer to HAL than to anyone else a line must be
+SHORT_MARGIN = 0.05  # the same for a short line; measured: HAL's +0.055 up, others' +0.03 down
+SHORT_FLOOR = 0.5  # a short line's prints are noisier, so it is judged on margin above this
+CONTINUE_S = 1.5  # a line this soon after one of HAL's, with nobody between, may carry it on
+CONTINUE_EASE = 0.08  # how far below the threshold such a continuation may score
 MIN_FILM_SEEDS = 8  # below this, clips from voice-data/hal-voice join the seeds
 FLOOR = 0.65
 
@@ -137,29 +142,55 @@ def identify(
         ]
         hal = _unit(np.mean(seed_vecs + confident, axis=0))
 
+    short: dict[int, np.ndarray] = {}
+    for i, ln in enumerate(lines):
+        if i not in vecs and ln.end - ln.start >= MIN_SHORT_SECONDS:
+            short[i] = embed(audio[int(ln.start * rate) : int(ln.end * rate)])
     results = []
     for i, ln in enumerate(lines):
-        if i not in vecs:
-            results.append(
-                {"line": i, "hal": False, "sim": None, "other": None, "why": "too short to tell"}
-            )
-            continue
-        s = float(vecs[i] @ hal)
-        nearest = nearest_other(vecs[i])
+        v = vecs.get(i, short.get(i))
+        labelled_hal = ln.speaker == "HAL" and "sings" not in ln.tags
         labelled_other = ln.speaker is not None and ln.speaker != "HAL"
-        is_hal = s >= threshold and s - nearest >= MARGIN and not labelled_other
-        why = (
-            "labelled as " + ln.speaker.title()
-            if labelled_other
-            else "seed"
-            if i in seeds
-            else "voice matches HAL"
-            if is_hal
-            else "voice is not HAL's"
-        )
+        if v is None:
+            why = "labelled as HAL" if labelled_hal else "too short to tell"
+            results.append({"line": i, "hal": labelled_hal, "sim": None, "other": None, "why": why})
+            continue
+        s, nearest = float(v @ hal), nearest_other(v)
+        if labelled_other:
+            is_hal, why = False, "labelled as " + ln.speaker.title()
+        elif labelled_hal:
+            # The label is certain; a radio or speaker line is judged later, on clarity.
+            is_hal, why = True, "labelled as HAL"
+        elif i in short:
+            is_hal = s >= SHORT_FLOOR and s - nearest >= SHORT_MARGIN
+            why = (
+                "short, voice nearer HAL than anyone"
+                if is_hal
+                else "short, voice not clearly HAL's"
+            )
+        else:
+            is_hal = s >= threshold and s - nearest >= MARGIN
+            why = "voice matches HAL" if is_hal else "voice is not HAL's"
         results.append(
             {"line": i, "hal": is_hal, "sim": round(s, 3), "other": round(nearest, 3), "why": why}
         )
+    # A monologue goes on after a pause in a new subtitle with no label; such a line may score a
+    # little lower and still be HAL when it follows straight on from him with nobody between.
+    for k, r in enumerate(results):
+        if r["hal"] or r["sim"] is None or lines[k].speaker:
+            continue
+        after = k > 0 and results[k - 1]["hal"] and lines[k].start - lines[k - 1].end <= CONTINUE_S
+        before = (
+            k + 1 < len(lines)
+            and results[k + 1]["hal"]
+            and lines[k + 1].start - lines[k].end <= CONTINUE_S
+        )
+        if (
+            (after or before)
+            and r["sim"] >= threshold - CONTINUE_EASE
+            and r["sim"] - r["other"] >= MARGIN
+        ):
+            r["hal"], r["why"] = True, "carries on one of HAL's lines"
     report = {
         "lines_embedded": len(vecs),
         "seed_lines": len(seeds),

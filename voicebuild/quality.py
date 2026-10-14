@@ -20,6 +20,7 @@ OVERLAP_S = 0.0  # seconds of clearance between HAL's words and anyone else's
 PITCH_ST = 4.5  # semitones from HAL's median; the slowed shutdown is far lower
 MIN_RATE = 1.2  # words per second
 MIN_SNR_DB = 12.0
+JOIN_GAP_S = 1.5  # HAL's lines this close, with nobody between, make one clip
 
 
 def word_error(ref: list[str], hyp: list[str]) -> float:
@@ -60,6 +61,41 @@ def split_long(ln: Line) -> list[Line]:
     return [ln]
 
 
+def join_runs(lines: list[Line], verdicts: list[dict]) -> list[tuple[Line, dict]]:
+    """Returns HAL's lines with each run of them (a monologue broken only by short pauses, with
+    nobody else speaking between) joined into one line, pauses kept, up to MAX_S long."""
+    out: list[tuple[Line, dict]] = []
+    prev = -2
+    for i, (ln, v) in enumerate(zip(lines, verdicts)):
+        if not v["hal"]:
+            continue
+        if out and prev == i - 1 and "sings" not in ln.tags:
+            last, lv = out[-1]
+            if (
+                ln.start - last.end <= JOIN_GAP_S
+                and ln.end - last.start <= MAX_S
+                and "sings" not in last.tags
+            ):
+                joined = Line(
+                    start=last.start,
+                    end=ln.end,
+                    text=f"{last.text} {ln.text}",
+                    heard=f"{last.heard} {ln.heard}",
+                    speaker="HAL",
+                    tags=sorted(set(last.tags) | set(ln.tags)),
+                    cue=last.cue,
+                    matched=min(last.matched, ln.matched),
+                    words=last.words + ln.words,
+                )
+                sims = [s for s in (lv["sim"], v["sim"]) if s is not None]
+                out[-1] = (joined, {**lv, "sim": max(sims) if sims else None})
+                prev = i
+                continue
+        out.append((ln, v))
+        prev = i
+    return out
+
+
 def pitch_semitones(seg: np.ndarray, rate: int) -> float | None:
     import librosa
 
@@ -78,9 +114,7 @@ def screen(
         (w["start"], w["end"]) for ln, v in zip(lines, verdicts) if not v["hal"] for w in ln.words
     ]
     candidates, dropped = [], []
-    for ln, v in zip(lines, verdicts):
-        if not v["hal"]:
-            continue
+    for ln, v in join_runs(lines, verdicts):
         for part in split_long(ln):
             candidates.append((part, v))
     pitches = {}

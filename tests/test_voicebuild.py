@@ -304,6 +304,46 @@ class UsableTest(unittest.TestCase):
         self.assertTrue(why["hiss"].startswith("too noisy"))
 
 
+class MonologueTest(unittest.TestCase):
+    def line(self, start, end, text, speaker=None):
+        words = [{"start": start, "end": end, "word": w, "prob": 0.9} for w in text.split()]
+        return sync.Line(start, end, text, text, speaker, [], 0, 1.0, words)
+
+    def test_pieces_of_a_monologue_join_with_their_pause(self):
+        from voicebuild import quality
+
+        lines = [
+            self.line(0.0, 0.5, "Yes."),
+            self.line(1.6, 4.0, "And it will stay that way."),
+            self.line(4.5, 5.0, "Hmm.", "BOWMAN"),
+            self.line(5.2, 7.0, "Of course."),
+        ]
+        verdicts = [
+            {"hal": True, "sim": 0.8},
+            {"hal": True, "sim": 0.7},
+            {"hal": False, "sim": 0.3},
+            {"hal": True, "sim": 0.8},
+        ]
+        runs = quality.join_runs(lines, verdicts)
+        self.assertEqual(
+            [r[0].text for r in runs], ["Yes. And it will stay that way.", "Of course."]
+        )
+        self.assertEqual((runs[0][0].start, runs[0][0].end), (0.0, 4.0))
+
+    def test_clip_names_come_from_the_words(self):
+        from voicebuild import build
+
+        taken = set()
+        self.assertEqual(
+            build.clip_name("I'm sorry, Dave. I'm afraid I can't do that.", taken),
+            "im-sorry-dave-im-afraid-i-cant-do-that",
+        )
+        self.assertEqual(build.clip_name("None whatsoever, Frank.", taken), "none-whatsoever-frank")
+        self.assertEqual(
+            build.clip_name("None whatsoever, Frank!", taken), "none-whatsoever-frank-2"
+        )
+
+
 class InputTest(unittest.TestCase):
     def test_films_and_subtitles_found_in_a_folder(self):
         import tempfile
