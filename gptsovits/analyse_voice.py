@@ -161,10 +161,10 @@ def melody(film: dict, cand: dict, m: np.ndarray) -> dict:
 
 # ---- the film fingerprint and the comparison --------------------------------------------
 
-def fingerprint() -> dict:
-    """Mean and spread of every voice measure across the film clips."""
+def fingerprint(clips: list[Path] | None = None) -> dict:
+    """Mean and spread of every voice measure across HAL's clips (voice-data/hal-voice by default)."""
     rows = []
-    for clip in sorted(CLIPS.glob("*.mp3")):
+    for clip in clips if clips is not None else sorted(CLIPS.glob("*.mp3")):
         y = load(clip)
         if len(y) > SR:                       # under a second is too short to measure
             rows.append(voice(y))
@@ -234,7 +234,7 @@ def compare(name: str, y: np.ndarray, fp: dict, film_fr: dict) -> dict:
             "word_rows": rows}
 
 
-def match(y: np.ndarray, fp: dict, film_fr: dict) -> dict:
+def match(y: np.ndarray, fp: dict, film_fr: dict, film_words: list | None = None) -> dict:
     """One take's distance from the film line, as named parts and a total (0 = the film itself).
 
     Each part is an error divided by roughly what is just noticeable, so 1.0 in any part is a
@@ -248,14 +248,18 @@ def match(y: np.ndarray, fp: dict, film_fr: dict) -> dict:
     film_db, cand_db = speech_level(film_fr), speech_level(fr)
     lens, louds, pause = [], [], 0.0
     prev_c = None
-    for k, (word, s, e) in enumerate(FILM_WORDS):
+    film_words = film_words or FILM_WORDS
+    # The line's longest pause in the film, whichever words it falls between.
+    gaps = [film_words[k][1] - film_words[k - 1][2] for k in range(1, len(film_words))]
+    pause_at = 1 + int(np.argmax(gaps)) if gaps else -1
+    for k, (word, s, e) in enumerate(film_words):
         fs, fe = int(s / HOP), min(int(e / HOP), len(m) - 1)
         cs, ce = int(m[fs]), int(m[max(fe - 1, fs)]) + 1
         fw, cw = word_stats(film_fr, fs, fe, film_db), word_stats(fr, cs, ce, cand_db)
         lens.append(abs(np.log(max(cw["length_s"], 0.02) / max(fw["length_s"], 0.02))))
         louds.append(abs(cw["loudness_db"] - fw["loudness_db"]))
-        if k == 3 and prev_c is not None:                       # the second "i'm"
-            pause = abs((cs - prev_c) * HOP - (fs - int(FILM_WORDS[2][2] / HOP)) * HOP)
+        if k == pause_at and prev_c is not None:
+            pause = abs((cs - prev_c) * HOP - (fs - int(film_words[k - 1][2] / HOP)) * HOP)
         prev_c = ce
     quality = [abs((v[k] - fp[k][0]) / (fp[k][1] or 1)) for k in
                ("pitch_range_st", "hnr_db", "jitter_pct", "shimmer_pct", "F1_hz", "F2_hz", "F3_hz", "tilt_db") if k in v]

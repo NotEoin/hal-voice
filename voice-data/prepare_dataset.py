@@ -97,15 +97,20 @@ AUDIO = SRC
 
 
 def main() -> None:
-    global AUDIO
+    global AUDIO, SRC, TRANSCRIPTS_FILE
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", choices=["raw", "denoised"], default="raw",
                         help="train on the clips as fetched, or on denoise.py's output")
     parser.add_argument("--source-dir", type=Path, help="train on cleaned clips in this folder (overrides --source)")
+    parser.add_argument("--clips", type=Path,
+                        help="a folder of clips with their own transcripts.csv, such as make-hal-voice's dataset")
     parser.add_argument("--exclude", nargs="*", default=[], help="clip stems to hold out of training")
     parser.add_argument("--keep-reference", action="store_true",
                         help="leave voice-data/reference/ (the live voice's references) untouched")
     args = parser.parse_args()
+    if args.clips:
+        SRC = args.clips.resolve()
+        TRANSCRIPTS_FILE = SRC / "transcripts.csv"
     AUDIO = args.source_dir.resolve() if args.source_dir else DENOISED if args.source == "denoised" else SRC
     if not AUDIO.exists():
         sys.exit(f"No clips at {AUDIO}. Run denoise.py first.")
