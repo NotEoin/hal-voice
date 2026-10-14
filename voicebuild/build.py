@@ -32,6 +32,7 @@ NOVEL = [
     "The weather tomorrow will be cool and dry, with a light breeze.",
 ]
 MIN_SNR_DB = 10.0
+MAX_SPOKEN_GAP = 0.5  # share of subtitle words a line's own transcript may differ by
 SIGNATURE_WEIGHT = 3  # times "I'm sorry, Dave" appears in training, so its delivery is learnt
 MUFFLED_DB = 10.0  # less 4-8 kHz energy than the film's typical HAL line: speaker or radio
 
@@ -105,7 +106,9 @@ def find(b: Build) -> None:
 
     from . import media, quality, speaker, subtitles, sync, transcribe
 
-    embed = None
+    from .verbatim import Verbatim
+
+    embed, verbatim = None, None
     for film in b.films:
         out = b.path(slug(film), "lines.json")
         if out.exists():
@@ -177,6 +180,21 @@ def find(b: Build) -> None:
             f"  {len(kept)} lines kept ({sum(k[0].end - k[0].start for k in kept) / 60:.1f} min), "
             f"{len(dropped)} dropped"
         )
+        # The training text is what HAL says, heard line by line; subtitles condense speech.
+        b.say("  writing down each line as spoken")
+        if verbatim is None:
+            verbatim = Verbatim(b.asr_model)
+        spoken: list[tuple] = []
+        for ln, rec in kept:
+            said = sync.tidy(verbatim(audio, rate, ln.start, ln.end, ln.text))
+            gap = quality.word_error(sync.tokens(ln.text), sync.tokens(said))
+            if not said or gap > MAX_SPOKEN_GAP:
+                dropped.append({**rec, "why": f"heard as '{said}', too far from the subtitle"})
+                continue
+            spoken.append((ln, {**rec, "text": said, "subtitle": ln.text}))
+        changed = sum(r["text"] != r["subtitle"] for _, r in spoken)
+        b.say(f"  {changed} of {len(spoken)} lines say something other than their subtitle")
+        kept = spoken
         # How far each clip may grow: up to the nearest word anyone else says.
         others = sorted(
             (w["start"], w["end"])
@@ -198,7 +216,7 @@ def find(b: Build) -> None:
             items.append(
                 {
                     **rec,
-                    "id": clip_name(ln.text, taken),
+                    "id": clip_name(rec["text"], taken),
                     "start": ln.start,
                     "end": ln.end,
                     "earliest": max(before + 0.05, ln.start - 0.6),

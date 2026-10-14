@@ -89,19 +89,23 @@ The following stages run in order:
 4. **Screen.** A HAL line is kept when no other voice overlaps it, the transcript agrees with
    the subtitle, the recogniser is confident, and its pitch and pace are HAL's usual. That rules
    out the singing and the slowed shutdown. Long lines are split at their pauses.
-5. **Clean.** Demucs separates the voice from the score and effects, giving a
+5. **Write down.** Each kept line is transcribed again on its own audio, with its subtitle as
+   a hint for spelling names. Subtitles condense speech, and the model learns the words it is
+   told go with each sound, so the training text is what HAL says. The report lists every line
+   spoken differently from its subtitle, and clips are named after the spoken words.
+6. **Clean.** Demucs separates the voice from the score and effects, giving a
    speech-to-background ratio; DeepFilterNet removes what noise is left, limited to 15 dB so the
    voice keeps its air. Each clip is extended to where the voice stops, never into the next
    speaker, and its level is matched.
-6. **Train.** GPT-SoVITS is fine-tuned on the clips. "I'm sorry, Dave. I'm afraid I can't do
+7. **Train.** GPT-SoVITS is fine-tuned on the clips. "I'm sorry, Dave. I'm afraid I can't do
    that." is trained on three times over, so HAL says it the way the film does; `--hold-out`
    leaves it out instead.
-7. **Select.** Every saved checkpoint pair, with the calmest clean clips as reference (never
+8. **Select.** Every saved checkpoint pair, with the calmest clean clips as reference (never
    "I'm sorry, Dave" itself), says that line and three lines HAL never says in the film. Each is scored against the film's
    delivery with `gptsovits/analyse_voice.py` (melody, timing, word lengths and loudness, voice
    quality, spectrum) and checked for pronunciation with the recogniser. The best is kept, with
    samples beside the film's line in `voice-data/build/samples/` for you to compare.
-8. **Install.** The chosen weights and reference clip are copied into place and `config.yaml`
+9. **Install.** The chosen weights and reference clip are copied into place and `config.yaml`
    points at them. The previous `config.yaml` is kept beside it as `config.yaml.<time>.bak`.
 
 ## Your copy stays yours

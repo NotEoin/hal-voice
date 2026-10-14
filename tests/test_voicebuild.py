@@ -392,6 +392,34 @@ class ExcludeTest(unittest.TestCase):
         self.assertFalse(build.excluded("I'm sorry, Franklin.", phrases))
 
 
+class VerbatimTest(unittest.TestCase):
+    def test_words_the_subtitle_dropped_come_from_the_speech(self):
+        from voicebuild.verbatim import reconcile
+
+        self.assertEqual(
+            reconcile(
+                "After four months of separate training on their own.",
+                "After four months of training on their own.",
+            ),
+            "After four months of separate training on their own.",
+        )
+
+    def test_one_for_one_swaps_come_from_the_subtitle(self):
+        from voicebuild.verbatim import reconcile
+
+        self.assertEqual(
+            reconcile(
+                "I never gave these stories much greetings.",
+                "I never gave these stories much credence.",
+            ),
+            "I never gave these stories much credence.",
+        )
+        self.assertEqual(
+            reconcile("Good afternoon, Mr. Aimer.", "Good afternoon, Mr. Amer."),
+            "Good afternoon, Mr. Amer.",
+        )
+
+
 class InputTest(unittest.TestCase):
     def test_films_and_subtitles_found_in_a_folder(self):
         import tempfile
