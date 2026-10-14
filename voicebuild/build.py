@@ -333,12 +333,17 @@ def references(b: Build, n: int = 4) -> list[tuple[Path, str]]:
     sys.path.insert(0, str(GPTSOVITS))
     import analyse_voice as av
 
+    from .sync import tokens
+
     pool = []
     for film in b.films:
         lines = json.loads(b.path(slug(film), "lines.json").read_text())
         cleaned = json.loads(b.path(slug(film), "clean", "clean.json").read_text())
         for it in lines["kept"]:
             c = cleaned.get(it["id"])
+            # The held-out line is what the voice is judged on, so it can't also be the reference.
+            if " ".join(tokens(it["text"])) == HELD_OUT:
+                continue
             if c and 3.0 <= c["seconds"] <= 10.0 and c["snr_db"] >= MIN_SNR_DB + 5:
                 pool.append((c["snr_db"], Path(c["path"]), it["text"]))
     pool = sorted(pool, reverse=True)[:12]
