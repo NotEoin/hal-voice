@@ -32,6 +32,7 @@ NOVEL = [
     "The weather tomorrow will be cool and dry, with a light breeze.",
 ]
 MIN_SNR_DB = 10.0
+SIGNATURE_WEIGHT = 3  # times "I'm sorry, Dave" appears in training, so its delivery is learnt
 MUFFLED_DB = 10.0  # less 4-8 kHz energy than the film's typical HAL line: speaker or radio
 
 
@@ -47,6 +48,7 @@ class Build:
     atten_db: float = 15.0
     use_ocr: bool = False
     install: bool = True
+    hold_out: bool = False
     denoise_python: str = ""
     log: list[str] = field(default_factory=list)
 
@@ -252,7 +254,12 @@ def usable(b: Build) -> tuple[dict[str, tuple[dict, dict]], dict[str, str]]:
 
 
 def dataset(b: Build) -> None:
-    """Writes the training clips and transcripts.csv, holding out the evaluation line."""
+    """Writes the training clips and transcripts.csv.
+
+    "I'm sorry, Dave. I'm afraid I can't do that." is trained on, weighted, so HAL says it the
+    way the film does, and the selection then judges how closely each voice reproduces it. With
+    --hold-out it is left out instead, and the selection judges a line the voice never heard.
+    """
     from .sync import tokens
 
     ds = b.path("dataset", "transcripts.csv").parent
@@ -261,11 +268,14 @@ def dataset(b: Build) -> None:
     ok, why = usable(b)
     rows, held, seconds = [], None, 0.0
     for cid, (it, c) in sorted(ok.items()):
+        weight = 1
         if held is None and " ".join(tokens(it["text"])) == HELD_OUT:
             held = (c["path"], it)
-            continue
+            if b.hold_out:
+                continue
+            weight = SIGNATURE_WEIGHT
         shutil.copy2(c["path"], ds / f"{cid}.wav")
-        rows.append((cid, it["text"], 1))
+        rows.append((cid, it["text"], weight))
         seconds += c["seconds"]
     with (ds / "transcripts.csv").open("w", newline="", encoding="utf-8") as fh:
         csv.writer(fh).writerows(rows)
@@ -278,7 +288,11 @@ def dataset(b: Build) -> None:
         reasons[w.split(" (")[0]] = reasons.get(w.split(" (")[0], 0) + 1
     b.say(
         f"dataset: {len(rows)} clips, {seconds / 60:.1f} min; dropped {reasons or 'none'}; "
-        f"held out: {held[1]['text'] if held else 'nothing (no evaluation line found)'}"
+        + (
+            f"judged on: {held[1]['text']} ({'held out' if b.hold_out else 'trained on, weighted'})"
+            if held
+            else "no evaluation line found"
+        )
     )
 
 
@@ -286,7 +300,7 @@ def dataset(b: Build) -> None:
 
 
 def experiment(b: Build) -> str:
-    return f"hal-film-{b.version.lower()}"
+    return f"hal-film-{b.version.lower()}" + ("-holdout" if b.hold_out else "")
 
 
 def gpt_python() -> str:
@@ -513,7 +527,7 @@ def select(b: Build) -> None:
                         f"ref {Path(ref[0]).stem} speed {speed}"
                     )
         best = max(results, key=lambda r: (r["score"], -r["wer"]))
-        b.path(f"selection-{b.version}.json").write_text(
+        b.path(f"selection-{experiment(b)}.json").write_text(
             json.dumps({"best": best, "all": results}, indent=1)
         )
         urllib.request.urlopen(
@@ -522,7 +536,7 @@ def select(b: Build) -> None:
         urllib.request.urlopen(
             f"{server.url}/set_sovits_weights?weights_path={best['sovits']}", timeout=180
         )
-        samples = b.path("samples", b.version, "film.wav").parent
+        samples = b.path("samples", experiment(b), "film.wav").parent
         shutil.copy2(b.path("held-out.wav"), samples / "0-film-held-out.wav")
         for k, text in enumerate([held["text"]] + NOVEL, start=1):
             sf.write(
@@ -543,7 +557,7 @@ def select(b: Build) -> None:
 
 def install(b: Build) -> None:
     """Points hal-voice's config.yaml at the chosen weights and reference, keeping a backup."""
-    best = json.loads(b.path(f"selection-{b.version}.json").read_text())["best"]
+    best = json.loads(b.path(f"selection-{experiment(b)}.json").read_text())["best"]
     weights = GPTSOVITS / "weights"
     gpt, sov = Path(best["gpt"]), Path(best["sovits"])
     shutil.copy2(gpt, weights / gpt.name)

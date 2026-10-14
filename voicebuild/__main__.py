@@ -160,6 +160,11 @@ def main() -> int:
     ap.add_argument(
         "--no-install", action="store_true", help="build and select, but leave the voice as it is"
     )
+    ap.add_argument(
+        "--hold-out",
+        action="store_true",
+        help='leave "I\'m sorry, Dave" out of training and judge voices on it as an unheard line',
+    )
     ap.add_argument("--denoise-python", help="Python with demucs and DeepFilterNet")
     args = ap.parse_args()
 
@@ -180,6 +185,7 @@ def main() -> int:
         gpt_epochs=args.gpt_epochs,
         use_ocr=args.ocr,
         install="install" in stages,
+        hold_out=args.hold_out,
     )
     b.work.mkdir(parents=True, exist_ok=True)
     if "clean" in stages:

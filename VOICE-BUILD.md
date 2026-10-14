@@ -49,6 +49,7 @@ change what runs:
 | `--sovits-epochs N`, `--gpt-epochs N` | Train longer or shorter (12 each by default) |
 | `--ocr` | Also read image subtitles inside the film when there are text ones too |
 | `--no-install` | Build and choose a checkpoint, but leave the voice as it is |
+| `--hold-out` | Leave "I'm sorry, Dave" out of training and judge voices on it as an unheard line |
 
 Each run writes `report.md` into the build folder, listing every line kept and every line in
 HAL's voice that was dropped, with the reason.
@@ -92,9 +93,10 @@ The following stages run in order:
    voice keeps its air. Each clip is extended to where the voice stops, never into the next
    speaker, and its level is matched.
 6. **Train.** GPT-SoVITS is fine-tuned on the clips. "I'm sorry, Dave. I'm afraid I can't do
-   that." is held out of training.
-7. **Select.** Every saved checkpoint pair, with the calmest clean clips as reference, says the
-   held-out line and three lines HAL never says in the film. Each is scored against the film's
+   that." is trained on three times over, so HAL says it the way the film does; `--hold-out`
+   leaves it out instead.
+7. **Select.** Every saved checkpoint pair, with the calmest clean clips as reference (never
+   "I'm sorry, Dave" itself), says that line and three lines HAL never says in the film. Each is scored against the film's
    delivery with `gptsovits/analyse_voice.py` (melody, timing, word lengths and loudness, voice
    quality, spectrum) and checked for pronunciation with the recogniser. The best is kept, with
    samples beside the film's line in `voice-data/build/samples/` for you to compare.

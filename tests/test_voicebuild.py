@@ -344,6 +344,44 @@ class MonologueTest(unittest.TestCase):
         )
 
 
+class SignatureLineTest(unittest.TestCase):
+    def build(self, d, hold_out):
+        import json
+
+        from voicebuild import build
+
+        film = Path(d, "film.mkv")
+        b = build.Build(films=[film], subtitles=[], work=Path(d, "work"), hold_out=hold_out)
+        texts = {
+            "sorry": "I'm sorry, Dave. I'm afraid I can't do that.",
+            "other": "Good evening, Dave.",
+        }
+        cleaned = {}
+        for k in texts:
+            wav = Path(d, f"{k}.wav")
+            wav.write_bytes(b"")
+            cleaned[k] = {"snr_db": 30.0, "hf_db": -20.0, "path": str(wav), "seconds": 2}
+        kept = [{"id": k, "text": v} for k, v in texts.items()]
+        b.path(build.slug(film), "lines.json").write_text(json.dumps({"kept": kept}))
+        b.path(build.slug(film), "clean", "clean.json").write_text(json.dumps(cleaned))
+        build.dataset(b)
+        return b.path("dataset", "transcripts.csv").read_text().splitlines()
+
+    def test_signature_line_is_trained_on_and_weighted(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as d:
+            rows = self.build(d, hold_out=False)
+        self.assertIn("sorry,\"I'm sorry, Dave. I'm afraid I can't do that.\",3", rows)
+
+    def test_hold_out_leaves_it_out(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as d:
+            rows = self.build(d, hold_out=True)
+        self.assertEqual(rows, ['other,"Good evening, Dave.",1'])
+
+
 class InputTest(unittest.TestCase):
     def test_films_and_subtitles_found_in_a_folder(self):
         import tempfile
