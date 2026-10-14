@@ -256,7 +256,7 @@ def is_speaker_tag(tag: str) -> bool:
     if not words or len(words) > 3 or words[0] in _SOUND_WORDS or words[0].endswith("ING"):
         return False
     return not any(
-        w in _SOUND_WORDS or w.endswith("ING") for w in words[1:2] if w not in ("SINGS", "VOICE")
+        w in _SOUND_WORDS or w.endswith("ING") for w in words[1:] if w not in ("SINGS", "VOICE")
     )
 
 

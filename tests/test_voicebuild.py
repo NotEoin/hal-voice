@@ -198,5 +198,100 @@ class SyncTest(unittest.TestCase):
         self.assertEqual(len(sync.from_transcript(words)), 2)
 
 
+class LabelTest(unittest.TestCase):
+    def test_bracket_tags(self):
+        self.assertTrue(subtitles.is_speaker_tag("HAL"))
+        self.assertTrue(subtitles.is_speaker_tag("HAL SINGS"))
+        self.assertTrue(subtitles.is_speaker_tag("MICHAELS"))
+        for sound in (
+            "GRUNTING",
+            "ALARM BLARING",
+            "APE MEN SCREAM",
+            "INAUDIBLE DIALOGUE",
+            "BEEPING NOISE",
+        ):
+            self.assertFalse(subtitles.is_speaker_tag(sound), sound)
+
+    def test_bracket_label_alone_on_its_line(self):
+        self.assertEqual(
+            subtitles.split_speakers("[HALVORSEN]\nYou're welcome."),
+            [("HALVORSEN", [], "You're welcome.")],
+        )
+
+    def test_italics_are_tagged(self):
+        self.assertIn("italic", subtitles.split_speakers("<i>I'm sorry, Dave.</i>")[0][1])
+
+    def test_labels_move_between_sources_over_the_same_words(self):
+        words = [
+            {"start": float(i), "end": i + 0.5, "word": w, "prob": 0.9}
+            for i, w in enumerate("good evening dave how are you".split())
+        ]
+        plain = [
+            subtitles.Cue(0.0, 2.6, "Good evening, Dave.", cue=0),
+            subtitles.Cue(3.0, 5.6, "How are you?", cue=1),
+        ]
+        labelled = [
+            subtitles.Cue(2.0, 4.6, "Good evening, Dave.", speaker="HAL", cue=0),
+            subtitles.Cue(5.0, 7.6, "How are you?", speaker="BOWMAN", cue=1),
+        ]
+        a = ("plain", *sync.align(plain, words))
+        b = ("labelled", *sync.align(labelled, words))
+        name, lines, report, _ = sync.choose([a, b])
+        self.assertEqual([ln.speaker for ln in lines], ["HAL", "BOWMAN"])
+        self.assertEqual(report["labels_transferred"], 2)
+
+
+class ScreenTest(unittest.TestCase):
+    def test_long_lines_split_at_the_longest_pause(self):
+        from voicebuild import quality
+
+        words = [
+            {"start": s, "end": s + 0.4, "word": "w", "prob": 0.9}
+            for s in (
+                0.0,
+                0.5,
+                1.0,
+                1.5,
+                2.0,
+                2.5,
+                3.0,
+                9.0,
+                9.5,
+                10.0,
+                10.5,
+                11.0,
+                11.5,
+                12.0,
+                12.5,
+            )
+        ]
+        line = sync.Line(0.0, 12.9, "x", "x", "HAL", [], 0, 1.0, words)
+        parts = quality.split_long(line)
+        self.assertEqual(len(parts), 2)
+        self.assertEqual(parts[1].start, 9.0)
+
+    def test_anchor_phrases(self):
+        from voicebuild import speaker
+
+        self.assertTrue(speaker._is_anchor("I'm sorry, Dave. I'm afraid I can't do that."))
+        self.assertTrue(
+            speaker._is_anchor("Well, this mission is too important for me to allow it.")
+        )
+        self.assertFalse(speaker._is_anchor("Open the pod bay doors, Hal."))
+
+
+class InputTest(unittest.TestCase):
+    def test_films_and_subtitles_found_in_a_folder(self):
+        import tempfile
+        from voicebuild.__main__ import films_in
+
+        with tempfile.TemporaryDirectory() as d:
+            for name in ("film.mkv", "film.en.srt", "notes.txt.bak", "cover.jpg"):
+                Path(d, name).write_text("")
+            films, subs = films_in([Path(d)])
+        self.assertEqual([f.name for f in films], ["film.mkv"])
+        self.assertEqual([s.name for s in subs], ["film.en.srt"])
+
+
 if __name__ == "__main__":
     unittest.main()
