@@ -253,7 +253,7 @@ def gpt_python() -> str:
 
 def train(b: Build) -> None:
     """Prepares GPT-SoVITS's dataset from the clips and trains under a new experiment name."""
-    done = b.path("trained.json")
+    done = b.path(f"trained-{experiment(b)}.json")
     if done.exists():
         b.say("already trained")
         return
@@ -475,14 +475,16 @@ def select(b: Build) -> None:
                         f"ref {Path(ref[0]).stem} speed {speed}"
                     )
         best = max(results, key=lambda r: (r["score"], -r["wer"]))
-        b.path("selection.json").write_text(json.dumps({"best": best, "all": results}, indent=1))
+        b.path(f"selection-{b.version}.json").write_text(
+            json.dumps({"best": best, "all": results}, indent=1)
+        )
         urllib.request.urlopen(
             f"{server.url}/set_gpt_weights?weights_path={best['gpt']}", timeout=180
         )
         urllib.request.urlopen(
             f"{server.url}/set_sovits_weights?weights_path={best['sovits']}", timeout=180
         )
-        samples = b.path("samples", "film.wav").parent
+        samples = b.path("samples", b.version, "film.wav").parent
         shutil.copy2(b.path("held-out.wav"), samples / "0-film-held-out.wav")
         for k, text in enumerate([held["text"]] + NOVEL, start=1):
             sf.write(
@@ -503,7 +505,7 @@ def select(b: Build) -> None:
 
 def install(b: Build) -> None:
     """Points hal-voice's config.yaml at the chosen weights and reference, keeping a backup."""
-    best = json.loads(b.path("selection.json").read_text())["best"]
+    best = json.loads(b.path(f"selection-{b.version}.json").read_text())["best"]
     weights = GPTSOVITS / "weights"
     gpt, sov = Path(best["gpt"]), Path(best["sovits"])
     shutil.copy2(gpt, weights / gpt.name)
