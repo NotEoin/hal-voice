@@ -111,26 +111,20 @@ def report(b: build.Build) -> Path:
         ]
         out += [f"| {d['start']:.1f} | {d['why']} | {d['text']} |" for d in lines["dropped"]]
         out.append("")
-    rows = []
-    for film in b.films:
-        f = b.work / build.slug(film) / "lines.json"
-        if f.exists():
-            rows += [
-                it
-                for it in json.loads(f.read_text())["kept"]
-                if it.get("subtitle", it["text"]) != it["text"]
+    spoken = b.work / "spoken.json"
+    if spoken.exists():
+        rows = [r for r in json.loads(spoken.read_text()).values() if r["spoken"] != r["subtitle"]]
+        if rows:
+            out += [
+                "## Spoken differently from the subtitles",
+                "",
+                "The transcript trained on is what HAL says.",
+                "",
+                "| Spoken | Subtitle |",
+                "| --- | --- |",
             ]
-    if rows:
-        out += [
-            "## Spoken differently from the subtitles",
-            "",
-            "The transcript trained on is what HAL says.",
-            "",
-            "| Spoken | Subtitle |",
-            "| --- | --- |",
-        ]
-        out += [f"| {it['text']} | {it['subtitle']} |" for it in rows]
-        out.append("")
+            out += [f"| {r['spoken']} | {r['subtitle']} |" for r in rows]
+            out.append("")
     unusable = b.work / "unusable.json"
     if unusable.exists():
         why = json.loads(unusable.read_text())

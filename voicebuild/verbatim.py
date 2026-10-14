@@ -45,6 +45,13 @@ class Verbatim:
         heard = re.sub(r"\s+", " ", " ".join(s.text.strip() for s in segments)).strip()
         return reconcile(heard, hint)
 
+    def clip(self, path, hint: str) -> str:
+        """Returns what is said in a whole clip file, reconciled with its subtitle."""
+        import librosa
+
+        y, _ = librosa.load(str(path), sr=16000, mono=True)
+        return self(y, 16000, PAD_S, len(y) / 16000 - PAD_S, hint)
+
 
 def _norm(piece: str) -> str:
     return " ".join(tokens(piece)) or piece
@@ -64,9 +71,10 @@ def reconcile(heard: str, subtitle: str) -> str:
                 core = re.search(r"[A-Za-z0-9'-]+", wrote[b0 + k])
                 old = re.search(r"[A-Za-z0-9'-]+", said[a0 + k])
                 if core and old:
-                    out.append(
-                        said[a0 + k][: old.start()] + core.group(0) + said[a0 + k][old.end() :]
-                    )
+                    # Keep the heard word's punctuation, but not a symbol written in place of a
+                    # word ("100%" for the subtitle's "100-percent").
+                    tail = re.sub(r"[^.,!?;:]", "", said[a0 + k][old.end() :])
+                    out.append(said[a0 + k][: old.start()] + core.group(0) + tail)
                 else:
                     out.append(said[a0 + k])
         else:

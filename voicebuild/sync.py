@@ -67,6 +67,7 @@ def tidy(text: str) -> str:
     """Drops the ellipses that join a sentence across subtitles, and capitalises the start."""
     t = re.sub(r"^[.\s]+|[\s]*\.{2,}\s*$", "", text).strip()
     t = re.sub(r"\s*\.{3}\s*", ", ", t)
+    t = re.sub(r"[,;:]+$", "", t)
     if t and t[-1] not in ".?!":
         t += "."
     return t[:1].upper() + t[1:] if t else t

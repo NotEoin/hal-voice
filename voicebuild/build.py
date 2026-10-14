@@ -106,9 +106,7 @@ def find(b: Build) -> None:
 
     from . import media, quality, speaker, subtitles, sync, transcribe
 
-    from .verbatim import Verbatim
-
-    embed, verbatim = None, None
+    embed = None
     for film in b.films:
         out = b.path(slug(film), "lines.json")
         if out.exists():
@@ -180,21 +178,6 @@ def find(b: Build) -> None:
             f"  {len(kept)} lines kept ({sum(k[0].end - k[0].start for k in kept) / 60:.1f} min), "
             f"{len(dropped)} dropped"
         )
-        # The training text is what HAL says, heard line by line; subtitles condense speech.
-        b.say("  writing down each line as spoken")
-        if verbatim is None:
-            verbatim = Verbatim(b.asr_model)
-        spoken: list[tuple] = []
-        for ln, rec in kept:
-            said = sync.tidy(verbatim(audio, rate, ln.start, ln.end, ln.text))
-            gap = quality.word_error(sync.tokens(ln.text), sync.tokens(said))
-            if not said or gap > MAX_SPOKEN_GAP:
-                dropped.append({**rec, "why": f"heard as '{said}', too far from the subtitle"})
-                continue
-            spoken.append((ln, {**rec, "text": said, "subtitle": ln.text}))
-        changed = sum(r["text"] != r["subtitle"] for _, r in spoken)
-        b.say(f"  {changed} of {len(spoken)} lines say something other than their subtitle")
-        kept = spoken
         # How far each clip may grow: up to the nearest word anyone else says.
         others = sorted(
             (w["start"], w["end"])
@@ -216,7 +199,7 @@ def find(b: Build) -> None:
             items.append(
                 {
                     **rec,
-                    "id": clip_name(rec["text"], taken),
+                    "id": clip_name(ln.text, taken),
                     "start": ln.start,
                     "end": ln.end,
                     "earliest": max(before + 0.05, ln.start - 0.6),
@@ -312,23 +295,37 @@ def dataset(b: Build) -> None:
     way the film does, and the selection then judges how closely each voice reproduces it. With
     --hold-out it is left out instead, and the selection judges a line the voice never heard.
     """
+    from . import quality, sync
     from .sync import tokens
+    from .verbatim import Verbatim
 
     ds = b.path("dataset", "transcripts.csv").parent
     for old in ds.glob("*.wav"):
         old.unlink()
     ok, why = usable(b)
+    # The training text is what HAL says in exactly the audio trained on, so each cleaned clip is
+    # transcribed again; subtitles condense speech.
+    b.say("writing down each clip as spoken")
+    verbatim, taken, spoken = Verbatim(b.asr_model), set(), {}
     rows, held, seconds = [], None, 0.0
-    for cid, (it, c) in sorted(ok.items()):
+    for cid, (it, c) in sorted(ok.items(), key=lambda kv: kv[1][0]["start"]):
+        said = sync.tidy(verbatim.clip(Path(c["path"]), it["text"]))
+        gap = quality.word_error(tokens(it["text"]), tokens(said))
+        if not said or gap > MAX_SPOKEN_GAP:
+            why[cid] = f"heard as '{said}', too far from the subtitle"
+            continue
         weight = 1
         if held is None and " ".join(tokens(it["text"])) == HELD_OUT:
             held = (c["path"], it)
             if b.hold_out:
                 continue
             weight = SIGNATURE_WEIGHT
-        shutil.copy2(c["path"], ds / f"{cid}.wav")
-        rows.append((cid, it["text"], weight))
+        name = clip_name(said, taken)
+        shutil.copy2(c["path"], ds / f"{name}.wav")
+        rows.append((name, said, weight))
+        spoken[name] = {"spoken": said, "subtitle": it["text"], "start": it["start"]}
         seconds += c["seconds"]
+    b.path("spoken.json").write_text(json.dumps(spoken, indent=1))
     with (ds / "transcripts.csv").open("w", newline="", encoding="utf-8") as fh:
         csv.writer(fh).writerows(rows)
     if held:

@@ -361,10 +361,16 @@ class SignatureLineTest(unittest.TestCase):
             wav = Path(d, f"{k}.wav")
             wav.write_bytes(b"")
             cleaned[k] = {"snr_db": 30.0, "hf_db": -20.0, "path": str(wav), "seconds": 2}
-        kept = [{"id": k, "text": v} for k, v in texts.items()]
+        kept = [{"id": k, "text": v, "start": n} for n, (k, v) in enumerate(texts.items())]
         b.path(build.slug(film), "lines.json").write_text(json.dumps({"kept": kept}))
         b.path(build.slug(film), "clean", "clean.json").write_text(json.dumps(cleaned))
-        build.dataset(b)
+        from unittest import mock
+
+        # The recogniser hears exactly the subtitle here; reconciling is tested on its own.
+        fake = mock.Mock()
+        fake.return_value.clip.side_effect = lambda path, hint: hint
+        with mock.patch("voicebuild.verbatim.Verbatim", fake):
+            build.dataset(b)
         return b.path("dataset", "transcripts.csv").read_text().splitlines()
 
     def test_signature_line_is_trained_on_and_weighted(self):
@@ -372,14 +378,18 @@ class SignatureLineTest(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as d:
             rows = self.build(d, hold_out=False)
-        self.assertIn("sorry,\"I'm sorry, Dave. I'm afraid I can't do that.\",3", rows)
+        self.assertIn(
+            "im-sorry-dave-im-afraid-i-cant-do-that,"
+            "\"I'm sorry, Dave. I'm afraid I can't do that.\",3",
+            rows,
+        )
 
     def test_hold_out_leaves_it_out(self):
         import tempfile
 
         with tempfile.TemporaryDirectory() as d:
             rows = self.build(d, hold_out=True)
-        self.assertEqual(rows, ['other,"Good evening, Dave.",1'])
+        self.assertEqual(rows, ['good-evening-dave,"Good evening, Dave.",1'])
 
 
 class ExcludeTest(unittest.TestCase):
@@ -393,6 +403,14 @@ class ExcludeTest(unittest.TestCase):
 
 
 class VerbatimTest(unittest.TestCase):
+    def test_symbols_in_place_of_words_are_dropped(self):
+        from voicebuild.verbatim import reconcile
+
+        self.assertEqual(
+            reconcile("It's going to go 100% failure.", "It's going to go 100-percent failure."),
+            "It's going to go 100-percent failure.",
+        )
+
     def test_words_the_subtitle_dropped_come_from_the_speech(self):
         from voicebuild.verbatim import reconcile
 
