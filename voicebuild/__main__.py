@@ -161,6 +161,13 @@ def main() -> int:
         "--no-install", action="store_true", help="build and select, but leave the voice as it is"
     )
     ap.add_argument(
+        "--exclude",
+        action="append",
+        default=[],
+        metavar="PHRASE",
+        help="leave out lines containing this phrase; remembered in the build folder (repeatable)",
+    )
+    ap.add_argument(
         "--hold-out",
         action="store_true",
         help='leave "I\'m sorry, Dave" out of training and judge voices on it as an unheard line',
@@ -186,6 +193,7 @@ def main() -> int:
         use_ocr=args.ocr,
         install="install" in stages,
         hold_out=args.hold_out,
+        exclude=args.exclude,
     )
     b.work.mkdir(parents=True, exist_ok=True)
     if "clean" in stages:

@@ -382,6 +382,16 @@ class SignatureLineTest(unittest.TestCase):
         self.assertEqual(rows, ['other,"Good evening, Dave.",1'])
 
 
+class ExcludeTest(unittest.TestCase):
+    def test_phrases_match_whole_words_ignoring_punctuation(self):
+        from voicebuild import build
+
+        phrases = ["I'm sorry, Frank"]
+        self.assertTrue(build.excluded("I'm sorry, Frank. I think you missed it.", phrases))
+        self.assertFalse(build.excluded("I'm sorry, Dave. I'm afraid I can't do that.", phrases))
+        self.assertFalse(build.excluded("I'm sorry, Franklin.", phrases))
+
+
 class InputTest(unittest.TestCase):
     def test_films_and_subtitles_found_in_a_folder(self):
         import tempfile

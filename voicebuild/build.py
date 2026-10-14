@@ -49,6 +49,7 @@ class Build:
     use_ocr: bool = False
     install: bool = True
     hold_out: bool = False
+    exclude: list[str] = field(default_factory=list)
     denoise_python: str = ""
     log: list[str] = field(default_factory=list)
 
@@ -72,6 +73,23 @@ def clip_name(text: str, taken: set[str]) -> str:
         name = f"{base or 'line'}-{n}"
     taken.add(name)
     return name
+
+
+def exclusions(b: Build) -> list[str]:
+    """Returns the phrases to leave out: those saved by earlier runs plus any given now, saved."""
+    saved = b.path("exclude.json")
+    phrases = json.loads(saved.read_text()) if saved.exists() else []
+    phrases += [p for p in b.exclude if p not in phrases]
+    saved.write_text(json.dumps(phrases, indent=1))
+    return phrases
+
+
+def excluded(text: str, phrases: list[str]) -> bool:
+    """True when a line contains one of the phrases, ignoring case and punctuation."""
+    from .sync import tokens
+
+    said = " " + " ".join(tokens(text)) + " "
+    return any(" " + " ".join(tokens(p)) + " " in said for p in phrases if tokens(p))
 
 
 def slug(path: Path) -> str:
@@ -138,7 +156,23 @@ def find(b: Build) -> None:
             f"  {srep['hal_lines']} lines in HAL's voice (threshold {srep['threshold']}, "
             f"{srep['seeds_used']} seeds)"
         )
+        # Lines the user asked to leave out go before monologues are joined, so the rest of a
+        # joined run (HAL's chess moves after "I'm sorry, Frank") is kept.
+        left_out = []
+        for ln, v in zip(lines, verdicts):
+            if v["hal"] and excluded(ln.text, exclusions(b)):
+                v["hal"] = False
+                left_out.append(
+                    {
+                        "start": round(ln.start, 2),
+                        "end": round(ln.end, 2),
+                        "text": ln.text,
+                        "sim": v["sim"],
+                        "why": "left out on request",
+                    }
+                )
         kept, dropped = quality.screen(lines, verdicts, audio, rate, bool(srcs))
+        dropped += left_out
         b.say(
             f"  {len(kept)} lines kept ({sum(k[0].end - k[0].start for k in kept) / 60:.1f} min), "
             f"{len(dropped)} dropped"

@@ -49,6 +49,7 @@ change what runs:
 | `--sovits-epochs N`, `--gpt-epochs N` | Train longer or shorter (12 each by default) |
 | `--ocr` | Also read image subtitles inside the film when there are text ones too |
 | `--no-install` | Build and choose a checkpoint, but leave the voice as it is |
+| `--exclude PHRASE` | Leave out lines containing the phrase, remembered for later runs; for example `--exclude "I'm sorry, Frank"` |
 | `--hold-out` | Leave "I'm sorry, Dave" out of training and judge voices on it as an unheard line |
 
 Each run writes `report.md` into the build folder, listing every line kept and every line in
