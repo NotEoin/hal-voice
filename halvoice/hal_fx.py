@@ -71,22 +71,33 @@ def _pedalboard_chain(audio: np.ndarray, sr: int, fx: dict) -> np.ndarray:
 
     eq = fx.get("eq", {}) or {}
     rev = fx.get("reverb", {}) or {}
-    board = Pedalboard([
-        PitchShift(semitones=float(fx.get("pitch_shift_semitones", 0.0))),
-        LowShelfFilter(cutoff_frequency_hz=float(eq.get("low_shelf_hz", 180)),
-                       gain_db=float(eq.get("low_shelf_gain_db", 2.0))),
-        PeakFilter(cutoff_frequency_hz=float(eq.get("presence_hz", 3500)),
-                   gain_db=float(eq.get("presence_gain_db", -2.5)), q=1.0),
-        HighShelfFilter(cutoff_frequency_hz=float(eq.get("high_rolloff_hz", 9000)),
-                        gain_db=float(eq.get("high_rolloff_gain_db", -3.0))),
-        Distortion(drive_db=float(fx.get("drive", 0.04)) * 100.0),
-    ])
+    shift = float(fx.get("pitch_shift_semitones", 0.0))
+    low = float(eq.get("low_shelf_gain_db", 2.0))
+    presence = float(eq.get("presence_gain_db", -2.5))
+    high = float(eq.get("high_rolloff_gain_db", -3.0))
+    drive = float(fx.get("drive", 0.04))
+    # A stage set to zero is left out, not run flat: the pitch shifter colours the sound even
+    # at zero semitones.
+    board = Pedalboard([])
+    if shift:
+        board.append(PitchShift(semitones=shift))
+    if low:
+        board.append(LowShelfFilter(cutoff_frequency_hz=float(eq.get("low_shelf_hz", 180)),
+                                    gain_db=low))
+    if presence:
+        board.append(PeakFilter(cutoff_frequency_hz=float(eq.get("presence_hz", 3500)),
+                                gain_db=presence, q=1.0))
+    if high:
+        board.append(HighShelfFilter(cutoff_frequency_hz=float(eq.get("high_rolloff_hz", 9000)),
+                                     gain_db=high))
+    if drive:
+        board.append(Distortion(drive_db=drive * 100.0))
     if rev.get("enabled", True):
         board.append(Reverb(room_size=float(rev.get("room", 0.18)),
                             damping=float(rev.get("damping", 0.6)),
                             wet_level=float(rev.get("wet", 0.12)),
                             dry_level=1.0 - float(rev.get("wet", 0.12)) * 0.5))
-    return board(audio, sr)
+    return board(audio, sr) if len(board) else audio
 
 
 def _normalize_loudness(audio: np.ndarray, sr: int, target_lufs: float) -> np.ndarray:

@@ -30,13 +30,28 @@ log = get_logger(__name__)
 _SENTENCE_RE = re.compile(r"(.+?(?:[.!?]+|\n|$))", re.S)
 
 
+GROUP_CHARS = 90  # short sentences are said together, as "I'm sorry, Dave. I'm afraid..." is
+
+
 def split_sentences(text: str) -> list[str]:
-    """Split into speakable chunks. Keeps HAL's measured, one-thought-at-a-time delivery."""
+    """Split into speakable chunks of whole sentences, short ones grouped up to GROUP_CHARS.
+
+    Each chunk is synthesised in one piece. Sentences said apart lose the delivery that joins
+    them, and the reference line itself is two short sentences said as one.
+    """
     text = text.strip()
     if not text:
         return []
-    chunks = [m.group(1).strip() for m in _SENTENCE_RE.finditer(text)]
-    return [c for c in chunks if c]
+    chunks: list[str] = []
+    for m in _SENTENCE_RE.finditer(text):
+        sentence = m.group(1).strip()
+        if not sentence:
+            continue
+        if chunks and len(chunks[-1]) + 1 + len(sentence) <= GROUP_CHARS:
+            chunks[-1] += " " + sentence
+        else:
+            chunks.append(sentence)
+    return chunks
 
 
 class GPTSoVITSClient:
