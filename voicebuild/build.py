@@ -341,6 +341,34 @@ def gpt_python() -> str:
     return sys.executable
 
 
+TRAIN_FREE_GB = 12.0  # GPU memory SoVITS training needs at batch size 4
+WAIT_FOR_GPU_S = 1800
+
+
+def free_gpu_gb() -> float | None:
+    """Returns free memory on the first GPU in GB, or None without nvidia-smi."""
+    try:
+        out = subprocess.run(
+            ["nvidia-smi", "--query-gpu=memory.free", "--format=csv,noheader,nounits"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return int(out.split()[0]) / 1024
+
+
+def wait_for_gpu(b: Build) -> None:
+    """Waits until enough GPU memory is free; something else on the machine may be using it."""
+    deadline = time.time() + WAIT_FOR_GPU_S
+    free = free_gpu_gb()
+    while free is not None and free < TRAIN_FREE_GB and time.time() < deadline:
+        b.say(f"waiting for GPU memory: {free:.1f} GB free, training needs {TRAIN_FREE_GB:.0f} GB")
+        time.sleep(30)
+        free = free_gpu_gb()
+
+
 def train(b: Build) -> None:
     """Prepares GPT-SoVITS's dataset from the clips and trains under a new experiment name."""
     done = b.path(f"trained-{experiment(b)}.json")
@@ -365,6 +393,7 @@ def train(b: Build) -> None:
         "HAL_SOVITS_EPOCHS": str(b.sovits_epochs),
         "HAL_GPT_EPOCHS": str(b.gpt_epochs),
     }
+    wait_for_gpu(b)
     b.say(f"training {exp}: {b.sovits_epochs} SoVITS and {b.gpt_epochs} GPT epochs")
     shutil.rmtree(GPTSOVITS / "GPT-SoVITS" / "logs" / exp, ignore_errors=True)
     with b.path("train.log").open("w") as log:
