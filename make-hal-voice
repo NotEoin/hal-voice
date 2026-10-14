@@ -27,5 +27,11 @@ for tool in ffmpeg ffprobe; do
   command -v "$tool" >/dev/null || { echo "$tool is needed: sudo apt install ffmpeg" >&2; exit 1; }
 done
 
+# setup-voice.sh --with-training records where demucs and DeepFilterNet live.
+if [ -f "$HERE/voice.conf" ] && [ -z "${HALVOICE_DENOISE_PYTHON:-}" ]; then
+  HALVOICE_DENOISE_PYTHON="$(sed -n 's/^HALVOICE_DENOISE_PYTHON="\(.*\)"$/\1/p' "$HERE/voice.conf" | tail -1)"
+  [ -n "$HALVOICE_DENOISE_PYTHON" ] && export HALVOICE_DENOISE_PYTHON
+fi
+
 cd "$HERE"
 PYTHONPATH="$HERE${PYTHONPATH:+:$PYTHONPATH}" exec "$PY" -m voicebuild "$@"

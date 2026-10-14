@@ -55,6 +55,7 @@ def denoise_python(given: str | None) -> str:
         candidates += [
             str(root / "envs" / n / "bin" / "python") for n in ("haldenoise", "hal-voice-denoise")
         ]
+    candidates.append(str(build.ROOT / ".venv-denoise" / "bin" / "python"))
     for c in candidates:
         if c and Path(c).exists():
             ok = subprocess.run(

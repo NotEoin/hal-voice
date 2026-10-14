@@ -9,6 +9,7 @@
 #   ./setup-voice.sh --yes            # accept the detected profile without prompting
 #   ./setup-voice.sh --no-gptsovits   # skip cloning/installing GPT-SoVITS (do it yourself)
 #   ./setup-voice.sh --with-wake      # also install the optional wake-word deps
+#   ./setup-voice.sh --with-training  # also what ./make-hal-voice needs to build the voice from the film
 #   ./setup-voice.sh --hal ../Hal     # also wire it to a Hal checkout (see below)
 #   ./setup-voice.sh --hal auto       # ...or find a sibling Hal automatically
 #
@@ -41,6 +42,7 @@ GPTSOVITS_DIR="$VOICE_ROOT/gptsovits/GPT-SoVITS"
 CONF_FILE="$VOICE_ROOT/voice.conf"   # git-ignored; written here, sourced by ./hal-voice
 DO_GPTSOVITS=1
 DO_WAKE=0
+DO_TRAINING=0
 HAL_ROOT_ARG=""
 PROFILE=""
 ASSUME_YES=0
@@ -48,6 +50,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --no-gptsovits) DO_GPTSOVITS=0; shift ;;
     --with-wake) DO_WAKE=1; shift ;;
+    --with-training) DO_TRAINING=1; shift ;;
     --hal) HAL_ROOT_ARG="${2:-}"; shift 2 || true ;;
     --hal=*) HAL_ROOT_ARG="${1#*=}"; shift ;;
     --profile) PROFILE="${2:-}"; shift 2 || true ;;
@@ -271,6 +274,37 @@ HALVOICE_TTS_HALF="$TTS_HALF"
 EOF
 ok "Voice profile saved to voice.conf"
 
+# --- 3d. What make-hal-voice needs to build the voice from the film --------
+# The GPT-SoVITS environment gains the analysis packages; demucs and DeepFilterNet get an
+# environment of their own, since DeepFilterNet needs an older torch than GPT-SoVITS uses.
+if [ "$DO_TRAINING" -eq 1 ]; then
+  log "Setting up the voice build (./make-hal-voice)"
+  have tesseract && ok "tesseract present (reads image subtitles)" \
+    || warn "tesseract missing; image subtitles need it: $SUDO apt-get install -y tesseract-ocr"
+  GSV_PY=""
+  for root in "$HOME/miniconda3" "$HOME/anaconda3" "$HOME/miniforge3"; do
+    [ -x "$root/envs/gptsovits/bin/python" ] && GSV_PY="$root/envs/gptsovits/bin/python" && break
+  done
+  [ -z "$GSV_PY" ] && [ -x "$GPTSOVITS_DIR/runtime/python" ] && GSV_PY="$GPTSOVITS_DIR/runtime/python"
+  if [ -n "$GSV_PY" ]; then
+    "$GSV_PY" -m pip install --quiet praat-parselmouth av faster-whisper \
+      && ok "analysis packages in the GPT-SoVITS environment" || warn "pip install in $GSV_PY failed"
+  else
+    warn "no GPT-SoVITS environment yet: run its install.sh first, then this again"
+  fi
+  if have conda; then
+    if ! conda env list | grep -q '^hal-voice-denoise '; then
+      conda create -y -n hal-voice-denoise python=3.11 >/dev/null && ok "created hal-voice-denoise"
+    fi
+    DN_PY="$(conda run -n hal-voice-denoise which python)"
+  else
+    python3.11 -m venv "$VOICE_ROOT/.venv-denoise" && DN_PY="$VOICE_ROOT/.venv-denoise/bin/python"
+  fi
+  "$DN_PY" -m pip install --quiet "torch==2.5.1" "torchaudio==2.5.1" demucs deepfilternet librosa soundfile \
+    && ok "demucs and DeepFilterNet in $DN_PY" || warn "denoise install failed; see $DN_PY"
+  [ -n "${DN_PY:-}" ] && printf '\nHALVOICE_DENOISE_PYTHON="%s"\n' "$DN_PY" >> "$CONF_FILE"
+fi
+
 # --- 4. Make 'hal-voice' executable + optional symlink ----------------------
 chmod +x "$VOICE_ROOT/hal-voice" "$VOICE_ROOT"/*.sh 2>/dev/null || true
 chmod +x "$VOICE_ROOT/gptsovits/"*.sh 2>/dev/null || true
@@ -286,9 +320,11 @@ ${c_green}============================================================${c_off}
 
 Remaining one-time steps (the voice itself):
 
-  1) Build HAL's voice dataset + fine-tune GPT-SoVITS:
-       see  voice-data/README.md   (sourcing & cleaning HAL audio)
-       then gptsovits/train-hal.md  (the fine-tune run)
+  1) Build HAL's voice from your copy of the film (needs --with-training):
+       put the film, and any .srt, in voice-data/film/, then run
+       ./make-hal-voice
+     (VOICE-BUILD.md explains each step; voice-data/README.md and
+     gptsovits/train-hal.md cover doing it by hand.)
 
   2) Start the GPT-SoVITS API server (keep it running):
        ./gptsovits/run-api.sh
