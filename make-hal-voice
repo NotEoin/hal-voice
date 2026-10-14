@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Builds HAL's voice from your copy of 2001: A Space Odyssey, and installs it into hal-voice.
+# Drop the film (and any subtitle files) into voice-data/film/ and run ./make-hal-voice, or name
+# the files: ./make-hal-voice FILM [--subs FILE.srt]. ./make-hal-voice --help lists the options.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+mkdir -p "$HERE/voice-data/film"
+
+# The GPT-SoVITS environment does the work: it has torch, faster-whisper and the speaker model.
+PY="${GPTSOVITS_PYTHON:-}"
+if [ -z "$PY" ]; then
+  conda_root="$(dirname "$(dirname "${CONDA_PREFIX:-/x/x}")")"
+  for root in "$conda_root" "$HOME/miniconda3" "$HOME/anaconda3" "$HOME/miniforge3"; do
+    [ -x "$root/envs/gptsovits/bin/python" ] && PY="$root/envs/gptsovits/bin/python" && break
+  done
+fi
+if [ -z "$PY" ] && [ -x "$HERE/gptsovits/GPT-SoVITS/runtime/python" ]; then
+  PY="$HERE/gptsovits/GPT-SoVITS/runtime/python"
+fi
+if [ -z "$PY" ]; then
+  echo "No GPT-SoVITS Python found. Run ./setup-voice.sh --with-training," >&2
+  echo "or set GPTSOVITS_PYTHON." >&2
+  exit 1
+fi
+for tool in ffmpeg ffprobe; do
+  command -v "$tool" >/dev/null || { echo "$tool is needed: sudo apt install ffmpeg" >&2; exit 1; }
+done
+
+cd "$HERE"
+PYTHONPATH="$HERE${PYTHONPATH:+:$PYTHONPATH}" exec "$PY" -m voicebuild "$@"

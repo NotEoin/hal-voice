@@ -52,3 +52,7 @@ CC-Session-Logs/
 gptsovits/tuning/
 voice-data/reference.october-backup/
 voice-data/denoised-light/
+
+# Voice builds: your film, and everything made from it (clips, transcripts, weights)
+voice-data/film/
+voice-data/build/
