@@ -39,6 +39,8 @@ set -uo pipefail
 VOICE_ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 VENV="$VOICE_ROOT/.venv"
 GPTSOVITS_DIR="$VOICE_ROOT/gptsovits/GPT-SoVITS"
+# The GPT-SoVITS commit HAL's voice was trained and chosen with; a later one may train differently.
+GPTSOVITS_COMMIT="08d627c3338173c3229286d8787060d6559fe0f8"
 CONF_FILE="$VOICE_ROOT/voice.conf"   # git-ignored; written here, sourced by ./hal-voice
 DO_GPTSOVITS=1
 DO_WAKE=0
@@ -214,9 +216,14 @@ if [ "$DO_GPTSOVITS" -eq 1 ]; then
   mkdir -p "$VOICE_ROOT/gptsovits"
   if [ ! -d "$GPTSOVITS_DIR/.git" ]; then
     git clone https://github.com/RVC-Boss/GPT-SoVITS "$GPTSOVITS_DIR" \
-      && ok "cloned GPT-SoVITS" || warn "git clone failed — clone it manually into $GPTSOVITS_DIR"
+      && git -C "$GPTSOVITS_DIR" checkout --quiet "$GPTSOVITS_COMMIT" \
+      && ok "cloned GPT-SoVITS at ${GPTSOVITS_COMMIT:0:7}" \
+      || warn "git clone failed — clone it manually into $GPTSOVITS_DIR"
+  elif [ "$(git -C "$GPTSOVITS_DIR" rev-parse HEAD 2>/dev/null)" = "$GPTSOVITS_COMMIT" ]; then
+    ok "GPT-SoVITS already cloned at ${GPTSOVITS_COMMIT:0:7}"
   else
-    ok "GPT-SoVITS already cloned"
+    warn "GPT-SoVITS is not at ${GPTSOVITS_COMMIT:0:7}, the version HAL's voice was built with:"
+    printf '       git -C %s checkout %s\n' "$GPTSOVITS_DIR" "$GPTSOVITS_COMMIT"
   fi
   if [ -f "$GPTSOVITS_DIR/install.sh" ]; then
     warn "Run GPT-SoVITS's own installer once (it pulls a large torch+CUDA stack):"
