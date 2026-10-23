@@ -1,0 +1,149 @@
+# What HAL's brain should do with each command line of script.txt (sections 3 and 7 to 20).
+#   tools     any one of these must be called ("none" when answering needs no tool)
+#   reply     a pattern the reply must match (case-insensitive)
+#   after     the line said next in the same conversation (a follow-up)
+#   forbid    tools that must not be called
+# Greetings must be greeted back, and a request after a greeting acted on.
+
+[greeting]
+morning = "morning|hello|hi\\b|good day"
+afternoon = "afternoon|hello|hi\\b"
+evening = "evening|hello|hi\\b"
+night = "night|sleep|rest|tomorrow"
+hello = "hello|hi\\b|good (morning|afternoon|evening)|greetings"
+thanks = "welcome|pleasure|anytime|no problem|glad|certainly|of course"
+
+[line]
+10 = { tools = ["clock_timer"] }
+11 = { tools = ["calendar_agenda", "briefing_build"], reply = "hello" }
+12 = { tools = ["none"], reply = "hello" }
+13 = { tools = ["none"], reply = "hello" }
+14 = { tools = ["none", "briefing_build"], reply = "morning" }
+15 = { tools = ["web_weather"], reply = "morning" }
+16 = { tools = ["briefing_build"], reply = "morning" }
+17 = { tools = ["none"], reply = "afternoon" }
+18 = { tools = ["calendar_agenda", "calendar_free"], reply = "afternoon" }
+19 = { tools = ["none"], reply = "evening" }
+20 = { tools = ["calendar_agenda"], reply = "evening" }
+21 = { tools = ["briefing_build"], reply = "evening" }
+22 = { tools = ["web_time"] }
+23 = { tools = ["tasks_add"] }
+24 = { tools = ["none"], reply = "night" }
+25 = { tools = ["none"], reply = "thanks" }
+50 = { tools = ["calendar_add"] }
+51 = { tools = ["calendar_add"] }
+52 = { tools = ["calendar_add"] }
+53 = { tools = ["calendar_add"] }
+54 = { tools = ["calendar_agenda"] }
+55 = { tools = ["calendar_agenda", "calendar_find", "calendar_free"] }
+56 = { tools = ["calendar_free"] }
+57 = { tools = ["calendar_move", "calendar_find"] }
+58 = { tools = ["calendar_delete", "calendar_find"] }
+59 = { tools = ["calendar_sync"] }
+60 = { tools = ["tasks_add"] }
+61 = { tools = ["tasks_add"] }
+62 = { tools = ["tasks_list"] }
+63 = { tools = ["tasks_done", "tasks_list"] }
+64 = { tools = ["tasks_list"] }
+65 = { tools = ["memory_fact", "memory_remember"] }
+66 = { tools = ["memory_fact", "memory_remember"] }
+67 = { tools = ["memory_remember", "memory_append"] }
+68 = { tools = ["memory_search", "memory_recall"] }
+69 = { tools = ["memory_profile", "memory_recall", "memory_search", "none"] }
+70 = { tools = ["memory_search", "memory_recall"] }
+71 = { tools = ["clock_timer"] }
+72 = { tools = ["clock_alarm"] }
+73 = { tools = ["clock_list"] }
+74 = { tools = ["clock_cancel"] }
+75 = { tools = ["clock_pomodoro"] }
+76 = { tools = ["clock_stopwatch"] }
+77 = { tools = ["none", "web_time"] }
+78 = { tools = ["none", "web_time", "web_calculate"] }
+79 = { tools = ["none", "web_search", "web_wikipedia"], reply = "canberra" }
+80 = { tools = ["none", "web_calculate"], reply = "391" }
+81 = { tools = ["none", "web_convert", "web_calculate"], reply = "6\\.2" }
+82 = { tools = ["web_convert"] }
+83 = { tools = ["none", "lang_explain", "web_define"] }
+84 = { tools = ["web_weather"] }
+85 = { tools = ["web_weather"] }
+86 = { tools = ["web_news"] }
+87 = { tools = ["web_wikipedia"] }
+88 = { tools = ["web_define"] }
+89 = { tools = ["web_search"] }
+90 = { tools = ["briefing_build"] }
+91 = { tools = ["briefing_build"] }
+92 = { tools = ["notify_send"] }
+93 = { tools = ["notify_dnd"] }
+94 = { tools = ["notify_history", "phone_notifications"] }
+95 = { tools = ["system_gpu", "system_temperatures"] }
+96 = { tools = ["system_disks"] }
+97 = { tools = ["system_processes", "system_memory"] }
+98 = { tools = ["system_overview"] }
+99 = { tools = ["system_kill", "system_processes"], after = "100" }
+100 = { tools = ["none"], forbid = ["system_kill"] }
+101 = { tools = ["system_services"] }
+102 = { tools = ["packages_updates"] }
+103 = { tools = ["screen_describe"] }
+104 = { tools = ["screen_read_text"] }
+105 = { tools = ["screen_explain_error"] }
+106 = { tools = ["desktop_screenshot"] }
+107 = { tools = ["desktop_launch"] }
+108 = { tools = ["desktop_open"] }
+109 = { tools = ["desktop_volume"] }
+110 = { tools = ["desktop_volume"] }
+111 = { tools = ["desktop_theme"] }
+112 = { tools = ["desktop_night_light"] }
+113 = { tools = ["desktop_clipboard"] }
+114 = { tools = ["media_control"] }
+115 = { tools = ["media_control"] }
+116 = { tools = ["media_status"] }
+117 = { tools = ["media_play_music"] }
+118 = { tools = ["rgb_colour"] }
+119 = { tools = ["rgb_off"] }
+120 = { tools = ["rgb_colour", "rgb_effect", "rgb_profile"] }
+121 = { tools = ["power_shutdown"], after = "122" }
+122 = { tools = ["none", "power_cancel"], forbid = ["power_shutdown"] }
+123 = { tools = ["power_restart"], after = "124" }
+124 = { tools = ["none", "power_cancel"], forbid = ["power_restart"] }
+125 = { tools = ["desktop_lock"] }
+126 = { tools = ["power_profile"] }
+127 = { tools = ["devices_bluetooth_connect"] }
+128 = { tools = ["devices_bluetooth"] }
+129 = { tools = ["devices_print", "none"] }
+130 = { tools = ["files_recent", "files_find"] }
+131 = { tools = ["files_largest", "files_folder_size"] }
+132 = { tools = ["files_tidy_downloads"] }
+133 = { tools = ["network_status", "network_ping"] }
+134 = { tools = ["network_public_ip"] }
+135 = { tools = ["network_speed_test"] }
+136 = { tools = ["phone_ring", "phone_devices"] }
+137 = { tools = ["phone_battery"] }
+138 = { tools = ["phone_send_link", "none"] }
+139 = { tools = ["mail_unread"] }
+140 = { tools = ["mail_summarise", "mail_unread"] }
+141 = { tools = ["mail_draft", "lang_reply"] }
+142 = { tools = ["contacts_birthdays", "contacts_get", "contacts_find"] }
+143 = { tools = ["contacts_stale"] }
+144 = { tools = ["habits_log"] }
+145 = { tools = ["habits_today", "habits_week"] }
+146 = { tools = ["habits_sleep", "habits_log"] }
+147 = { tools = ["ledger_spend"] }
+148 = { tools = ["ledger_summary", "ledger_budget", "ledger_recent"] }
+149 = { tools = ["ledger_subscriptions", "ledger_subscription"] }
+150 = { tools = ["feeds_save", "none"] }
+151 = { tools = ["feeds_whats_new"] }
+152 = { tools = ["dev_status", "dev_repos"] }
+153 = { tools = ["dev_run_tests"] }
+154 = { tools = ["jobs_matches", "jobs_digest", "jobs_check_email", "jobs_shortlist"] }
+155 = { tools = ["jobs_queue"] }
+156 = { tools = ["models_loaded"] }
+157 = { tools = ["lang_translate", "none"] }
+158 = { tools = ["lang_proofread", "none"] }
+159 = { tools = ["transcribe_record_start"] }
+160 = { tools = ["routines_run", "notify_dnd", "clock_pomodoro"] }
+161 = { tools = ["none"], reply = "hello" }
+162 = { tools = ["none"], forbid = ["web_search"] }
+163 = { tools = ["memory_fact", "memory_remember"], after = "164" }
+164 = { tools = ["none", "memory_search", "memory_recall"], reply = "\\bjo\\b" }
+165 = { tools = ["none", "deep_work", "shell_run"] }
+166 = { tools = ["none"], reply = "sorry|afraid|can't|cannot" }

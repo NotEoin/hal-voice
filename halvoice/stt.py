@@ -147,6 +147,9 @@ class Transcriber:
         self.beam_size = int(cfg.get("stt.beam_size", 1))
         self.language = cfg.get("stt.language", "en")
         self.hotwords = cfg.get("stt.hotwords", "Hal")
+        self.prompt = cfg.get("stt.initial_prompt") or None
+        self.highpass_hz = float(cfg.get("stt.highpass_hz", 0) or 0)
+        self.level_dbfs = cfg.get("stt.normalise_dbfs")
 
     def _load(self):
         with Transcriber._lock:
@@ -166,12 +169,27 @@ class Transcriber:
                 Transcriber._model = WhisperModel(self.cpu_model, device="cpu", compute_type="int8")
         return Transcriber._model
 
+    def prepare(self, audio: np.ndarray) -> np.ndarray:
+        """Takes out what is below a voice, and brings a quiet one up to a set level."""
+        if self.highpass_hz:
+            from scipy.signal import butter, sosfilt
+
+            sos = butter(4, self.highpass_hz, "highpass", fs=16000, output="sos")
+            audio = sosfilt(sos, audio).astype(np.float32)
+        if self.level_dbfs is not None:
+            loud = np.sqrt(np.mean(audio.astype(np.float64) ** 2)) + 1e-9
+            gain = 10 ** (float(self.level_dbfs) / 20) / loud
+            audio = np.clip(audio * min(gain, 30.0), -1.0, 1.0).astype(np.float32)
+        return audio
+
     def transcribe(self, audio: np.ndarray, prompt: str | None = None) -> str:
         if audio.size == 0:
             return ""
         model = self._load()
+        audio = self.prepare(audio)
         segments, _info = model.transcribe(
-            audio, beam_size=self.beam_size, language=self.language, initial_prompt=prompt,
+            audio, beam_size=self.beam_size, language=self.language,
+            initial_prompt=prompt or self.prompt,
             hotwords=self.hotwords or None, vad_filter=False, condition_on_previous_text=False)
         # Noise and silence come back as confident-sounding words; Whisper's own scores
         # say which segments were really speech.

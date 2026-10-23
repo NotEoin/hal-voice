@@ -122,6 +122,25 @@ HALVOICE_TTS_SPEED=0.9 ./hal-voice        # slow it down
 HALVOICE_STT_MODEL=medium.en ./hal-voice  # more accurate transcription
 ```
 
+### Testing hands-free listening
+
+`voicetest` replays a recording of you reading [`voicetest/script.txt`](voicetest/script.txt)
+through the same voice detector, name rules and speech recognition the service uses, without the
+voice or the brain, and reports what woke HAL, what reached him and how fast:
+
+```bash
+./hal-voice voicetest split ~/recording.wav    # cut it into lines (kept in voice-data/tests/)
+./hal-voice voicetest run                      # replay on a simulated clock, in a minute or so
+./hal-voice voicetest run --live               # replay at real-time pace through the threads
+./hal-voice voicetest run --simulate --set activation.keyword.end_silence_ms=500 --label e500
+./hal-voice voicetest compare sim e500         # two runs side by side
+./hal-voice voicetest brain --label sim        # send the commands heard to the brain, sandboxed
+```
+
+Record on the microphone HAL uses, with HAL turned off, saying "Marker one" and the take ("Desk,
+take one") first. `--simulate` adds louder fans and a quieter voice, made from your recording,
+until you have recorded those takes. The clips are your voice, so they stay out of git.
+
 ## ⬇️ Installation
 
 hal-voice is a Hal ecosystem extension: it lives in `extensions/hal-voice` and is installed by the
@@ -210,7 +229,8 @@ don't have rights to is not okay.
   dependencies aren't installed; run `./setup-voice.sh --with-wake` to experiment. For hands-free
   use, set `activation.keyword.enabled: true` instead: one microphone stream is cut into utterances,
   each transcribed once (on the GPU with `stt.device: auto`), and a turn starts when one begins or
-  ends with "Hal". It costs some GPU or CPU time whenever someone is speaking nearby.
+  ends with "Hal", greeting first or not ("Good morning, Hal"). It costs some GPU or CPU time
+  whenever someone is speaking nearby, and "Hey Al" still sounds like "Hey Hal" to it.
 - **The direct brain needs a model that calls tools reliably.** Smaller models tend to say they did
   something instead of doing it; the brain holds back such replies and retries once, but a 20B-class
   model with good tool use (mistral-small3.2 measured best here) is the practical minimum.

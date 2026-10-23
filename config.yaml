@@ -12,6 +12,10 @@ audio:
   channels: 1
   # Voice-activity detection: how aggressively to trim silence around speech.
   vad_aggressiveness: 2     # 0..3 (webrtcvad). Higher = more aggressive silence trimming.
+  # A PC's fans hum below a voice, and webrtcvad takes that for speech on every frame, so a
+  # hands-free utterance never ended (measured: 25.9 s from the end of speech to the reply).
+  vad_highpass_hz: 300      # the hands-free detector listens above this.
+  vad_margin_db: 8          # and counts a frame as speech only this far above the noise floor.
   silence_ms: 700           # stop recording after this much trailing silence (push-to-talk and wake word).
   max_utterance_s: 30       # hard cap on a single spoken turn.
 
@@ -32,6 +36,8 @@ activation:
     model: tiny.en          # used only by the legacy keyword listener; handsfree.py uses stt.model.
     max_seconds: 8          # longest burst checked; covers "Hal, <request>" in one breath.
     end_silence_ms: 600     # a pause this long ends an utterance in hands-free listening.
+    pre_roll_ms: 600        # audio kept from before the voice detector fired: a quiet "Hal".
+    how_is_name: true       # "How, what time is it?" is Whisper hearing a quiet "Hal".
     command_window_s: 6     # after a bare "Hal", the next utterance is the request for this long.
   followup_s: 8             # after HAL speaks, carry on talking without his name for this long.
 
@@ -43,8 +49,11 @@ stt:
   hotwords: Hal             # biases recognition towards HAL's name.
   device: cpu               # cpu | cuda | auto (GPU when CUDA works). voice.conf overrides this.
   compute_type: int8        # int8 on CPU; use float16/int8_float16 if you move it to GPU.
-  beam_size: 1
+  beam_size: 5              # 1 misheard more requests (17.5% against 20.4% word errors).
   language: en
+  # Whisper takes a quiet "Hal" for "How" or drops it; a prompt in the shape of a request to
+  # him lifts names heard from 59% to 95% (voicetest), without waking him on other speech.
+  initial_prompt: "Hal, check the oven. Hal, read me the headlines."
 
 # ---- Text-to-speech: GPT-SoVITS + the HAL effect ----------------------------
 tts:

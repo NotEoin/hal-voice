@@ -1,0 +1,209 @@
+Marker one. [Say: Desk, take one / Desk, take two / Across the room, take one / Across the room, take two]
+(stay silent for 10 seconds)
+
+Marker two. Waking.
+1. Hal.
+2. Hal. (2 s) What time is it?
+3. Hal, what time is it?
+4. What time is it, Hal?
+5. Hal... (2 s) ...what's on my calendar today?
+6. (very quietly) Hal, what's the weather like?
+7. (quickly) Hal what's the date today
+8. (louder) Hal! Are you listening?
+
+Marker three. Greetings.
+9. Hey Hal.
+10. Hey Hal, set a timer for five minutes.
+11. Hi Hal, what's on today?
+12. Hello Hal.
+13. Hello Hal, how are you?
+14. Good morning, Hal.
+15. Good morning, Hal. What's the weather today?
+16. Morning Hal, give me my briefing.
+17. Good afternoon, Hal.
+18. Good afternoon, Hal. Anything on this afternoon?
+19. Good evening, Hal.
+20. Good evening, Hal. What's on tomorrow?
+21. Evening Hal, give me the evening briefing.
+22. Okay Hal, what's the time in Tokyo?
+23. Right Hal, add buy bread to my list.
+24. Goodnight, Hal.
+25. Thanks Hal.
+
+Marker four. Not for Hal.
+(None of these should wake him.)
+26. Hello there, how are you doing?
+27. Good morning, Sam.
+28. Good evening, everyone.
+29. Hey Al, are you coming tonight?
+30. I walked down the hallway to the kitchen.
+31. Can you pass me that, pal?
+32. Shall we go out for dinner later?
+33. I'll ask Hal about it later.
+34. Al said he'd ring me back tomorrow.
+35. That's quite a haul of shopping.
+36. The hall was absolutely packed last night.
+37. Halifax is a long way from London.
+38. (chat as if on the phone for about 10 seconds, without saying Hal)
+
+Marker five. Follow-ups.
+39. Hal, add lunch with Sam to my calendar on Friday at one.
+40. Actually, make it two.
+41. And put it in my Hal calendar.
+42. Hal, what's on tomorrow?
+43. What about the day after?
+
+Marker six. Interrupting.
+44. Hal, stop.
+45. Hal, wait.
+46. Hal, never mind.
+47. Hal, cancel that.
+48. Hal, yes, go ahead.
+49. Hal, no, don't do that.
+
+Marker seven. Calendar.
+50. Hal, add a dentist appointment on Thursday at ten a.m.
+51. Hal, book a project meeting tomorrow from two till half three in the library.
+52. Hal, I'm having lunch with Mum on Sunday at one.
+53. Hal, put gym in my calendar every Monday and Wednesday at seven a.m.
+54. Hal, what's on my calendar tomorrow?
+55. Hal, have I got anything on next Saturday?
+56. Hal, when am I free for two hours this week?
+57. Hal, move my haircut to Sunday at three p.m.
+58. Hal, cancel book club on Friday.
+59. Hal, sync my calendar.
+
+Marker eight. Tasks.
+60. Hal, add buy milk to my to-do list.
+61. Hal, remind me to renew my passport by the end of the month.
+62. Hal, what's on my to-do list?
+63. Hal, I've bought the batteries, tick that off.
+64. Hal, what's overdue?
+
+Marker nine. Memory.
+65. Hal, remember that my bike lock code is four five one two.
+66. Hal, by the way, I'm vegetarian.
+67. Hal, take a note: blog post idea, running language models on a home GPU.
+68. Hal, what did I decide about caching for my dissertation?
+69. Hal, what do you know about me?
+70. Hal, search my notes for the AE-35 unit.
+
+Marker ten. Time.
+71. Hal, set a timer for ten minutes for the pasta.
+72. Hal, wake me up at seven tomorrow morning.
+73. Hal, how long left on the pasta timer?
+74. Hal, cancel all my timers.
+75. Hal, start a Pomodoro.
+76. Hal, start the stopwatch.
+77. Hal, what day is it today?
+78. Hal, what's the date this coming Friday?
+
+Marker eleven. Questions and the web.
+79. Hal, what's the capital of Australia?
+80. Hal, what's seventeen times twenty-three?
+81. Hal, how many miles is ten kilometres?
+82. Hal, convert fifty pounds to euros.
+83. Hal, in one sentence, what is a hash map?
+84. Hal, what's the weather going to be like in London tomorrow?
+85. Hal, will it rain this afternoon?
+86. Hal, what's the news?
+87. Hal, look up Arthur C. Clarke on Wikipedia.
+88. Hal, what does serendipity mean?
+89. Hal, search the web for the best hiking boots.
+
+Marker twelve. Briefings and notifications.
+90. Hal, give me my morning briefing.
+91. Hal, give me the evening briefing.
+92. Hal, send a test notification to my phone.
+93. Hal, do not disturb for an hour.
+94. Hal, what notifications have I missed?
+
+Marker thirteen. The computer.
+95. Hal, how hot is my graphics card running?
+96. Hal, how much free disk space have I got?
+97. Hal, what's using all my memory?
+98. Hal, how's the computer doing?
+99. Hal, kill the process called Firefox.
+100. No.
+101. Hal, are any services failing?
+102. Hal, are there any software updates?
+103. Hal, what's on my screen right now?
+104. Hal, read the text on my screen.
+105. Hal, explain the error on my screen.
+106. Hal, take a screenshot.
+
+Marker fourteen. Desktop, media and lights.
+107. Hal, open Firefox.
+108. Hal, open my Downloads folder.
+109. Hal, turn the volume up.
+110. Hal, mute the sound.
+111. Hal, switch to dark mode.
+112. Hal, turn on night light.
+113. Hal, copy that to the clipboard.
+114. Hal, pause the music.
+115. Hal, play the next song.
+116. Hal, what's playing?
+117. Hal, play some Pink Floyd.
+118. Hal, turn the lights blue.
+119. Hal, turn the lights off.
+120. Hal, set the lights to fifty percent.
+
+Marker fifteen. Power and devices.
+121. Hal, shut down the computer.
+122. No, don't.
+123. Hal, restart the computer in ten minutes.
+124. Cancel that.
+125. Hal, lock the screen.
+126. Hal, switch to power saver mode.
+127. Hal, connect my headphones.
+128. Hal, which Bluetooth devices are connected?
+129. Hal, print this document.
+
+Marker sixteen. Files, network and phone.
+130. Hal, find the most recent PDF in my Downloads.
+131. Hal, what are my biggest folders?
+132. Hal, tidy my Downloads folder.
+133. Hal, am I connected to the internet?
+134. Hal, what's my public IP address?
+135. Hal, run a speed test.
+136. Hal, where's my phone?
+137. Hal, what's my phone's battery?
+138. Hal, send this link to my phone.
+
+Marker seventeen. Messages and people.
+139. Hal, have I got any new emails?
+140. Hal, summarise my unread email.
+141. Hal, draft a reply saying I'll be there at six.
+142. Hal, when is Sam's birthday?
+143. Hal, who haven't I spoken to in a while?
+
+Marker eighteen. Life.
+144. Hal, I drank a glass of water.
+145. Hal, how's my reading streak?
+146. Hal, I slept badly last night.
+147. Hal, I spent twelve pounds on lunch.
+148. Hal, how much have I spent this month?
+149. Hal, when does my Netflix renew?
+150. Hal, save this article to read later.
+151. Hal, what's new in my feeds?
+
+Marker nineteen. Work.
+152. Hal, what's the state of my git repositories?
+153. Hal, run the tests for hal-calendar.
+154. Hal, any new jobs today?
+155. Hal, what's in my job queue?
+156. Hal, which models are loaded?
+157. Hal, translate where is the station into French.
+158. Hal, proofread this paragraph.
+159. Hal, transcribe this meeting.
+160. Hal, start focus mode.
+
+Marker twenty. Conversation.
+161. Hal, hello, how are you today?
+162. Hal, order me a large pepperoni pizza.
+163. Hal, my sister's name is Jo.
+164. What did I just say my sister was called?
+165. Hal, write me a short Python script that renames all the photos in a folder by date.
+166. Hal, open the pod bay doors.
+
+Marker twenty-one. End of take.

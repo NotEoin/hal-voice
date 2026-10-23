@@ -10,6 +10,7 @@
 #   hal-voice devices      list audio input/output devices
 #   hal-voice eye          run the red-eye UI on its own (demo the animation states)
 #   hal-voice doctor       check that every dependency + the GPT-SoVITS server are reachable
+#   hal-voice voicetest    replay a recording of voicetest/script.txt through hands-free listening
 #   hal-voice connection   show which Claude Code setup it will drive, and why
 #   hal-voice help         show this help
 #
@@ -27,7 +28,7 @@ VENV="$VOICE_ROOT/.venv"
 PY="$VENV/bin/python"
 CONFIG="${HALVOICE_CONFIG:-$VOICE_ROOT/config.yaml}"
 
-usage() { sed -n '3,16p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '3,17p' "$0" | sed 's/^# \{0,1\}//'; }
 
 # --- Global options, accepted before or after the subcommand -----------------
 ARGS=()
@@ -71,5 +72,6 @@ case "$cmd" in
   eye)            exec "$PY" -m halvoice.ui_eye --demo ;;
   doctor)         exec "$PY" -m halvoice.doctor ;;
   connection)     exec "$PY" -m halvoice.connect ;;
+  voicetest)      exec "$PY" -m voicetest "$@" ;;
   *)              echo "Unknown command: $cmd"; echo; usage; exit 1 ;;
 esac
