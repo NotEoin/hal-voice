@@ -12,8 +12,6 @@ import sys
 from collections.abc import Callable
 from pathlib import Path
 
-from .util import ca_bundle
-
 USAGE = """\
 hal-voice - a HAL-9000 voice: speak to it, it answers aloud.
 
@@ -162,7 +160,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Unknown command: {command}\n", file=sys.stderr)
         print(USAGE, end="", file=sys.stderr)
         return 1
-    ca_bundle()
+    from . import util  # not at the top: `help` must run without the dependencies installed
+
+    util.ca_bundle()
     return handler(args[1:])
 
 

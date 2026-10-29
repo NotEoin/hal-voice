@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from halvoice import cli, config
+from halvoice import cli, config, util
 
 INSTALL_TIMEOUT_S = 600  # pip builds the wheel and creates a venv; allow a slow disk
 RUN_TIMEOUT_S = 60
@@ -15,7 +15,7 @@ RUN_TIMEOUT_S = 60
 @pytest.fixture(autouse=True)
 def no_environment_changes(monkeypatch):
     """Keeps `main` from setting SSL_CERT_FILE in the test process."""
-    monkeypatch.setattr(cli, "ca_bundle", lambda: None)
+    monkeypatch.setattr(util, "ca_bundle", lambda: None)
 
 
 def test_help_lists_every_command(capsys):
