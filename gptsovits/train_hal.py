@@ -9,6 +9,7 @@ Replicates exactly what the GPT-SoVITS WebUI does for:
 
 Run with the gptsovits conda python, from anywhere — it cd's into the GPT-SoVITS dir.
 """
+
 import glob
 import json
 import os
@@ -21,8 +22,8 @@ import yaml
 
 # ---------------------------------------------------------------- paths / config
 # Resolve everything relative to this file so the repo works wherever it's cloned.
-HERE = Path(__file__).resolve().parent            # <repo>/gptsovits
-ROOT = HERE.parent                                # <repo>
+HERE = Path(__file__).resolve().parent  # <repo>/gptsovits
+ROOT = HERE.parent  # <repo>
 GSV = Path(os.environ.get("GPTSOVITS_DIR", HERE / "GPT-SoVITS"))
 VOICE = ROOT / "voice-data"
 WEIGHTS_OUT = HERE / "weights"
@@ -69,7 +70,7 @@ SOVITS_EPOCHS = int(os.environ.get("HAL_SOVITS_EPOCHS", 8))
 SOVITS_SAVE_EVERY = 4
 SOVITS_BATCH = 4
 GPT_EPOCHS = int(os.environ.get("HAL_GPT_EPOCHS", 12))
-GPT_SAVE_EVERY = 4          # divides 12 so the final e12 weight is saved
+GPT_SAVE_EVERY = 4  # divides 12 so the final e12 weight is saved
 GPT_BATCH = 4
 
 os.makedirs(OPT_DIR, exist_ok=True)
@@ -106,8 +107,13 @@ def base_env():
 
 # ============================================================ 1A: text + BERT
 path_text = f"{OPT_DIR}/2-name2text.txt"
-if not (os.path.exists(path_text) and len(open(path_text, encoding="utf8").read().strip().split("\n")) >= 2):
-    run_step("GPT_SoVITS/prepare_datasets/1-get-text.py", {**base_env(), "bert_pretrained_dir": BERT})
+if not (
+    os.path.exists(path_text)
+    and len(open(path_text, encoding="utf8").read().strip().split("\n")) >= 2
+):
+    run_step(
+        "GPT_SoVITS/prepare_datasets/1-get-text.py", {**base_env(), "bert_pretrained_dir": BERT}
+    )
     opt = []
     p0 = f"{OPT_DIR}/2-name2text-0.txt"
     with open(p0, encoding="utf8") as f:
@@ -120,17 +126,23 @@ if not (os.path.exists(path_text) and len(open(path_text, encoding="utf8").read(
 print("1A done")
 
 # ============================================================ 1B: HuBERT / wav32k
-run_step("GPT_SoVITS/prepare_datasets/2-get-hubert-wav32k.py",
-         {**base_env(), "cnhubert_base_dir": HUBERT, "sv_path": SV_PATH})
+run_step(
+    "GPT_SoVITS/prepare_datasets/2-get-hubert-wav32k.py",
+    {**base_env(), "cnhubert_base_dir": HUBERT, "sv_path": SV_PATH},
+)
 if PRO:
-    run_step("GPT_SoVITS/prepare_datasets/2-get-sv.py", {**base_env(), "sv_path": SV_PATH}, shim=True)
+    run_step(
+        "GPT_SoVITS/prepare_datasets/2-get-sv.py", {**base_env(), "sv_path": SV_PATH}, shim=True
+    )
 print("1B done")
 
 # ============================================================ 1C: semantic tokens
 path_semantic = f"{OPT_DIR}/6-name2semantic.tsv"
 if not (os.path.exists(path_semantic) and os.path.getsize(path_semantic) >= 31):
-    run_step("GPT_SoVITS/prepare_datasets/3-get-semantic.py",
-             {**base_env(), "pretrained_s2G": S2G, "s2config_path": S2_CONFIG})
+    run_step(
+        "GPT_SoVITS/prepare_datasets/3-get-semantic.py",
+        {**base_env(), "pretrained_s2G": S2G, "s2config_path": S2_CONFIG},
+    )
     opt = ["item_name\tsemantic_audio"]
     sp = f"{OPT_DIR}/6-name2semantic-0.tsv"
     with open(sp, encoding="utf8") as f:
@@ -200,10 +212,12 @@ r = subprocess.run([PY, "-s", "GPT_SoVITS/s1_train.py", "--config_file", tmp_s1]
 if r.returncode != 0:
     sys.exit(f"GPT training failed (exit {r.returncode})")
 
+
 # ============================================================ collect weights
 def newest(pattern):
     files = glob.glob(pattern)
     return max(files, key=os.path.getmtime) if files else None
+
 
 sovits_w = newest(f"{SOVITS_DIR}/{EXP}_*.pth")
 gpt_w = newest(f"{GPT_DIR}/{EXP}-*.ckpt")

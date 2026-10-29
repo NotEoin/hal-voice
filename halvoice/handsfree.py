@@ -28,29 +28,37 @@ from .util import get_logger
 
 log = get_logger(__name__)
 
-FRAME_MS = 30           # webrtcvad accepts 10, 20 or 30 ms frames
-PRE_ROLL_MS = 360       # audio kept from before the detector fired
-MIN_SPEECH_MS = 240     # shorter bursts are clicks and coughs
-ECHO_TAIL_S = 0.6       # speech starting this soon after HAL stops is his own echo and reverb
-ECHO_SPEECH_S = 0.5     # speech going on this long past the echo tail is the user, not echo
-FLOOR_RISE_DB = 0.02    # per frame the noise floor may rise: 0.7 dB a second
+FRAME_MS = 30  # webrtcvad accepts 10, 20 or 30 ms frames
+PRE_ROLL_MS = 360  # audio kept from before the detector fired
+MIN_SPEECH_MS = 240  # shorter bursts are clicks and coughs
+ECHO_TAIL_S = 0.6  # speech starting this soon after HAL stops is his own echo and reverb
+ECHO_SPEECH_S = 0.5  # speech going on this long past the echo tail is the user, not echo
+FLOOR_RISE_DB = 0.02  # per frame the noise floor may rise: 0.7 dB a second
 
 # Whisper's usual spellings of a spoken "Hal", alone or after a greeting.
 NAME = r"(?:hal|hall|hale|haul|howl|hull|hel|hell|al|owl|hol)"
 # Said before the name. An attention word alone ("Hey Hal") waits for the request; any other
 # greeting alone ("Good morning, Hal") is a turn of its own, so HAL greets back.
-GREET = (r"good\s*morning|good\s*afternoon|good\s*evening|good\s*night|morning|afternoon|"
-         r"evening|hello|hiya|hi|hey|okay|ok|oi|right|so|thanks|thank\s+you|cheers")
+GREET = (
+    r"good\s*morning|good\s*afternoon|good\s*evening|good\s*night|morning|afternoon|"
+    r"evening|hello|hiya|hi|hey|okay|ok|oi|right|so|thanks|thank\s+you|cheers"
+)
 ATTENTION = {"hey", "ok", "okay", "oi", "right", "so"}
 LEADING = re.compile(rf"^\W*(?:(?P<greet>{GREET})[\s,.!]+)?{NAME}\b[\s,.!?:;-]*", re.I)
 TRAILING = re.compile(rf"[\s,]+{NAME}\W*$", re.I)
 # In noise Whisper writes a quiet "Hal" as "How". Only where "how" cannot start a sentence is it
 # taken for the name: set off by punctuation ("How, what time is it?") or before a question word.
-HOW = re.compile(rf"^\W*(?:(?P<greet>{GREET})[\s,.!]+)?how(?:\s*(?:[,?!]+|\.\.\.|\u2026)\s*(?=\w)"
-                 r"|\s+(?=(?:what|what's|whats|when|where|which|who|whose)\b))", re.I)
+HOW = re.compile(
+    rf"^\W*(?:(?P<greet>{GREET})[\s,.!]+)?how(?:\s*(?:[,?!]+|\.\.\.|\u2026)\s*(?=\w)"
+    r"|\s+(?=(?:what|what's|whats|when|where|which|who|whose)\b))",
+    re.I,
+)
 # "Hal said he'd ring back" is about someone called Hal (or Al), not to HAL.
-ABOUT = re.compile(rf"^\W*{NAME}\s+(?:said|says|told|tells|thinks|thought|reckons|reckoned|"
-                   r"mentioned|wants|wanted|knows|asked)\b", re.I)
+ABOUT = re.compile(
+    rf"^\W*{NAME}\s+(?:said|says|told|tells|thinks|thought|reckons|reckoned|"
+    r"mentioned|wants|wanted|knows|asked)\b",
+    re.I,
+)
 
 
 def addressed(text: str, how_is_name: bool = True) -> tuple[bool, str]:
@@ -62,12 +70,12 @@ def addressed(text: str, how_is_name: bool = True) -> tuple[bool, str]:
         return False, text.strip(" ,.!?")
     lead = LEADING.match(text) or (HOW.match(text) if how_is_name else None)
     if lead:
-        request, greet = text[lead.end():], lead.group("greet")
+        request, greet = text[lead.end() :], lead.group("greet")
     else:
         trail = TRAILING.search(text)
         if not trail:
             return False, text.strip(" ,.!?")
-        request, greet = text[:trail.start()], None
+        request, greet = text[: trail.start()], None
     request = request.strip(" ,.!?")
     # "Hal, Hal" is the name said twice (or noise heard as it), not a request.
     if re.fullmatch(rf"(?:\W*{NAME}\W*)*", request, re.I):
@@ -80,9 +88,9 @@ def addressed(text: str, how_is_name: bool = True) -> tuple[bool, str]:
 
 @dataclass
 class Heard:
-    text: str           # the request, with the name removed
-    named: bool         # HAL's name was in it
-    raw: str            # the full transcript
+    text: str  # the request, with the name removed
+    named: bool  # HAL's name was in it
+    raw: str  # the full transcript
 
 
 class Segmenter:
@@ -92,9 +100,16 @@ class Segmenter:
     this, so a recording is cut exactly as live speech is.
     """
 
-    def __init__(self, sr: int, vad_level: int, end_ms: int, max_s: float,
-                 highpass_hz: float = 0.0, margin_db: float = 0.0,
-                 pre_roll_ms: int = PRE_ROLL_MS) -> None:
+    def __init__(
+        self,
+        sr: int,
+        vad_level: int,
+        end_ms: int,
+        max_s: float,
+        highpass_hz: float = 0.0,
+        margin_db: float = 0.0,
+        pre_roll_ms: int = PRE_ROLL_MS,
+    ) -> None:
         import webrtcvad
 
         self.vad = webrtcvad.Vad(vad_level)
@@ -116,7 +131,7 @@ class Segmenter:
         self.max_frames = int(max_s * 1000 / FRAME_MS)
         self.voiced: list[np.ndarray] = []
         self.speech_frames = self.silent = 0
-        self.lead_s = 0.0       # pre-roll at the front of the last utterance returned
+        self.lead_s = 0.0  # pre-roll at the front of the last utterance returned
 
     def feed(self, chunk: np.ndarray) -> np.ndarray | None:
         """Takes one frame; returns an utterance as float32 audio when one has just ended."""
@@ -179,13 +194,13 @@ class Ears:
         self.requests: queue.Queue[Heard] = queue.Queue()
         self.interrupt = threading.Event()
         self.speaking = threading.Event()
-        self._armed_until = 0.0         # a request without the name is accepted until then
-        self._quiet_since = 0.0         # when HAL last stopped speaking
-        self._said: collections.deque = collections.deque(maxlen=12)   # HAL's recent sentences
-        self._pending_name_at = 0.0     # when a bare "Hal" was heard
+        self._armed_until = 0.0  # a request without the name is accepted until then
+        self._quiet_since = 0.0  # when HAL last stopped speaking
+        self._said: collections.deque = collections.deque(maxlen=12)  # HAL's recent sentences
+        self._pending_name_at = 0.0  # when a bare "Hal" was heard
         self._stop = threading.Event()
         self._audio: queue.Queue[np.ndarray] = queue.Queue()
-        self.clock = time.time          # the replay test runs on the recording's own clock
+        self.clock = time.time  # the replay test runs on the recording's own clock
 
     # -- windows ----------------------------------------------------------------
     def follow_up(self) -> None:
@@ -205,8 +220,11 @@ class Ears:
     def _is_echo(self, text: str) -> bool:
         """True when a transcript matches something HAL said: the mic heard the speakers."""
         low = text.lower()
-        return any(difflib.SequenceMatcher(None, low, said).ratio() > 0.55 or (len(low) > 12 and low in said)
-                   for said in self._said)
+        return any(
+            difflib.SequenceMatcher(None, low, said).ratio() > 0.55
+            or (len(low) > 12 and low in said)
+            for said in self._said
+        )
 
     # -- threads ----------------------------------------------------------------
     def start(self) -> None:
@@ -229,15 +247,23 @@ class Ears:
         return began < tail and ended < tail + ECHO_SPEECH_S
 
     def segmenter(self) -> Segmenter:
-        return Segmenter(self.sr, self.vad_level, self.end_ms, self.max_s, self.highpass_hz,
-                         self.margin_db, self.pre_roll_ms)
+        return Segmenter(
+            self.sr,
+            self.vad_level,
+            self.end_ms,
+            self.max_s,
+            self.highpass_hz,
+            self.margin_db,
+            self.pre_roll_ms,
+        )
 
     def open_stream(self, frame: int):
         """The microphone, as a context manager whose read(frame) returns (block, overflowed)."""
         import sounddevice as sd
 
-        return sd.InputStream(samplerate=self.sr, channels=1, dtype="int16", blocksize=frame,
-                              device=self.device)
+        return sd.InputStream(
+            samplerate=self.sr, channels=1, dtype="int16", blocksize=frame, device=self.device
+        )
 
     def _capture(self) -> None:
         """Splits the microphone stream into utterances and queues them for transcription."""

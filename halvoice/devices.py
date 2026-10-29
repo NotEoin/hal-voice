@@ -18,10 +18,14 @@ def main() -> None:
         if i == default_out:
             tag.append("DEFAULT-OUT")
         flag = ("  <" + ",".join(tag) + ">") if tag else ""
-        print(f"{i:3d}: {d['name']}  "
-              f"[in {d['max_input_channels']} / out {d['max_output_channels']}]  "
-              f"@{int(d['default_samplerate'])}{flag}")
-    print("\nSet audio.input_device / audio.output_device in config.yaml to one of the indices above.")
+        print(
+            f"{i:3d}: {d['name']}  "
+            f"[in {d['max_input_channels']} / out {d['max_output_channels']}]  "
+            f"@{int(d['default_samplerate'])}{flag}"
+        )
+    print(
+        "\nSet audio.input_device / audio.output_device in config.yaml to one of the indices above."
+    )
 
 
 if __name__ == "__main__":

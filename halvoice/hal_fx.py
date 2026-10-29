@@ -51,7 +51,9 @@ def _flatten_pitch(audio: np.ndarray, sr: int, amount: float) -> np.ndarray:
         win += 1
     pad = win // 2
     padded = np.pad(inst_freq, (pad, pad), mode="edge")
-    med = np.array([np.median(padded[i:i + win]) for i in range(0, len(inst_freq), max(1, win // 4))])
+    med = np.array(
+        [np.median(padded[i : i + win]) for i in range(0, len(inst_freq), max(1, win // 4))]
+    )
     med = np.interp(np.arange(len(inst_freq)), np.linspace(0, len(inst_freq), len(med)), med)
     flattened = inst_freq * (1 - amount) + med * amount
     new_phase = np.concatenate([[inst_phase[0]], inst_phase[0] + np.cumsum(flattened)])
@@ -89,21 +91,32 @@ def _pedalboard_chain(audio: np.ndarray, sr: int, fx: dict) -> np.ndarray:
     if shift:
         board.append(PitchShift(semitones=shift))
     if low:
-        board.append(LowShelfFilter(cutoff_frequency_hz=float(eq.get("low_shelf_hz", 180)),
-                                    gain_db=low))
+        board.append(
+            LowShelfFilter(cutoff_frequency_hz=float(eq.get("low_shelf_hz", 180)), gain_db=low)
+        )
     if presence:
-        board.append(PeakFilter(cutoff_frequency_hz=float(eq.get("presence_hz", 3500)),
-                                gain_db=presence, q=1.0))
+        board.append(
+            PeakFilter(
+                cutoff_frequency_hz=float(eq.get("presence_hz", 3500)), gain_db=presence, q=1.0
+            )
+        )
     if high:
-        board.append(HighShelfFilter(cutoff_frequency_hz=float(eq.get("high_rolloff_hz", 9000)),
-                                     gain_db=high))
+        board.append(
+            HighShelfFilter(
+                cutoff_frequency_hz=float(eq.get("high_rolloff_hz", 9000)), gain_db=high
+            )
+        )
     if drive:
         board.append(Distortion(drive_db=drive * 100.0))
     if rev.get("enabled", True):
-        board.append(Reverb(room_size=float(rev.get("room", 0.18)),
-                            damping=float(rev.get("damping", 0.6)),
-                            wet_level=float(rev.get("wet", 0.12)),
-                            dry_level=1.0 - float(rev.get("wet", 0.12)) * 0.5))
+        board.append(
+            Reverb(
+                room_size=float(rev.get("room", 0.18)),
+                damping=float(rev.get("damping", 0.6)),
+                wet_level=float(rev.get("wet", 0.12)),
+                dry_level=1.0 - float(rev.get("wet", 0.12)) * 0.5,
+            )
+        )
     return board(audio, sr) if len(board) else audio
 
 

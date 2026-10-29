@@ -18,6 +18,7 @@ The target line is held out of training (`train` drops it from the dataset), so 
 score says how Hal will sound on lines it has never heard. Results append to
 gptsovits/tuning/results.jsonl.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -48,17 +49,22 @@ SR = 16000
 
 TARGET = "im-sorry-dave-im-afraid-i-cant-do-that"
 # Lines HAL never says in the film, for the pronunciation check.
-NOVEL = ["Your dentist appointment is on Thursday at ten in the morning.",
-         "I have added lunch with Sam to your calendar for Friday.",
-         "The weather tomorrow will be cool and dry."]
+NOVEL = [
+    "Your dentist appointment is on Thursday at ten in the morning.",
+    "I have added lunch with Sam to your calendar for Friday.",
+    "The weather tomorrow will be cool and dry.",
+]
 DEFAULTS = {"speed": 0.9, "fragment_interval": 0.5, "temperature": 0.7, "top_k": 15, "top_p": 0.8}
 
 
 # ---- the film ---------------------------------------------------------------------------
 
+
 def transcripts() -> dict[str, str]:
     with (CLIPS / "transcripts.csv").open(newline="", encoding="utf-8") as fh:
-        return {r[0].strip(): r[1].strip() for r in csv.reader(fh) if r and not r[0].startswith("#")}
+        return {
+            r[0].strip(): r[1].strip() for r in csv.reader(fh) if r and not r[0].startswith("#")
+        }
 
 
 def load(path: Path | str, sr: int = SR) -> np.ndarray:
@@ -90,6 +96,7 @@ class Judge:
 
     def __init__(self) -> None:
         import analyse_voice as av
+
         self.av = av
         self.text = transcripts()[TARGET]
         fp_path = OUT / "film-fingerprint.json"
@@ -101,15 +108,18 @@ class Judge:
         self.film_fr = av.frames(av.load(CLIPS / f"{TARGET}.mp3"))
         import torch
         from faster_whisper import WhisperModel
+
         gpu = torch.cuda.is_available()
-        self.asr = WhisperModel("small.en", device="cuda" if gpu else "cpu", compute_type="float16" if gpu else "int8")
+        self.asr = WhisperModel(
+            "small.en", device="cuda" if gpu else "cpu", compute_type="float16" if gpu else "int8"
+        )
 
     def wer(self, y: np.ndarray, text: str) -> float:
         segs, _ = self.asr.transcribe(y.astype(np.float32), language="en", beam_size=1)
         said = re.findall(r"[a-z']+", " ".join(s.text for s in segs).lower())
         want = re.findall(r"[a-z']+", text.lower())
         d = np.arange(len(said) + 1)
-        for w in want:                       # word-level edit distance
+        for w in want:  # word-level edit distance
             prev, d[0] = d.copy(), d[0] + 1
             for k, s in enumerate(said, 1):
                 d[k] = min(prev[k] + 1, d[k - 1] + 1, prev[k - 1] + (s != w))
@@ -118,8 +128,12 @@ class Judge:
     def score(self, takes: list[np.ndarray], novel: list[np.ndarray]) -> dict:
         parts = [self.av.match(t.astype(np.float64), self.fp, self.film_fr) for t in takes]
         avg = {k: float(np.mean([p[k] for p in parts])) for k in parts[0]}
-        avg["wer"] = float(np.mean([self.wer(t, self.text) for t in takes] +
-                                   [self.wer(y, s) for y, s in zip(novel, NOVEL, strict=False)]))
+        avg["wer"] = float(
+            np.mean(
+                [self.wer(t, self.text) for t in takes]
+                + [self.wer(y, s) for y, s in zip(novel, NOVEL, strict=False)]
+            )
+        )
         # A take the recogniser can't follow is out, however close its melody.
         avg["score"] = 0.0 if avg["wer"] > 0.3 else avg["match_pct"]
         return {k: round(v, 3) for k, v in avg.items()}
@@ -127,17 +141,38 @@ class Judge:
 
 # ---- synthesis --------------------------------------------------------------------------
 
+
 def set_weights(gpt: str, sovits: str) -> None:
-    requests.get(f"{API}/set_gpt_weights", params={"weights_path": gpt}, timeout=180).raise_for_status()
-    requests.get(f"{API}/set_sovits_weights", params={"weights_path": sovits}, timeout=180).raise_for_status()
+    requests.get(
+        f"{API}/set_gpt_weights", params={"weights_path": gpt}, timeout=180
+    ).raise_for_status()
+    requests.get(
+        f"{API}/set_sovits_weights", params={"weights_path": sovits}, timeout=180
+    ).raise_for_status()
 
 
 def synth(text: str, ref: tuple[Path, str], p: dict) -> np.ndarray:
-    r = requests.post(f"{API}/tts", timeout=300, json={
-        "text": text, "text_lang": "en", "ref_audio_path": str(ref[0]), "prompt_text": ref[1], "prompt_lang": "en",
-        "text_split_method": "cut5", "batch_size": 1, "media_type": "wav", "streaming_mode": False,
-        "top_k": p["top_k"], "top_p": p["top_p"], "temperature": p["temperature"], "speed_factor": p["speed"],
-        "fragment_interval": p["fragment_interval"], "repetition_penalty": 1.35})
+    r = requests.post(
+        f"{API}/tts",
+        timeout=300,
+        json={
+            "text": text,
+            "text_lang": "en",
+            "ref_audio_path": str(ref[0]),
+            "prompt_text": ref[1],
+            "prompt_lang": "en",
+            "text_split_method": "cut5",
+            "batch_size": 1,
+            "media_type": "wav",
+            "streaming_mode": False,
+            "top_k": p["top_k"],
+            "top_p": p["top_p"],
+            "temperature": p["temperature"],
+            "speed_factor": p["speed"],
+            "fragment_interval": p["fragment_interval"],
+            "repetition_penalty": 1.35,
+        },
+    )
     r.raise_for_status()
     y, sr = sf.read(io.BytesIO(r.content), dtype="float32")
     y = y.mean(1) if y.ndim > 1 else y
@@ -146,12 +181,27 @@ def synth(text: str, ref: tuple[Path, str], p: dict) -> np.ndarray:
     return y / (np.abs(y).max() or 1.0)
 
 
-def evaluate(judge: Judge, label: str, gpt: str, sovits: str, ref: tuple[Path, str], p: dict,
-             takes: int = 3, save: bool = False) -> dict:
+def evaluate(
+    judge: Judge,
+    label: str,
+    gpt: str,
+    sovits: str,
+    ref: tuple[Path, str],
+    p: dict,
+    takes: int = 3,
+    save: bool = False,
+) -> dict:
     lines = [synth(judge.text, ref, p) for _ in range(takes)]
     novel = [synth(s, ref, p) for s in NOVEL]
-    result = {"at": time.strftime("%Y-%m-%dT%H:%M:%S"), "label": label, "gpt": Path(gpt).name,
-              "sovits": Path(sovits).name, "ref": ref[0].stem, **p, **judge.score(lines, novel)}
+    result = {
+        "at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "label": label,
+        "gpt": Path(gpt).name,
+        "sovits": Path(sovits).name,
+        "ref": ref[0].stem,
+        **p,
+        **judge.score(lines, novel),
+    }
     if save:
         best = OUT / "samples" / f"{label}.wav"
         best.parent.mkdir(parents=True, exist_ok=True)
@@ -159,18 +209,23 @@ def evaluate(judge: Judge, label: str, gpt: str, sovits: str, ref: tuple[Path, s
         result["sample"] = str(best)
     with RESULTS.open("a") as f:
         f.write(json.dumps(result) + "\n")
-    print(f"  match {result['score']:5.1f}%  melody {result['melody_shape']:.2f} level {result['pitch_level']:.2f} "
-          f"pause {result['pause']:.2f} lengths {result['word_lengths']:.2f} loud {result['word_loudness']:.2f} "
-          f"quality {result['voice_quality']:.2f} spectrum {result['spectrum']:.2f} wer {result['wer']:.2f} | "
-          f"{Path(gpt).name} {Path(sovits).name} ref={ref[0].stem[:24]} "
-          f"speed={p['speed']} gap={p['fragment_interval']} temp={p['temperature']}", flush=True)
+    print(
+        f"  match {result['score']:5.1f}%  melody {result['melody_shape']:.2f} level {result['pitch_level']:.2f} "
+        f"pause {result['pause']:.2f} lengths {result['word_lengths']:.2f} loud {result['word_loudness']:.2f} "
+        f"quality {result['voice_quality']:.2f} spectrum {result['spectrum']:.2f} wer {result['wer']:.2f} | "
+        f"{Path(gpt).name} {Path(sovits).name} ref={ref[0].stem[:24]} "
+        f"speed={p['speed']} gap={p['fragment_interval']} temp={p['temperature']}",
+        flush=True,
+    )
     return result
 
 
 def search(judge: Judge, label: str, pairs: list[tuple[str, str]]) -> dict:
     """Coordinate search: checkpoint pair, then reference clip, then pace, gap and temperature."""
     refs = reference_clips(transcripts())
-    default_ref = refs.get("im-sorry-dave-i-dont-have-enough-information") or next(iter(refs.values()))
+    default_ref = refs.get("im-sorry-dave-i-dont-have-enough-information") or next(
+        iter(refs.values())
+    )
     p = dict(DEFAULTS)
     best = None
     for gpt, sov in pairs:
@@ -184,8 +239,12 @@ def search(judge: Judge, label: str, pairs: list[tuple[str, str]]) -> dict:
         r = evaluate(judge, label, *pair, candidate, p)
         if r["score"] > best["score"]:
             best, ref = r, candidate
-    for key, values in (("speed", [0.8, 0.85, 0.9, 0.95, 1.0]), ("fragment_interval", [0.3, 0.5, 0.7, 0.9]),
-                        ("temperature", [0.4, 0.55, 0.7, 0.9]), ("top_k", [5, 15, 30])):
+    for key, values in (
+        ("speed", [0.8, 0.85, 0.9, 0.95, 1.0]),
+        ("fragment_interval", [0.3, 0.5, 0.7, 0.9]),
+        ("temperature", [0.4, 0.55, 0.7, 0.9]),
+        ("top_k", [5, 15, 30]),
+    ):
         for v in values:
             if v == p[key]:
                 continue
@@ -206,31 +265,54 @@ def run_pairs(run: str) -> list[tuple[str, str]]:
 
 # ---- training ---------------------------------------------------------------------------
 
+
 def train(name: str, version: str, sovits_epochs: int, gpt_epochs: int, source: str) -> None:
     """Rebuilds the dataset without the target line, then trains a new model under `name`."""
     venv_py = ROOT / ".venv" / "bin" / "python"
     where = ["--source", source] if source in ("raw", "denoised") else ["--source-dir", source]
-    subprocess.run([str(venv_py if venv_py.exists() else "python3"), str(ROOT / "voice-data" / "prepare_dataset.py"),
-                    *where, "--exclude", TARGET, "--keep-reference"], check=True)
-    env = {**os.environ, "HAL_EXP": name, "HAL_VERSION": version,
-           "HAL_SOVITS_EPOCHS": str(sovits_epochs), "HAL_GPT_EPOCHS": str(gpt_epochs)}
+    subprocess.run(
+        [
+            str(venv_py if venv_py.exists() else "python3"),
+            str(ROOT / "voice-data" / "prepare_dataset.py"),
+            *where,
+            "--exclude",
+            TARGET,
+            "--keep-reference",
+        ],
+        check=True,
+    )
+    env = {
+        **os.environ,
+        "HAL_EXP": name,
+        "HAL_VERSION": version,
+        "HAL_SOVITS_EPOCHS": str(sovits_epochs),
+        "HAL_GPT_EPOCHS": str(gpt_epochs),
+    }
     subprocess.run([sys.executable, str(HERE / "train_hal.py")], check=True, env=env)
 
 
 def report() -> None:
-    rows = [json.loads(line) for line in RESULTS.read_text().splitlines()] if RESULTS.exists() else []
+    rows = (
+        [json.loads(line) for line in RESULTS.read_text().splitlines()] if RESULTS.exists() else []
+    )
     for r in sorted(rows, key=lambda r: -r["score"])[:15]:
-        print(f"{r['score']:5.1f}% melody {r['melody_shape']:.2f} level {r['pitch_level']:.2f} pause {r['pause']:.2f} "
-              f"lengths {r['word_lengths']:.2f} loud {r['word_loudness']:.2f} quality {r['voice_quality']:.2f} "
-              f"spectrum {r['spectrum']:.2f} wer {r['wer']:.2f} | {r['label']} {r['gpt']} {r['sovits']} "
-              f"{r['ref'][:30]} speed {r['speed']} gap {r['fragment_interval']} temp {r['temperature']} k {r['top_k']}")
+        print(
+            f"{r['score']:5.1f}% melody {r['melody_shape']:.2f} level {r['pitch_level']:.2f} pause {r['pause']:.2f} "
+            f"lengths {r['word_lengths']:.2f} loud {r['word_loudness']:.2f} quality {r['voice_quality']:.2f} "
+            f"spectrum {r['spectrum']:.2f} wer {r['wer']:.2f} | {r['label']} {r['gpt']} {r['sovits']} "
+            f"{r['ref'][:30]} speed {r['speed']} gap {r['fragment_interval']} temp {r['temperature']} k {r['top_k']}"
+        )
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("search")
-    s.add_argument("--weights", nargs=2, metavar=("GPT", "SOVITS"), help="one pair, from gptsovits/weights/")
+    s.add_argument(
+        "--weights", nargs=2, metavar=("GPT", "SOVITS"), help="one pair, from gptsovits/weights/"
+    )
     s.add_argument("--run", help="every checkpoint pair a training run saved")
     s.add_argument("--label")
     t = sub.add_parser("train")

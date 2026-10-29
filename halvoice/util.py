@@ -15,7 +15,7 @@ State = Literal["idle", "listening", "thinking", "speaking"]
 def get_logger(name: str = "halvoice") -> logging.Logger:
     cfg = config.load()
     log = logging.getLogger("halvoice")
-    if log.handlers:                      # already configured
+    if log.handlers:  # already configured
         return logging.getLogger(name)
     level = getattr(logging, str(cfg.get("log.level", "INFO")).upper(), logging.INFO)
     log.setLevel(level)
@@ -42,7 +42,7 @@ class StateBus:
         self._q: queue.Queue[tuple[str, float]] = queue.Queue()
         self.state: State = "idle"
         self.level: float = 0.0
-        self.on_change = None   # called with the new state whenever it changes
+        self.on_change = None  # called with the new state whenever it changes
 
     def set(self, state: State, level: float = 0.0) -> None:
         changed = state != self.state

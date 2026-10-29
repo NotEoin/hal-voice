@@ -67,17 +67,29 @@ def cmd_run(args) -> int:
     if args.condition:
         conditions = ["" if c == "recorded" else c for c in args.condition]
     label = args.label or ("live" if args.live else "sim")
-    print(f"replaying ({'real time' if args.live else 'simulated clock'})"
-          + (f" with {overrides}" if overrides else ""))
-    results = replay.run(manifest, "live" if args.live else "sim", args.take or None,
-                         args.line or None, overrides, conditions)
+    print(
+        f"replaying ({'real time' if args.live else 'simulated clock'})"
+        + (f" with {overrides}" if overrides else "")
+    )
+    results = replay.run(
+        manifest,
+        "live" if args.live else "sim",
+        args.take or None,
+        args.line or None,
+        overrides,
+        conditions,
+    )
     rows = [score.judge(r) for r in results]
     out = TESTS / "runs"
     out.mkdir(exist_ok=True)
-    (out / f"{label}.json").write_text(json.dumps(
-        {"overrides": overrides, "mode": "live" if args.live else "sim", "rows": rows}, indent=1))
+    (out / f"{label}.json").write_text(
+        json.dumps(
+            {"overrides": overrides, "mode": "live" if args.live else "sim", "rows": rows}, indent=1
+        )
+    )
     note = f"Mode: {'real time' if args.live else 'simulated clock'}." + (
-        f" Settings changed: {overrides}." if overrides else "")
+        f" Settings changed: {overrides}." if overrides else ""
+    )
     report = score.markdown(label, rows, note)
     (out / f"{label}.md").write_text(report)
     print(report if args.verbose else report.split("## Failures")[0])
@@ -103,8 +115,11 @@ def cmd_brain(args) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(prog="hal-voice voicetest", description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        prog="hal-voice voicetest",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     sub = ap.add_subparsers(dest="cmd", required=True)
     sp = sub.add_parser("split", help="cut a recording of script.txt into clips")
     sp.add_argument("recordings", nargs="+")
@@ -113,12 +128,24 @@ def main(argv: list[str] | None = None) -> int:
     rp.add_argument("--live", action="store_true", help="real-time pace through the threads")
     rp.add_argument("--take", action="append", default=[])
     rp.add_argument("--line", action="append", default=[])
-    rp.add_argument("--set", action="append", default=[], metavar="KEY=VALUE",
-                    help="override a config value, e.g. activation.keyword.end_silence_ms=500")
-    rp.add_argument("--simulate", action="store_true",
-                    help="also replay with louder fans and from further away (simulated)")
-    rp.add_argument("--condition", action="append", default=[],
-                    help="only these conditions: recorded, fans, far")
+    rp.add_argument(
+        "--set",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="override a config value, e.g. activation.keyword.end_silence_ms=500",
+    )
+    rp.add_argument(
+        "--simulate",
+        action="store_true",
+        help="also replay with louder fans and from further away (simulated)",
+    )
+    rp.add_argument(
+        "--condition",
+        action="append",
+        default=[],
+        help="only these conditions: recorded, fans, far",
+    )
     rp.add_argument("--label", help="name for this run's report (default sim or live)")
     rp.add_argument("-v", "--verbose", action="store_true", help="print every failure")
     cp = sub.add_parser("compare", help="compare runs side by side")
@@ -126,8 +153,9 @@ def main(argv: list[str] | None = None) -> int:
     bp = sub.add_parser("brain", help="send a run's requests to HAL's brain in the eval sandbox")
     bp.add_argument("--label", default="sim")
     args = ap.parse_args(argv)
-    return {"split": cmd_split, "run": cmd_run, "compare": cmd_compare,
-            "brain": cmd_brain}[args.cmd](args)
+    return {"split": cmd_split, "run": cmd_run, "compare": cmd_compare, "brain": cmd_brain}[
+        args.cmd
+    ](args)
 
 
 if __name__ == "__main__":

@@ -23,7 +23,8 @@ try:
 except ImportError as exc:
     raise SystemExit(
         "hal-voice needs the 'mcp' package, version 2.3 or later (MCPServer). Install it with:\n"
-        "  ./setup-voice.sh   (or: pip install -e .)") from exc
+        "  ./setup-voice.sh   (or: pip install -e .)"
+    ) from exc
 
 from . import tts
 from .stt import listen_once

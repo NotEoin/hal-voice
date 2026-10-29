@@ -55,11 +55,13 @@ def make_brain():
     mode = str(config.load().get("brain.mode", "direct"))
     if mode == "direct":
         from .brain import CoreNotFound, DirectBrain
+
         try:
             return DirectBrain()
         except CoreNotFound as e:
             log.error("%s. Falling back to claude mode.", e)
     from .claude_client import ClaudeSession
+
     return ClaudeSession()
 
 
@@ -75,6 +77,7 @@ class VoiceLoop:
         self.activator = None
         if self.cfg.get("activation.keyword.enabled", False):
             from .handsfree import Ears
+
             self.ears = Ears(self.transcriber.transcribe)
         if self.cfg.get("activation.mode", "both") in ("push_to_talk", "both") or not self.ears:
             self.activator = Activator(keyword=False)
@@ -85,7 +88,8 @@ class VoiceLoop:
             hub = self.brain.hub
             # The lights show HAL's state through hal-rgb; a slow or missing light never holds up speech.
             self.bus.on_change = lambda state: threading.Thread(
-                target=hub.call, args=("rgb_state", {"state": state}), daemon=True).start()
+                target=hub.call, args=("rgb_state", {"state": state}), daemon=True
+            ).start()
         self._speak_lock = threading.Lock()
 
     # -- UI --------------------------------------------------------------------
@@ -158,7 +162,9 @@ class VoiceLoop:
                         break
                     audio, sr = item
                     self.bus.set("speaking")
-                    if not self.player.play(audio, sr, on_level=lambda lv: self.bus.set("speaking", lv)):
+                    if not self.player.play(
+                        audio, sr, on_level=lambda lv: self.bus.set("speaking", lv)
+                    ):
                         log.info("(barge-in: HAL stops)")
                         finished = False
                         cancel.set()

@@ -21,11 +21,11 @@ from . import script
 
 HOP_S = 0.01
 WIN_S = 0.03
-START_DB = 6.0      # speech is this far above the noise floor
-KEEP_DB = 4.0       # and carries on while above this
-MERGE_S = 0.3       # gaps shorter than this are inside a phrase
+START_DB = 6.0  # speech is this far above the noise floor
+KEEP_DB = 4.0  # and carries on while above this
+MERGE_S = 0.3  # gaps shorter than this are inside a phrase
 MIN_REGION_S = 0.12
-MAX_GROUP = 8       # most stretches of speech one line can take
+MAX_GROUP = 8  # most stretches of speech one line can take
 PRE_S, POST_S = 1.0, 1.5  # audio kept around each line's speech, gaps allowing
 NAMES = {"hal", "hall", "how", "al", "howl", "hell", "hale", "haul", "hull", "owl", "hel"}
 
@@ -81,8 +81,12 @@ def regions(y: np.ndarray, sr: int) -> tuple[list[Region], float]:
     """
     from faster_whisper.vad import VadOptions, get_speech_timestamps
 
-    opts = VadOptions(threshold=0.3, min_silence_duration_ms=int(MERGE_S * 1000),
-                      min_speech_duration_ms=int(MIN_REGION_S * 1000), speech_pad_ms=60)
+    opts = VadOptions(
+        threshold=0.3,
+        min_silence_duration_ms=int(MERGE_S * 1000),
+        min_speech_duration_ms=int(MIN_REGION_S * 1000),
+        speech_pad_ms=60,
+    )
     stamps = get_speech_timestamps(y, opts, sampling_rate=sr)
     spans = [[t["start"] / sr, t["end"] / sr] for t in stamps]
     spans = sorted(spans + level_regions(y, sr))
@@ -98,17 +102,26 @@ def regions(y: np.ndarray, sr: int) -> tuple[list[Region], float]:
 
 def transcribe_regions(y: np.ndarray, sr: int, regs: list[Region], model) -> None:
     for r in regs:
-        seg = y[int(max(0, r.start - 0.2) * sr): int((r.end + 0.2) * sr)]
-        segs, _ = model.transcribe(seg, language="en", beam_size=5, hotwords="Hal",
-                                   vad_filter=False, condition_on_previous_text=False)
-        r.text = " ".join(s.text.strip() for s in segs
-                          if s.no_speech_prob < 0.6 and s.avg_logprob > -1.0).strip()
+        seg = y[int(max(0, r.start - 0.2) * sr) : int((r.end + 0.2) * sr)]
+        segs, _ = model.transcribe(
+            seg,
+            language="en",
+            beam_size=5,
+            hotwords="Hal",
+            vad_filter=False,
+            condition_on_previous_text=False,
+        )
+        r.text = " ".join(
+            s.text.strip() for s in segs if s.no_speech_prob < 0.6 and s.avg_logprob > -1.0
+        ).strip()
 
 
 def score(got: list[str], want: list[str]) -> float:
     """Matched words, less a little for every word on either side left unmatched."""
-    m = sum(b.size for b in difflib.SequenceMatcher(None, got, want, autojunk=False)
-            .get_matching_blocks())
+    m = sum(
+        b.size
+        for b in difflib.SequenceMatcher(None, got, want, autojunk=False).get_matching_blocks()
+    )
     return m - 0.3 * (len(got) - m) - 0.3 * (len(want) - m)
 
 
@@ -160,11 +173,15 @@ def take_starts(regs: list[Region]) -> list[tuple[int, str]]:
     """Finds each "Marker one, <take>" and the take it names."""
     found = []
     for i, r in enumerate(regs):
-        text = " ".join(x.text for x in regs[i: i + 3]).lower()
+        text = " ".join(x.text for x in regs[i : i + 3]).lower()
         if not r.text or not re.match(r"^\W*mark\w*\W+(one|1)\b", text):
             continue
-        tid = max(script.TAKES, key=lambda t: difflib.SequenceMatcher(
-            None, script.TAKES[t][0].lower(), text[:40]).ratio())
+        tid = max(
+            script.TAKES,
+            key=lambda t: difflib.SequenceMatcher(
+                None, script.TAKES[t][0].lower(), text[:40]
+            ).ratio(),
+        )
         found.append((i, tid))
     return found
 
@@ -218,10 +235,12 @@ def split(recording: Path, out: Path, model, take: str | None = None, say=print)
         tdir.mkdir(parents=True, exist_ok=True)
         # The silence is the longest gap between "Marker one" and the next line.
         m1 = spans.get("m1", (0, 1))
-        gaps = [(sub[k + 1].start - sub[k].end, sub[k].end, sub[k + 1].start)
-                for k in range(m1[1] - 1, min(len(sub) - 1, m1[1] + 2))]
+        gaps = [
+            (sub[k + 1].start - sub[k].end, sub[k].end, sub[k + 1].start)
+            for k in range(m1[1] - 1, min(len(sub) - 1, m1[1] + 2))
+        ]
         g, a, b = max(gaps) if gaps else (0.0, 0.0, 0.0)
-        quiet = y[int((a + 0.5) * sr): int((b - 0.5) * sr)]
+        quiet = y[int((a + 0.5) * sr) : int((b - 0.5) * sr)]
         sf.write(tdir / "silence.wav", quiet, sr)
         noise_db = round(float(10 * np.log10(np.mean(quiet**2) + 1e-12)), 1) if quiet.size else None
         clips = []
@@ -238,30 +257,41 @@ def split(recording: Path, out: Path, model, take: str | None = None, say=print)
             next_start = sub[j].start if j < len(sub) else len(y) / sr
             c0 = max(s0 - PRE_S, (prev_end + s0) / 2)
             c1 = min(s1 + POST_S, (s1 + next_start) / 2)
-            clip = y[int(c0 * sr): int(c1 * sr)]
+            clip = y[int(c0 * sr) : int(c1 * sr)]
             name = f"{int(ln.id):03d}-{slug(ln.text)}.wav"
             sf.write(tdir / name, clip, sr)
-            level = active_level(y[int(s0 * sr): int(s1 * sr)], sr, floor)
-            clips.append({
-                **row,
-                "file": f"{tid}/{name}",
-                "at": round(s0, 2),
-                "speech_start": round(s0 - c0, 3),
-                "speech_end": round(s1 - c0, 3),
-                "heard": " ".join(r.text for r in sub[i:j]),
-                "level_dbfs": level,
-                "snr_db": round(level - noise_db, 1) if noise_db is not None else None,
-            })
+            level = active_level(y[int(s0 * sr) : int(s1 * sr)], sr, floor)
+            clips.append(
+                {
+                    **row,
+                    "file": f"{tid}/{name}",
+                    "at": round(s0, 2),
+                    "speech_start": round(s0 - c0, 3),
+                    "speech_end": round(s1 - c0, 3),
+                    "heard": " ".join(r.text for r in sub[i:j]),
+                    "level_dbfs": level,
+                    "snr_db": round(level - noise_db, 1) if noise_db is not None else None,
+                }
+            )
         missing = [c["id"] for c in clips if c.get("missing")]
-        say(f"  {tid}: {len(clips) - len(missing)} lines cut, silence {g:.1f} s at "
-            f"{noise_db} dBFS" + (f"; not found: {', '.join(missing)}" if missing else ""))
-        takes.append({
-            "take": tid, "label": label, "distance": distance, "noise": noise,
-            "recording": str(recording), "silence": f"{tid}/silence.wav",
-            "silence_s": round(len(quiet) / sr, 2), "noise_dbfs": noise_db,
-            "noise_bands_db": band_levels(quiet, sr) if quiet.size else {},
-            "clips": clips,
-        })
+        say(
+            f"  {tid}: {len(clips) - len(missing)} lines cut, silence {g:.1f} s at "
+            f"{noise_db} dBFS" + (f"; not found: {', '.join(missing)}" if missing else "")
+        )
+        takes.append(
+            {
+                "take": tid,
+                "label": label,
+                "distance": distance,
+                "noise": noise,
+                "recording": str(recording),
+                "silence": f"{tid}/silence.wav",
+                "silence_s": round(len(quiet) / sr, 2),
+                "noise_dbfs": noise_db,
+                "noise_bands_db": band_levels(quiet, sr) if quiet.size else {},
+                "clips": clips,
+            }
+        )
     return takes
 
 
@@ -272,6 +302,7 @@ def write_manifest(out: Path, takes: list[dict]) -> Path:
     keep = {t["take"]: t for t in old}
     keep.update({t["take"]: t for t in takes})
     order = list(script.TAKES)
-    path.write_text(json.dumps({"takes": sorted(keep.values(),
-                                                key=lambda t: order.index(t["take"]))}, indent=1))
+    path.write_text(
+        json.dumps({"takes": sorted(keep.values(), key=lambda t: order.index(t["take"]))}, indent=1)
+    )
     return path

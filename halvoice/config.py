@@ -58,7 +58,7 @@ def _apply_env_overrides(cfg: dict) -> None:
     for key, raw in os.environ.items():
         if not key.startswith(prefix) or key in skip:
             continue
-        parts = key[len(prefix):].lower().split("_")
+        parts = key[len(prefix) :].lower().split("_")
         # Walk as far down the existing tree as the parts allow; the remainder, if any,
         # is treated as a single leaf key (covers leaf names that contain underscores).
         node: Any = cfg

@@ -6,6 +6,7 @@ Reads your clips plus the transcripts.csv beside them, converts each to a clean
 reference clip. No dialogue is stored in this repo - see voice-data/README.md
 for the CSV format and the weight column.
 """
+
 import argparse
 import csv
 import shutil
@@ -87,9 +88,24 @@ def to_wav(src: Path, dst: Path) -> None:
         shutil.copy2(src, dst)
         return
     subprocess.run(
-        ["ffmpeg", "-y", "-i", str(src), "-ac", "1", "-ar", "32000",
-         "-af", "highpass=f=70", "-sample_fmt", "s16", str(dst)],
-        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(src),
+            "-ac",
+            "1",
+            "-ar",
+            "32000",
+            "-af",
+            "highpass=f=70",
+            "-sample_fmt",
+            "s16",
+            str(dst),
+        ],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
 
 
@@ -99,19 +115,39 @@ AUDIO = SRC
 def main() -> None:
     global AUDIO, SRC, TRANSCRIPTS_FILE
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", choices=["raw", "denoised"], default="raw",
-                        help="train on the clips as fetched, or on denoise.py's output")
-    parser.add_argument("--source-dir", type=Path, help="train on cleaned clips in this folder (overrides --source)")
-    parser.add_argument("--clips", type=Path,
-                        help="a folder of clips with their own transcripts.csv, such as make-hal-voice's dataset")
-    parser.add_argument("--exclude", nargs="*", default=[], help="clip stems to hold out of training")
-    parser.add_argument("--keep-reference", action="store_true",
-                        help="leave voice-data/reference/ (the live voice's references) untouched")
+    parser.add_argument(
+        "--source",
+        choices=["raw", "denoised"],
+        default="raw",
+        help="train on the clips as fetched, or on denoise.py's output",
+    )
+    parser.add_argument(
+        "--source-dir", type=Path, help="train on cleaned clips in this folder (overrides --source)"
+    )
+    parser.add_argument(
+        "--clips",
+        type=Path,
+        help="a folder of clips with their own transcripts.csv, such as make-hal-voice's dataset",
+    )
+    parser.add_argument(
+        "--exclude", nargs="*", default=[], help="clip stems to hold out of training"
+    )
+    parser.add_argument(
+        "--keep-reference",
+        action="store_true",
+        help="leave voice-data/reference/ (the live voice's references) untouched",
+    )
     args = parser.parse_args()
     if args.clips:
         SRC = args.clips.resolve()
         TRANSCRIPTS_FILE = SRC / "transcripts.csv"
-    AUDIO = args.source_dir.resolve() if args.source_dir else DENOISED if args.source == "denoised" else SRC
+    AUDIO = (
+        args.source_dir.resolve()
+        if args.source_dir
+        else DENOISED
+        if args.source == "denoised"
+        else SRC
+    )
     if not AUDIO.exists():
         sys.exit(f"No clips at {AUDIO}. Run denoise.py first.")
     if not SRC.exists():
@@ -172,7 +208,11 @@ def main() -> None:
     # Further stems in reference.txt are auxiliary references, blended in for timbre.
     for old_aux in REF_DIR.glob("hal_aux_*.wav"):
         old_aux.unlink()
-    aux = (ROOT / "reference.txt").read_text(encoding="utf-8").split()[1:] if (ROOT / "reference.txt").exists() else []
+    aux = (
+        (ROOT / "reference.txt").read_text(encoding="utf-8").split()[1:]
+        if (ROOT / "reference.txt").exists()
+        else []
+    )
     for i, stem in enumerate(aux, start=1):
         clip = find_clip(stem)
         if clip is None:

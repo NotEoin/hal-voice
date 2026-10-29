@@ -94,7 +94,7 @@ def _parse_kv_file(path: Path) -> dict[str, str]:
         if not line or line.startswith("#"):
             continue
         if line.startswith("export "):
-            line = line[len("export "):].strip()
+            line = line[len("export ") :].strip()
         key, sep, value = line.partition("=")
         if not sep:
             continue
@@ -214,9 +214,11 @@ def resolve() -> Connection:
     # deliberately do NOT copy it into our own overrides: re-deriving settings from it
     # would make us re-inject placeholder credentials over real ones. We only note that
     # it is there, so `hal-voice connection` can tell you what will actually apply.
-    inherited = {k: os.environ[k] for k in
-                 ("ANTHROPIC_BASE_URL", "ANTHROPIC_MODEL", "ANTHROPIC_SMALL_FAST_MODEL")
-                 if os.environ.get(k)}
+    inherited = {
+        k: os.environ[k]
+        for k in ("ANTHROPIC_BASE_URL", "ANTHROPIC_MODEL", "ANTHROPIC_SMALL_FAST_MODEL")
+        if os.environ.get(k)
+    }
     if inherited and not any(settings.values()):
         sources.append("inherited from your environment")
 
@@ -246,8 +248,9 @@ def resolve() -> Connection:
     # model_env is the raw escape hatch and wins over everything we derived.
     env.update({str(k): str(v) for k, v in (c.get("model_env") or {}).items()})
 
-    return Connection(project_dir=project_dir, env=env, sources=sources,
-                      inherited=inherited, **settings)
+    return Connection(
+        project_dir=project_dir, env=env, sources=sources, inherited=inherited, **settings
+    )
 
 
 def explain() -> None:
@@ -257,8 +260,11 @@ def explain() -> None:
     print("----------------------------------")
     print(f"  target       : {conn.describe()}")
     print(f"  project dir  : {conn.project_dir}")
-    print(f"  mode         : {'cloud (your own Claude Code login)' if conn.is_cloud else 'local model'}")
+    print(
+        f"  mode         : {'cloud (your own Claude Code login)' if conn.is_cloud else 'local model'}"
+    )
     print(f"  resolved from: {' -> '.join(conn.sources)}")
+
     def _mask(key: str, value: str) -> str:
         return "***" if any(s in key.upper() for s in ("TOKEN", "KEY", "SECRET")) else value
 

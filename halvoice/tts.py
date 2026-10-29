@@ -86,14 +86,20 @@ class GPTSoVITSClient:
         sov = config.resolve(cfg.get("tts.sovits_weights"))
         try:
             if gpt:
-                requests.get(f"{self.url}/set_gpt_weights", params={"weights_path": gpt}, timeout=60)
+                requests.get(
+                    f"{self.url}/set_gpt_weights", params={"weights_path": gpt}, timeout=60
+                )
             if sov:
-                requests.get(f"{self.url}/set_sovits_weights", params={"weights_path": sov}, timeout=60)
+                requests.get(
+                    f"{self.url}/set_sovits_weights", params={"weights_path": sov}, timeout=60
+                )
             self._weights_set = True
             log.info("GPT-SoVITS HAL weights loaded")
         except Exception as e:  # noqa: BLE001
             # Not fatal: the server may already have them baked in via -g/-s flags.
-            log.warning("could not hot-swap weights (%s) — assuming server already has HAL loaded", e)
+            log.warning(
+                "could not hot-swap weights (%s) — assuming server already has HAL loaded", e
+            )
             self._weights_set = True
 
     def synth_raw(self, text: str) -> tuple[np.ndarray, int]:
@@ -127,7 +133,7 @@ class GPTSoVITSClient:
         return audio.astype(np.float32), int(sr)
 
 
-EDGE_GATE_DB = 38.0   # audio this far below the line's peak, before speech or after it, is cut
+EDGE_GATE_DB = 38.0  # audio this far below the line's peak, before speech or after it, is cut
 EDGE_FADE_S = 0.012
 
 
@@ -141,7 +147,7 @@ def gate_edges(audio: np.ndarray, sr: int) -> np.ndarray:
         return audio
     frame = sr // 100
     n = audio.size // frame
-    rms = np.sqrt(np.mean(audio[:n * frame].reshape(n, frame) ** 2, axis=1) + 1e-12)
+    rms = np.sqrt(np.mean(audio[: n * frame].reshape(n, frame) ** 2, axis=1) + 1e-12)
     db = 20 * np.log10(rms)
     loud = np.flatnonzero(db > db.max() - EDGE_GATE_DB)
     if loud.size == 0:
@@ -216,12 +222,13 @@ class Player:
         block = max(256, sr // 50)  # ~20 ms blocks for responsive barge-in + level metering
         idx = 0
         audio = np.asarray(audio, dtype=np.float32).flatten()
-        with sd.OutputStream(samplerate=sr, channels=1, dtype="float32",
-                            blocksize=block, device=self.device) as stream:
+        with sd.OutputStream(
+            samplerate=sr, channels=1, dtype="float32", blocksize=block, device=self.device
+        ) as stream:
             while idx < len(audio) and not self._stop.is_set():
-                seg = audio[idx:idx + block]
+                seg = audio[idx : idx + block]
                 stream.write(seg)
-                self.level = float(np.sqrt(np.mean(seg ** 2)) * 3.0) if seg.size else 0.0
+                self.level = float(np.sqrt(np.mean(seg**2)) * 3.0) if seg.size else 0.0
                 if on_level:
                     on_level(min(1.0, self.level))
                 idx += block
@@ -243,11 +250,11 @@ def main() -> None:
     # `python -m halvoice.tts --say "..."`
     args = sys.argv[1:]
     if "--say" in args:
-        text = " ".join(args[args.index("--say") + 1:]).strip()
+        text = " ".join(args[args.index("--say") + 1 :]).strip()
     else:
         text = " ".join(args).strip()
     if not text:
-        print("usage: python -m halvoice.tts --say \"line to speak\"", file=sys.stderr)
+        print('usage: python -m halvoice.tts --say "line to speak"', file=sys.stderr)
         raise SystemExit(2)
     speak(text)
 

@@ -26,7 +26,7 @@ def wer(got: str, want: str) -> float:
 
 
 def cut(got: str, want: str) -> str:
-    """"start" or "end" when the request lost words there, else ""."""
+    """ "start" or "end" when the request lost words there, else ""."""
     a, b = script.words(got), script.words(want)
     if not a or not b:
         return ""
@@ -44,10 +44,18 @@ def judge(r) -> dict:
     turns = [e for e in r.events if e[1] == "turn"]
     first = r.events[0] if r.events else None
     row = {
-        "condition": c["condition"], "id": c["id"], "section": c["section"], "text": c["text"],
-        "form": c.get("form", ""), "heard": " | ".join(t for t in r.heard if t),
-        "woke": bool(r.events), "turns": len(turns),
-        "request": turns[0][2] if turns else "", "latency": None, "wer": None, "cut": "",
+        "condition": c["condition"],
+        "id": c["id"],
+        "section": c["section"],
+        "text": c["text"],
+        "form": c.get("form", ""),
+        "heard": " | ".join(t for t in r.heard if t),
+        "woke": bool(r.events),
+        "turns": len(turns),
+        "request": turns[0][2] if turns else "",
+        "latency": None,
+        "wer": None,
+        "cut": "",
         "problems": [],
     }
     p = row["problems"]
@@ -62,8 +70,11 @@ def judge(r) -> dict:
         return row
     if c["turn"]:
         if not turns:
-            p.append("request not caught" if c["then_request"] or c["followup"] or r.events
-                     else "missed wake")
+            p.append(
+                "request not caught"
+                if c["then_request"] or c["followup"] or r.events
+                else "missed wake"
+            )
             return row
         row["latency"] = turns[0][0]
         row["wer"] = round(wer(turns[0][2], c["request"]), 3)
@@ -135,12 +146,19 @@ def markdown(label: str, rows: list[dict], note: str = "") -> str:
             else:
                 cells.append(fmt(v))
         out.append(f"| {k} | " + " | ".join(cells) + " |")
-    out += ["", "## Failures", "", "| Condition | Line | Said | Heard | Problem |",
-            "| --- | --- | --- | --- | --- |"]
+    out += [
+        "",
+        "## Failures",
+        "",
+        "| Condition | Line | Said | Heard | Problem |",
+        "| --- | --- | --- | --- | --- |",
+    ]
     for r in rows:
         if r["problems"]:
-            out.append(f"| {r['condition']} | {r['id']} | {r['text']} | {r['heard']} | "
-                       f"{'; '.join(r['problems'])} |")
+            out.append(
+                f"| {r['condition']} | {r['id']} | {r['text']} | {r['heard']} | "
+                f"{'; '.join(r['problems'])} |"
+            )
     return "\n".join(out) + "\n"
 
 
@@ -151,8 +169,7 @@ def compare(labelled: dict[str, list[dict]]) -> str:
     out = []
     for c in conds:
         keys = next(iter(s[c] for s in sums.values() if c in s)).keys()
-        out += [f"### {c}", "", "| | " + " | ".join(sums) + " |",
-                "| --- |" + " --- |" * len(sums)]
+        out += [f"### {c}", "", "| | " + " | ".join(sums) + " |", "| --- |" + " --- |" * len(sums)]
         for k in keys:
             cells = []
             for s in sums.values():

@@ -99,10 +99,14 @@ class _WakeWord:
             return
         # openWakeWord expects 16 kHz int16 frames of 1280 samples (80 ms).
         chunk = 1280
-        with sd.InputStream(samplerate=self.sr, channels=1, dtype="int16",
-                            blocksize=chunk, device=self.device) as stream:
-            log.info("wake word listening ('%s', threshold %.2f)…",
-                     self.custom or self.model_name, self.threshold)
+        with sd.InputStream(
+            samplerate=self.sr, channels=1, dtype="int16", blocksize=chunk, device=self.device
+        ) as stream:
+            log.info(
+                "wake word listening ('%s', threshold %.2f)…",
+                self.custom or self.model_name,
+                self.threshold,
+            )
             while not self._stop.is_set():
                 block, _ = stream.read(chunk)
                 preds = oww.predict(block[:, 0].astype(np.int16))
@@ -118,8 +122,8 @@ class _WakeWord:
 
 
 DEFAULT_KEYWORD = r"^\W*(?:(?:hey|hi|hello|ok|okay)\W+)?(?:hal|hall|howl)\b[\s,.!?]*"
-_FRAME_MS = 30            # webrtcvad accepts 10, 20 or 30 ms frames
-_END_SILENCE_MS = 450     # a pause this long ends a burst
+_FRAME_MS = 30  # webrtcvad accepts 10, 20 or 30 ms frames
+_END_SILENCE_MS = 450  # a pause this long ends a burst
 
 
 class _Keyword:
@@ -155,8 +159,9 @@ class _Keyword:
         max_frames = int(self.max_seconds * 1000 / _FRAME_MS)
         voiced: list[np.ndarray] = []
         silent = 0
-        with sd.InputStream(samplerate=self.sr, channels=1, dtype="int16",
-                            blocksize=frame, device=self.device) as stream:
+        with sd.InputStream(
+            samplerate=self.sr, channels=1, dtype="int16", blocksize=frame, device=self.device
+        ) as stream:
             log.info("listening for HAL's name (%s)", self.model_name)
             while not self._stop.is_set():
                 block, _ = stream.read(frame)
@@ -176,13 +181,18 @@ class _Keyword:
                         self._check(model, audio)
 
     def _check(self, model, audio: np.ndarray) -> None:
-        segments, _ = model.transcribe(audio, language="en", beam_size=1,
-                                       initial_prompt="Hey Hal.", vad_filter=False,
-                                       condition_on_previous_text=False)
+        segments, _ = model.transcribe(
+            audio,
+            language="en",
+            beam_size=1,
+            initial_prompt="Hey Hal.",
+            vad_filter=False,
+            condition_on_previous_text=False,
+        )
         text = " ".join(seg.text for seg in segments).strip()
         match = self.pattern.match(text)
         if match:
-            self.command = text[match.end():].strip(" ,.!?")
+            self.command = text[match.end() :].strip(" ,.!?")
             log.info("heard HAL's name: %r", text)
             self.detected.set()
 
@@ -222,8 +232,10 @@ class Activator:
 
     def heard(self) -> bool:
         """True while a hands-free trigger has fired and not been consumed."""
-        return bool((self.wake and self.wake.detected.is_set())
-                    or (self.keyword and self.keyword.detected.is_set()))
+        return bool(
+            (self.wake and self.wake.detected.is_set())
+            or (self.keyword and self.keyword.detected.is_set())
+        )
 
     def pause_keyword(self, paused: bool) -> None:
         """Stops the keyword listener transcribing while a turn is recorded."""

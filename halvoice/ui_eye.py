@@ -89,9 +89,12 @@ class RedEye:
         hot = (min(255, int(r * k) + 60), int(g * k) + 30, int(b * k) + 20)
         pygame.draw.circle(screen, hot, (cx, cy), int(core_r * 0.5))
         # tiny white specular highlight, offset (the "eye" feel)
-        pygame.draw.circle(screen, (255, 235, 230),
-                           (cx - int(core_r * 0.28), cy - int(core_r * 0.30)),
-                           max(2, int(core_r * 0.10)))
+        pygame.draw.circle(
+            screen,
+            (255, 235, 230),
+            (cx - int(core_r * 0.28), cy - int(core_r * 0.30)),
+            max(2, int(core_r * 0.10)),
+        )
 
 
 def demo() -> None:

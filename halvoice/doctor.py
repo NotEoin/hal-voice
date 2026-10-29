@@ -37,15 +37,13 @@ def _imports():
     for essential in ("numpy", "requests", "soundfile", "sounddevice", "yaml"):
         __import__(essential)  # the import itself is the check; a failure is reported by _check
     mods = []
-    for m in ("faster_whisper", "webrtcvad", "pynput",
-              "pedalboard", "pyloudnorm", "pygame", "mcp"):
+    for m in ("faster_whisper", "webrtcvad", "pynput", "pedalboard", "pyloudnorm", "pygame", "mcp"):
         try:
             __import__(m)
         except Exception:  # noqa: BLE001
             mods.append(m)
     if mods:
-        raise _Warn("modules missing: " + ", ".join(mods)
-                    + " — re-run ./setup-voice.sh")
+        raise _Warn("modules missing: " + ", ".join(mods) + " — re-run ./setup-voice.sh")
     # Wake word is an opt-in extra (the `wake` extra), so its absence is normal
     # and should not read as a broken install.
     try:
@@ -57,6 +55,7 @@ def _imports():
 
 def _audio():
     import sounddevice as sd
+
     ins = [d for d in sd.query_devices() if d["max_input_channels"] > 0]
     outs = [d for d in sd.query_devices() if d["max_output_channels"] > 0]
     if not ins:
@@ -70,6 +69,7 @@ def _stt_model():
     cfg = config.load()
     name = cfg.get("stt.model", "small.en")
     from faster_whisper import WhisperModel  # noqa: F401
+
     return f"faster-whisper available (model '{name}' downloads on first use)"
 
 
@@ -89,13 +89,16 @@ def _weights():
         if not p or not Path(p).exists():
             missing.append(f"{key}={p}")
     if missing:
-        raise _Warn("fine-tuned weights not found yet (train them — gptsovits/train-hal.md): "
-                    + "; ".join(missing))
+        raise _Warn(
+            "fine-tuned weights not found yet (train them — gptsovits/train-hal.md): "
+            + "; ".join(missing)
+        )
     return "HAL fine-tuned checkpoints present"
 
 
 def _gptsovits_server():
     import requests
+
     cfg = config.load()
     url = str(cfg.get("tts.api_url", "http://127.0.0.1:9880")).rstrip("/")
     try:
@@ -105,8 +108,9 @@ def _gptsovits_server():
         try:
             requests.get(url + "/set_gpt_weights", timeout=2)
         except Exception as e:
-            raise _Warn(f"GPT-SoVITS api not reachable at {url} "
-                        f"(start it: gptsovits/run-api.sh): {e}") from e
+            raise _Warn(
+                f"GPT-SoVITS api not reachable at {url} (start it: gptsovits/run-api.sh): {e}"
+            ) from e
     return f"reachable at {url}"
 
 
@@ -122,6 +126,7 @@ def _brain():
     import urllib.request
 
     from . import brain
+
     core = brain.find_core()
     b = brain.direct_brain()
     try:
@@ -147,6 +152,7 @@ def _claude():
 def _connection():
     """What hal-voice will actually drive, and where. See halvoice/connect.py."""
     from . import connect
+
     conn = connect.resolve()
     if not Path(conn.project_dir).is_dir():
         raise Exception(f"project_dir does not exist: {conn.project_dir}")
@@ -156,6 +162,7 @@ def _connection():
 def _voice_profile():
     """The VRAM profile chosen by setup-voice.sh — separate from the Claude connection."""
     import os
+
     profile = os.environ.get("HALVOICE_PROFILE")
     cfg = config.load()
     stt_dev = cfg.get("stt.device", "cpu")

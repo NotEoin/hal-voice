@@ -61,17 +61,21 @@ class ClaudeSession:
         return env
 
     def _base_cmd(self) -> list[str]:
-        cmd = [str(self.c.get("command", "claude")), "-p",
-               "--output-format", "stream-json",
-               "--include-partial-messages",
-               "--verbose"]  # required for stream-json on -p
+        cmd = [
+            str(self.c.get("command", "claude")),
+            "-p",
+            "--output-format",
+            "stream-json",
+            "--include-partial-messages",
+            "--verbose",
+        ]  # required for stream-json on -p
         pm = self.c.get("permission_mode")
         if pm:
             cmd += ["--permission-mode", str(pm)]
         allowed = self.c.get("allowed_tools") or []
         if allowed:
             cmd += ["--allowedTools", ",".join(map(str, allowed))]
-        for d in (self.c.get("add_dirs") or []):
+        for d in self.c.get("add_dirs") or []:
             cmd += ["--add-dir", str(d)]
         sysprompt = self.c.get("voice_system_prompt")
         if sysprompt:
@@ -85,8 +89,14 @@ class ClaudeSession:
         cmd = [*self._base_cmd(), prompt]
         log.debug("claude cmd: %s", " ".join(cmd[:-1]) + " <prompt>")
         proc = subprocess.Popen(
-            cmd, cwd=self.cwd, env=self._env,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
+            cmd,
+            cwd=self.cwd,
+            env=self._env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+        )
 
         # Drain stderr in the background so it can't deadlock the pipe.
         def _drain_err():
@@ -124,8 +134,9 @@ class ClaudeSession:
                 # Final assembled assistant message — yield any tail we didn't stream.
                 elif etype == "assistant":
                     msg = evt.get("message", {}) or {}
-                    text = "".join(b.get("text", "") for b in msg.get("content", [])
-                                   if b.get("type") == "text")
+                    text = "".join(
+                        b.get("text", "") for b in msg.get("content", []) if b.get("type") == "text"
+                    )
                     if text and len(text) > emitted:
                         yield text[emitted:]
                         emitted = len(text)

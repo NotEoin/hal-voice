@@ -1,6 +1,6 @@
 """hal-voice's hal-hub tools, run as a subprocess with the voice virtualenv.
 
-    python -m halvoice.tools --stdin say    JSON arguments on stdin, JSON result on stdout
+python -m halvoice.tools --stdin say    JSON arguments on stdin, JSON result on stdout
 """
 
 from __future__ import annotations

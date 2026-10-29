@@ -21,10 +21,16 @@ class AddressedTest(unittest.TestCase):
         self.check("Hall, open Firefox.", True, "open Firefox")
 
     def test_greeting_before_the_name_is_kept_for_a_reply(self):
-        self.check("Good morning Hal, what's the weather today?", True,
-                   "Good morning. What's the weather today")
-        self.check("Evening Hal, give me the evening briefing.", True,
-                   "Evening. Give me the evening briefing")
+        self.check(
+            "Good morning Hal, what's the weather today?",
+            True,
+            "Good morning. What's the weather today",
+        )
+        self.check(
+            "Evening Hal, give me the evening briefing.",
+            True,
+            "Evening. Give me the evening briefing",
+        )
         self.check("Good morning, Hal.", True, "Good morning")
         self.check("Thanks Hal.", True, "Thanks")
 
@@ -37,13 +43,15 @@ class AddressedTest(unittest.TestCase):
         self.check("How, what time is it?", True, "what time is it")
         self.check("How? Stop.", True, "Stop")
         self.check("How what's on my calendar?", True, "what's on my calendar")
-        self.check("How hot is my graphics card running?", False,
-                   "How hot is my graphics card running")
+        self.check(
+            "How hot is my graphics card running?", False, "How hot is my graphics card running"
+        )
         self.check("How?", False, "How")
 
     def test_talk_about_hal_is_not_to_him(self):
-        self.check("Hal said he'd ring me back tomorrow.", False,
-                   "Hal said he'd ring me back tomorrow")
+        self.check(
+            "Hal said he'd ring me back tomorrow.", False, "Hal said he'd ring me back tomorrow"
+        )
         self.check("I'll ask Hal about it later.", False, "I'll ask Hal about it later")
         self.check("Good morning, Sam.", False, "Good morning, Sam")
 
@@ -56,7 +64,7 @@ class SegmenterTest(unittest.TestCase):
         y = 0.25 * np.sin(2 * np.pi * 50 * t) + 0.1 * np.sin(2 * np.pi * 120 * t)
         y += 0.03 * rng.standard_normal(n)
         pcm = np.clip(y * 32768, -32768, 32767).astype(np.int16)
-        return [pcm[i: i + 480] for i in range(0, n - 480, 480)]
+        return [pcm[i : i + 480] for i in range(0, n - 480, 480)]
 
     def test_steady_fan_noise_is_not_an_endless_utterance(self):
         from halvoice.handsfree import Segmenter
@@ -106,10 +114,16 @@ class ScriptTest(unittest.TestCase):
     def test_numbers_and_spellings_compare_equal(self):
         from voicetest import score
 
-        self.assertEqual(score.wer("Hal, add a dentist appointment at 10am",
-                                   "Hal, add a dentist appointment at ten a.m."), 0.0)
         self.assertEqual(
-            score.wer("convert \u00a350 to euros", "convert fifty pounds to euros"), 0.0)
+            score.wer(
+                "Hal, add a dentist appointment at 10am",
+                "Hal, add a dentist appointment at ten a.m.",
+            ),
+            0.0,
+        )
+        self.assertEqual(
+            score.wer("convert \u00a350 to euros", "convert fifty pounds to euros"), 0.0
+        )
         self.assertEqual(score.cut("take a note", "take a note blog post idea"), "end")
 
 

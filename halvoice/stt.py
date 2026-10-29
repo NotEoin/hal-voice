@@ -21,8 +21,8 @@ from .util import get_logger
 log = get_logger(__name__)
 
 _FRAME_MS = 30  # webrtcvad accepts 10/20/30 ms frames
-NO_SPEECH_MAX = 0.5   # segments Whisper thinks are more likely silence than speech are dropped
-MIN_LOGPROB = -1.0    # and so are segments it was very unsure of
+NO_SPEECH_MAX = 0.5  # segments Whisper thinks are more likely silence than speech are dropped
+MIN_LOGPROB = -1.0  # and so are segments it was very unsure of
 
 
 class Recorder:
@@ -54,14 +54,21 @@ class Recorder:
 
         frame_len = int(self.sr * _FRAME_MS / 1000)
         t0 = time.time()
-        log.debug("recording (sr=%d, device=%s, hold=%s)", self.sr, self.device, hold_check is not None)
+        log.debug(
+            "recording (sr=%d, device=%s, hold=%s)", self.sr, self.device, hold_check is not None
+        )
 
         # ---- Hold-to-talk: bounded purely by the key being held ------------------
         if hold_check is not None:
             frames: list[np.ndarray] = []
             notified = False
-            with sd.InputStream(samplerate=self.sr, channels=1, dtype="int16",
-                                blocksize=frame_len, device=self.device) as stream:
+            with sd.InputStream(
+                samplerate=self.sr,
+                channels=1,
+                dtype="int16",
+                blocksize=frame_len,
+                device=self.device,
+            ) as stream:
                 while hold_check():
                     if time.time() - t0 > self.max_s:
                         log.debug("max utterance length reached")
@@ -83,8 +90,9 @@ class Recorder:
         voiced: list[np.ndarray] = []
         started = False
 
-        with sd.InputStream(samplerate=self.sr, channels=1, dtype="int16",
-                            blocksize=frame_len, device=self.device) as stream:
+        with sd.InputStream(
+            samplerate=self.sr, channels=1, dtype="int16", blocksize=frame_len, device=self.device
+        ) as stream:
             while True:
                 if time.time() - t0 > self.max_s:
                     log.debug("max utterance length reached")
@@ -123,8 +131,11 @@ def _preload_cuda() -> None:
     import site
 
     for base in site.getsitepackages():
-        for pattern in ("nvidia/cublas/lib/libcublasLt.so.*", "nvidia/cublas/lib/libcublas.so.*",
-                        "nvidia/cudnn/lib/libcudnn*.so.*"):
+        for pattern in (
+            "nvidia/cublas/lib/libcublasLt.so.*",
+            "nvidia/cublas/lib/libcublas.so.*",
+            "nvidia/cudnn/lib/libcudnn*.so.*",
+        ):
             for path in sorted(glob.glob(os.path.join(base, pattern))):
                 try:
                     ctypes.CDLL(path, mode=ctypes.RTLD_GLOBAL)
@@ -164,7 +175,9 @@ class Transcriber:
                     try:
                         ct = self.compute_type if self.compute_type != "int8" else "float16"
                         log.info("loading STT model %s (cuda/%s)", self.model_name, ct)
-                        Transcriber._model = WhisperModel(self.model_name, device="cuda", compute_type=ct)
+                        Transcriber._model = WhisperModel(
+                            self.model_name, device="cuda", compute_type=ct
+                        )
                         return Transcriber._model
                     except (RuntimeError, ValueError) as e:
                         log.warning("STT on the GPU failed (%s); using the CPU", e)
@@ -191,13 +204,21 @@ class Transcriber:
         model = self._load()
         audio = self.prepare(audio)
         segments, _info = model.transcribe(
-            audio, beam_size=self.beam_size, language=self.language,
+            audio,
+            beam_size=self.beam_size,
+            language=self.language,
             initial_prompt=prompt or self.prompt,
-            hotwords=self.hotwords or None, vad_filter=False, condition_on_previous_text=False)
+            hotwords=self.hotwords or None,
+            vad_filter=False,
+            condition_on_previous_text=False,
+        )
         # Noise and silence come back as confident-sounding words; Whisper's own scores
         # say which segments were really speech.
-        kept = [s.text.strip() for s in segments
-                if s.no_speech_prob < NO_SPEECH_MAX and s.avg_logprob > MIN_LOGPROB]
+        kept = [
+            s.text.strip()
+            for s in segments
+            if s.no_speech_prob < NO_SPEECH_MAX and s.avg_logprob > MIN_LOGPROB
+        ]
         return " ".join(kept).strip()
 
 

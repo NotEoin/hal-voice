@@ -24,8 +24,16 @@ from .util import get_logger
 log = get_logger(__name__)
 
 # config.yaml keys passed to halcore's Brain when they are set.
-OVERRIDES = ("ollama_url", "keep_alive", "history_turns", "max_tool_rounds", "tools_per_turn", "num_ctx",
-             "temperature", "user_name")
+OVERRIDES = (
+    "ollama_url",
+    "keep_alive",
+    "history_turns",
+    "max_tool_rounds",
+    "tools_per_turn",
+    "num_ctx",
+    "temperature",
+    "user_name",
+)
 
 
 class CoreNotFound(RuntimeError):
@@ -42,13 +50,18 @@ def _shared_config() -> dict:
 
 def find_core() -> Path:
     """Returns the core hal checkout; raises CoreNotFound when there is none."""
-    candidates = [os.environ.get("HAL_CORE"), str(config.root_dir().resolve().parents[1] / "core" / "hal"),
-                  _shared_config().get("hal", {}).get("core")]
+    candidates = [
+        os.environ.get("HAL_CORE"),
+        str(config.root_dir().resolve().parents[1] / "core" / "hal"),
+        _shared_config().get("hal", {}).get("core"),
+    ]
     for c in candidates:
         if c and (Path(c).expanduser() / "halcore" / "brain.py").is_file():
             return Path(c).expanduser().resolve()
-    raise CoreNotFound("core hal not found: install it with the Hal ecosystem installer, point HAL_CORE or "
-                       "[hal].core in ~/.config/hal/config.toml at it, or set brain.mode: claude in config.yaml")
+    raise CoreNotFound(
+        "core hal not found: install it with the Hal ecosystem installer, point HAL_CORE or "
+        "[hal].core in ~/.config/hal/config.toml at it, or set brain.mode: claude in config.yaml"
+    )
 
 
 def direct_brain():
@@ -62,11 +75,22 @@ def direct_brain():
     hub_path = config.resolve(cfg.get("brain.hub_path"))
     if hub_path:
         os.environ.setdefault("HAL_HUB", hub_path)
-    overrides = {k: cfg.get(f"brain.{k}") for k in OVERRIDES if cfg.get(f"brain.{k}") not in (None, "")}
-    persona = str(cfg.get("brain.persona") or cfg.get("claude.voice_system_prompt") or "").strip() or None
-    brain = Brain(channel="voice", persona=persona, model=cfg.get("brain.model") or None, **overrides)
-    log.info("brain: %s via %s, %s (core hal at %s)", brain.model, brain.url,
-             "with tools" if brain.hub else "no tools", core)
+    overrides = {
+        k: cfg.get(f"brain.{k}") for k in OVERRIDES if cfg.get(f"brain.{k}") not in (None, "")
+    }
+    persona = (
+        str(cfg.get("brain.persona") or cfg.get("claude.voice_system_prompt") or "").strip() or None
+    )
+    brain = Brain(
+        channel="voice", persona=persona, model=cfg.get("brain.model") or None, **overrides
+    )
+    log.info(
+        "brain: %s via %s, %s (core hal at %s)",
+        brain.model,
+        brain.url,
+        "with tools" if brain.hub else "no tools",
+        core,
+    )
     return brain
 
 

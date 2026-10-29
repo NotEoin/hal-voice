@@ -113,7 +113,9 @@ def identify(
     # A label can sit on a line another sound dominates; drop seeds far from the rest.
     hal = _unit(np.mean(seed_vecs, axis=0))
     sims = [float(v @ hal) for v in seed_vecs]
-    seed_vecs = [v for v, s in zip(seed_vecs, sims, strict=False) if s >= float(np.median(sims)) - 0.15]
+    seed_vecs = [
+        v for v, s in zip(seed_vecs, sims, strict=False) if s >= float(np.median(sims)) - 0.15
+    ]
     others: dict[str, list[np.ndarray]] = {}
     for i in vecs:
         spk = lines[i].speaker

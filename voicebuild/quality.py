@@ -111,7 +111,10 @@ def screen(
     """Returns the HAL lines that pass every check, and a record of every HAL line dropped."""
     # Other voices by their recognised words, so a reply a beat later doesn't count as overlap.
     others = [
-        (w["start"], w["end"]) for ln, v in zip(lines, verdicts, strict=False) if not v["hal"] for w in ln.words
+        (w["start"], w["end"])
+        for ln, v in zip(lines, verdicts, strict=False)
+        if not v["hal"]
+        for w in ln.words
     ]
     candidates, dropped = [], []
     for ln, v in join_runs(lines, verdicts):

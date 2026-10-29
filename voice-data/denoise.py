@@ -12,6 +12,7 @@ Gentler cleaning keeps more of the voice's character: --no-demucs skips the
 separation step (the clips are mostly dialogue already) and a lower --atten-db
 limits how far DeepFilterNet may cut.
 """
+
 import argparse
 import sys
 from pathlib import Path
@@ -26,14 +27,15 @@ SRC = ROOT / "hal-voice"
 OUT = ROOT / "denoised"
 AUDIO_SUFFIXES = (".wav", ".mp3", ".flac", ".m4a", ".ogg")
 OUT_SR = 32000
-EDGE_PAD = 0.12      # seconds of silence kept before and after speech
-FADE = 0.015         # seconds
-TARGET_PEAK = 0.7    # linear; keeps headroom for the FX chain
+EDGE_PAD = 0.12  # seconds of silence kept before and after speech
+FADE = 0.015  # seconds
+TARGET_PEAK = 0.7  # linear; keeps headroom for the FX chain
 
 
 def separate(model, wav: np.ndarray, sr: int, device: str) -> np.ndarray:
     """Returns the vocals stem of a mono clip at the model's sample rate."""
     from demucs.apply import apply_model
+
     audio = librosa.resample(wav, orig_sr=sr, target_sr=model.samplerate)
     stereo = torch.tensor(np.stack([audio, audio]), dtype=torch.float32)[None].to(device)
     with torch.no_grad():
@@ -45,9 +47,11 @@ def separate(model, wav: np.ndarray, sr: int, device: str) -> np.ndarray:
 def enhance(df_model, df_state, wav: np.ndarray, sr: int, atten_db: float) -> np.ndarray:
     """Removes residual noise with DeepFilterNet, limiting attenuation to keep the voice natural."""
     from df.enhance import enhance as df_enhance
+
     audio = librosa.resample(wav, orig_sr=sr, target_sr=df_state.sr())
-    clean = df_enhance(df_model, df_state, torch.tensor(audio, dtype=torch.float32)[None],
-                       atten_lim_db=atten_db)
+    clean = df_enhance(
+        df_model, df_state, torch.tensor(audio, dtype=torch.float32)[None], atten_lim_db=atten_db
+    )
     return clean[0].cpu().numpy()
 
 
@@ -56,7 +60,7 @@ def finish(wav: np.ndarray, sr: int) -> np.ndarray:
     wav = librosa.resample(wav, orig_sr=sr, target_sr=OUT_SR)
     _, (start, end) = librosa.effects.trim(wav, top_db=40)
     pad = int(EDGE_PAD * OUT_SR)
-    wav = wav[max(0, start - pad):min(len(wav), end + pad)]
+    wav = wav[max(0, start - pad) : min(len(wav), end + pad)]
     n = int(FADE * OUT_SR)
     ramp = np.linspace(0.0, 1.0, n)
     wav[:n] *= ramp
@@ -66,11 +70,21 @@ def finish(wav: np.ndarray, sr: int) -> np.ndarray:
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--atten-db", type=float, default=40.0,
-                   help="most DeepFilterNet may attenuate; lower keeps more air in the voice")
-    p.add_argument("--no-demucs", action="store_true", help="skip separating the voice from music and hum")
-    p.add_argument("--out", type=Path, default=OUT, help=f"where the cleaned clips go (default {OUT.name}/)")
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    p.add_argument(
+        "--atten-db",
+        type=float,
+        default=40.0,
+        help="most DeepFilterNet may attenuate; lower keeps more air in the voice",
+    )
+    p.add_argument(
+        "--no-demucs", action="store_true", help="skip separating the voice from music and hum"
+    )
+    p.add_argument(
+        "--out", type=Path, default=OUT, help=f"where the cleaned clips go (default {OUT.name}/)"
+    )
     p.add_argument("--only", nargs="*", help="clip stems to process")
     args = p.parse_args()
 
@@ -92,7 +106,9 @@ def main() -> None:
         if demucs_model is not None:
             wav, sr = separate(demucs_model, wav, sr, device), demucs_model.samplerate
         clean = enhance(df_model, df_state, wav, sr, args.atten_db)
-        sf.write(args.out / f"{clip.stem}.wav", finish(clean, df_state.sr()), OUT_SR, subtype="PCM_16")
+        sf.write(
+            args.out / f"{clip.stem}.wav", finish(clean, df_state.sr()), OUT_SR, subtype="PCM_16"
+        )
         print(f"  {clip.stem}", flush=True)
     print(f"{len(clips)} clips written to {args.out}")
 

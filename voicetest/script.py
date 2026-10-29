@@ -24,18 +24,60 @@ TAKES = {
 # alone ("Good morning, Hal.") is a turn of its own, which HAL answers.
 ATTENTION = {"hey", "ok", "okay", "right", "oi", "so"}
 GREETINGS = [
-    "good morning", "good afternoon", "good evening", "good night", "goodnight", "morning",
-    "afternoon", "evening", "hello", "hi", "hey", "okay", "ok", "right", "thanks", "thank you",
+    "good morning",
+    "good afternoon",
+    "good evening",
+    "good night",
+    "goodnight",
+    "morning",
+    "afternoon",
+    "evening",
+    "hello",
+    "hi",
+    "hey",
+    "okay",
+    "ok",
+    "right",
+    "thanks",
+    "thank you",
     "cheers",
 ]
-UNITS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
-         "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
-         "eighteen", "nineteen"]
+UNITS = [
+    "zero",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "eleven",
+    "twelve",
+    "thirteen",
+    "fourteen",
+    "fifteen",
+    "sixteen",
+    "seventeen",
+    "eighteen",
+    "nineteen",
+]
 TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
 # Whisper's American spellings, and words it writes as one or as two.
-SPELLING = {"kilometers": "kilometres", "summarize": "summarise", "color": "colour",
-            "a.m.": "am", "p.m.": "pm", "todo": "to do", "goodnight": "good night",
-            "okay": "ok", "mom": "mum", "favorite": "favourite"}
+SPELLING = {
+    "kilometers": "kilometres",
+    "summarize": "summarise",
+    "color": "colour",
+    "a.m.": "am",
+    "p.m.": "pm",
+    "todo": "to do",
+    "goodnight": "good night",
+    "okay": "ok",
+    "mom": "mum",
+    "favorite": "favourite",
+}
 
 
 def number_words(n: int) -> str:
@@ -69,18 +111,18 @@ def words(text: str) -> list[str]:
 class Line:
     """One line of the script, with what hal-voice should do when it hears it."""
 
-    id: str                 # "12" for a numbered line, "m3" for a marker
+    id: str  # "12" for a numbered line, "m3" for a marker
     section: int
     section_title: str
-    text: str               # what is said, without stage directions
+    text: str  # what is said, without stage directions
     directions: list[str] = field(default_factory=list)
-    kind: str = "test"      # test | marker | chat
-    wake: bool = False      # HAL should notice he is spoken to
-    turn: bool = False      # a request (or greeting) should reach the brain
+    kind: str = "test"  # test | marker | chat
+    wake: bool = False  # HAL should notice he is spoken to
+    turn: bool = False  # a request (or greeting) should reach the brain
     followup: bool = False  # said in the follow-up window, without his name
-    form: str = ""          # plain ("Hal, ..."), greeting ("Hi Hal, ..."), name-last ("..., Hal")
+    form: str = ""  # plain ("Hal, ..."), greeting ("Hi Hal, ..."), name-last ("..., Hal")
     then_request: bool = False  # a bare "Hal", a pause, then the request
-    request: str = ""       # what should reach the brain
+    request: str = ""  # what should reach the brain
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -91,11 +133,11 @@ def name_form(text: str) -> tuple[str, str, str]:
     low = text.lower()
     m = re.match(r"^\W*hal\b\W*", low)
     if m:
-        return "plain", "", text[m.end():].strip(" ,.!?")
+        return "plain", "", text[m.end() :].strip(" ,.!?")
     for g in sorted(GREETINGS, key=len, reverse=True):
         m = re.match(rf"^\W*{g}\W+hal\b\W*", low)
         if m:
-            return "greeting", text[: len(g)].strip(), text[m.end():].strip(" ,.!?")
+            return "greeting", text[: len(g)].strip(), text[m.end() :].strip(" ,.!?")
     m = re.search(r"\W+hal\W*$", low)
     if m:
         return "name-last", "", text[: m.start()].strip(" ,.!?")

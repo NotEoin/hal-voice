@@ -28,11 +28,11 @@ from halvoice import config, handsfree, stt
 
 from . import script
 
-LEAD_S = 1.5        # room noise before each clip
-TAIL_S = 7.0        # and after it, long enough for a command window to close; and longer
-                    # than the longest utterance, so one the detector never ends still is
-REPLY_GAP_S = 1.0   # a follow-up starts this long after HAL stops speaking
-NOISE_S = 30        # room noise alone, played to check it never wakes HAL
+LEAD_S = 1.5  # room noise before each clip
+TAIL_S = 7.0  # and after it, long enough for a command window to close; and longer
+# than the longest utterance, so one the detector never ends still is
+REPLY_GAP_S = 1.0  # a follow-up starts this long after HAL stops speaking
+NOISE_S = 30  # room noise alone, played to check it never wakes HAL
 UNIT = Path.home() / ".config/systemd/user/hal-voice.service"
 
 
@@ -94,8 +94,8 @@ class CachedTranscriber:
 @dataclass
 class Result:
     clip: dict
-    events: list = field(default_factory=list)   # (seconds after end of speech, kind, text)
-    heard: list = field(default_factory=list)    # every transcript, request or not
+    events: list = field(default_factory=list)  # (seconds after end of speech, kind, text)
+    heard: list = field(default_factory=list)  # every transcript, request or not
 
 
 def noise_bed(silence: np.ndarray, n: int, rng: np.random.Generator) -> np.ndarray:
@@ -107,7 +107,7 @@ def noise_bed(silence: np.ndarray, n: int, rng: np.random.Generator) -> np.ndarr
     pos = 0
     while pos < n:
         a = int(rng.integers(0, max(1, silence.size - seg + 1)))
-        piece = silence[a: a + seg].copy()
+        piece = silence[a : a + seg].copy()
         piece[:fade] *= np.linspace(0, 1, fade)
         piece[-fade:] *= np.linspace(1, 0, fade)
         end = min(n, pos + seg)
@@ -128,8 +128,9 @@ def _int16(y: np.ndarray) -> np.ndarray:
     return np.clip(np.round(y * 32768.0), -32768, 32767).astype(np.int16)
 
 
-def run_sim(clip: dict, audio: np.ndarray, silence: np.ndarray, sr: int,
-            transcribe: CachedTranscriber) -> Result:
+def run_sim(
+    clip: dict, audio: np.ndarray, silence: np.ndarray, sr: int, transcribe: CachedTranscriber
+) -> Result:
     """Plays one clip through Segmenter and Ears.decide on a simulated clock."""
     y = _int16(stream_for(audio, silence, sr, seed=int(re.sub(r"\D", "", clip["id"]) or 0)))
     speech_end = LEAD_S + clip["speech_end"]
@@ -147,7 +148,7 @@ def run_sim(clip: dict, audio: np.ndarray, silence: np.ndarray, sr: int,
         if clip.get("followup") and now[0] - frame / sr < t0 + opened <= now[0]:
             ears.stopped_speaking()
             ears.follow_up()
-        out = seg.feed(y[k * frame: (k + 1) * frame])
+        out = seg.feed(y[k * frame : (k + 1) * frame])
         if out is not None:
             utterances.append((now[0], out, ears.overlapped(out, seg.lead_s)))
     res = Result(clip)
@@ -160,8 +161,9 @@ def run_sim(clip: dict, audio: np.ndarray, silence: np.ndarray, sr: int,
         ears.decide(text.strip(), overlapped)
         while not ears.requests.empty():
             h = ears.requests.get()
-            res.events.append((round(now[0] - t0 - speech_end, 3), "turn" if h.text else "wake",
-                               h.text))
+            res.events.append(
+                (round(now[0] - t0 - speech_end, 3), "turn" if h.text else "wake", h.text)
+            )
     return res
 
 
@@ -184,7 +186,7 @@ class FakeMic:
         delay = due - time.time()
         if delay > 0:
             time.sleep(delay)
-        block = self.y[self.pos: self.pos + frame]
+        block = self.y[self.pos : self.pos + frame]
         if len(block) < frame:
             block = np.concatenate([block, np.zeros(frame - len(block), dtype=np.int16)])
         self.pos += frame
@@ -195,8 +197,9 @@ class FakeMic:
         return block[:, None], False
 
 
-def run_live(clip: dict, audio: np.ndarray, silence: np.ndarray, sr: int,
-             transcribe: CachedTranscriber) -> Result:
+def run_live(
+    clip: dict, audio: np.ndarray, silence: np.ndarray, sr: int, transcribe: CachedTranscriber
+) -> Result:
     """Plays one clip through the real listening threads at real-time pace."""
     y = _int16(stream_for(audio, silence, sr, seed=int(re.sub(r"\D", "", clip["id"]) or 0)))
     res = Result(clip)
@@ -210,9 +213,11 @@ def run_live(clip: dict, audio: np.ndarray, silence: np.ndarray, sr: int,
     ears = handsfree.Ears(heard)
     at = {}
     if clip.get("followup"):
+
         def opened():
             ears.stopped_speaking()
             ears.follow_up()
+
         at[LEAD_S + clip["speech_start"] - REPLY_GAP_S] = opened
     mic = FakeMic(y, sr, at)
     ears.open_stream = lambda frame: mic
@@ -234,9 +239,15 @@ def run_live(clip: dict, audio: np.ndarray, silence: np.ndarray, sr: int,
     return res
 
 
-def run(manifest: Path, mode: str = "sim", takes: list[str] | None = None,
-        lines: list[str] | None = None, overrides: dict | None = None,
-        conditions: list[str] | None = None, say=print) -> list[Result]:
+def run(
+    manifest: Path,
+    mode: str = "sim",
+    takes: list[str] | None = None,
+    lines: list[str] | None = None,
+    overrides: dict | None = None,
+    conditions: list[str] | None = None,
+    say=print,
+) -> list[Result]:
     """Replays every clip (or the chosen takes and lines) and returns what happened."""
     import soundfile as sf
 
@@ -256,16 +267,32 @@ def run(manifest: Path, mode: str = "sim", takes: list[str] | None = None,
                 sil = simulate.apply(silence, silence, sr, cond) if cond else silence
                 play = run_live if mode == "live" else run_sim
                 # Half a minute of the room alone: nothing in it may wake HAL.
-                quiet = {"id": "noise", "section": script.NOT_FOR_HAL, "kind": "noise",
-                         "text": "(room noise only)", "speech_start": 0.0, "speech_end": 0.0,
-                         "wake": False, "turn": False, "followup": False, "form": ""}
+                quiet = {
+                    "id": "noise",
+                    "section": script.NOT_FOR_HAL,
+                    "kind": "noise",
+                    "text": "(room noise only)",
+                    "speech_start": 0.0,
+                    "speech_end": 0.0,
+                    "wake": False,
+                    "turn": False,
+                    "followup": False,
+                    "form": "",
+                }
                 for clip in [*take["clips"], quiet]:
                     if clip.get("missing") or (lines and clip["id"] not in lines):
                         continue
                     if clip["id"] == "noise":
                         audio = noise_bed(sil, NOISE_S * sr, np.random.default_rng(7))
-                        results.append(play({**clip, "condition": take["take"] + (
-                            f"~{cond}" if cond else "")}, audio, sil, sr, transcribe))
+                        results.append(
+                            play(
+                                {**clip, "condition": take["take"] + (f"~{cond}" if cond else "")},
+                                audio,
+                                sil,
+                                sr,
+                                transcribe,
+                            )
+                        )
                         continue
                     audio, _ = sf.read(base / clip["file"], dtype="float32")
                     if cond:

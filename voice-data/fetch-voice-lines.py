@@ -37,6 +37,7 @@ Usage
   python voice-data/fetch-voice-lines.py --source https://my-bucket/hal-clips.tar.gz
   python voice-data/fetch-voice-lines.py --check         # report coverage only
 """
+
 from __future__ import annotations
 
 import argparse
@@ -74,6 +75,7 @@ def expected_stems() -> list[str]:
                 stems.append(row[0].strip())
     return sorted(stems)
 
+
 RIGHTS_NOTICE = (
     "  NOTE: these clips are Douglas Rain's HAL 9000 performance from the film.\n"
     "  Use only audio you legally own or have the right to use, keep it local,\n"
@@ -102,7 +104,9 @@ def _is_url(src: str) -> bool:
 
 
 def _is_rsync(src: str) -> bool:
-    return src.startswith("rsync://") or (":" in src and not _is_url(src) and not Path(src).exists())
+    return src.startswith("rsync://") or (
+        ":" in src and not _is_url(src) and not Path(src).exists()
+    )
 
 
 def _looks_like_archive(name: str) -> bool:
@@ -157,8 +161,18 @@ def fetch(source: str, dest: Path) -> int:
             sys.exit("  ✗ rsync not found — install it or use a local/URL source.")
         print(f"  rsync from {source}")
         sep = "" if source.endswith("/") else "/"
-        subprocess.run(["rsync", "-av", "--include=*/", "--include=*.mp3",
-                        "--exclude=*", f"{source}{sep}", f"{dest}/"], check=True)
+        subprocess.run(
+            [
+                "rsync",
+                "-av",
+                "--include=*/",
+                "--include=*.mp3",
+                "--exclude=*",
+                f"{source}{sep}",
+                f"{dest}/",
+            ],
+            check=True,
+        )
         return len(list(dest.glob("*.mp3")))
 
     p = Path(source).expanduser()
@@ -179,8 +193,7 @@ def fetch(source: str, dest: Path) -> int:
 def _present_stems() -> set[str]:
     if not DEST.exists():
         return set()
-    return {p.stem for p in DEST.iterdir()
-            if p.is_file() and p.suffix.lower() in AUDIO_SUFFIXES}
+    return {p.stem for p in DEST.iterdir() if p.is_file() and p.suffix.lower() in AUDIO_SUFFIXES}
 
 
 def report_coverage() -> tuple[list[str], list[str]]:
@@ -201,8 +214,10 @@ def print_coverage() -> int:
         print("  no transcripts.csv alongside the clips - cannot check coverage.")
         return present
     if missing:
-        print(f"  missing ({len(missing)}): {', '.join(s[:32] for s in missing[:6])}"
-              + (" ..." if len(missing) > 6 else ""))
+        print(
+            f"  missing ({len(missing)}): {', '.join(s[:32] for s in missing[:6])}"
+            + (" ..." if len(missing) > 6 else "")
+        )
     if extra:
         print(f"  extra (no transcript): {', '.join(s[:32] for s in extra[:6])}")
     if not missing:
@@ -220,8 +235,7 @@ def _no_source_help() -> None:
         "A source can be a folder of clips, a .tar.gz/.zip of them, an http(s) URL\n"
         "to such an archive, or an rsync target. It needs a transcripts.csv too.\n\n"
         "If you don't have the clips, build them from a copy of the film you own —\n"
-        "see voice-data/README.md (Demucs stem-separation + slicing + ASR).\n\n"
-        + RIGHTS_NOTICE
+        "see voice-data/README.md (Demucs stem-separation + slicing + ASR).\n\n" + RIGHTS_NOTICE
     )
 
 
@@ -229,8 +243,11 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Restore HAL voice clips from a source you supply.")
     ap.add_argument("--source", help="path / archive / http(s) URL / rsync target")
     ap.add_argument("--check", action="store_true", help="only report coverage, fetch nothing")
-    ap.add_argument("--allow-partial", action="store_true",
-                    help="exit 0 even if some manifest clips are missing")
+    ap.add_argument(
+        "--allow-partial",
+        action="store_true",
+        help="exit 0 even if some manifest clips are missing",
+    )
     args = ap.parse_args()
 
     if args.check:
@@ -252,8 +269,10 @@ def main() -> None:
         sys.exit("  ✗ no clips ended up in place — check the source.")
     missing, _ = report_coverage()
     if missing and not args.allow_partial:
-        print("\n  Some manifest clips are missing (see above). Re-run with a complete\n"
-              "  source, or pass --allow-partial to proceed anyway.")
+        print(
+            "\n  Some manifest clips are missing (see above). Re-run with a complete\n"
+            "  source, or pass --allow-partial to proceed anyway."
+        )
         sys.exit(1)
     print("\n  Next: python voice-data/prepare_dataset.py   # build the training set")
 

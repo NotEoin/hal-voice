@@ -22,7 +22,7 @@ from . import script
 
 EXPECT = Path(__file__).with_name("tools.toml")
 SECTIONS = {3, *range(7, 21)}
-ALWAYS = {"hal_find_tools"}   # looking for tools is not acting
+ALWAYS = {"hal_find_tools"}  # looking for tools is not acting
 
 
 def conversations(lines: dict[str, script.Line], expect: dict) -> list[list[str]]:
@@ -70,8 +70,9 @@ def sandbox():
     box = evaluate.make_sandbox(None)
     cfg = box / "config.toml"
     keep = sorted(set(real.get("hub", {}).get("disabled", [])) - set(evaluate.UNSAFE))
-    cfg.write_text(re.sub(r"^disabled = .*$", f"disabled = {json.dumps(keep)}",
-                          cfg.read_text(), flags=re.M))
+    cfg.write_text(
+        re.sub(r"^disabled = .*$", f"disabled = {json.dumps(keep)}", cfg.read_text(), flags=re.M)
+    )
     hub = evaluate._fresh_hub()
     real_call = hub.call
 
@@ -79,8 +80,10 @@ def sandbox():
         tool = hub.get(name)
         if tool is not None and tool.module.name in evaluate.UNSAFE:
             if tool.confirm and not (args or {}).get("_confirmed"):
-                return {"needs_confirmation": f"{name} {json.dumps(args or {})}",
-                        "hint": "ask the user, then call again with _confirmed: true"}
+                return {
+                    "needs_confirmation": f"{name} {json.dumps(args or {})}",
+                    "hint": "ask the user, then call again with _confirmed: true",
+                }
             return {"result": f"(test run: {name} was not carried out)"}
         return real_call(name, args)
 
@@ -102,8 +105,11 @@ def run(rows: list[dict], out: Path, say=print) -> str:
     try:
         for conv in conversations(lines, wants):
             for variant in ("script", "heard"):
-                texts = [lines[i].request for i in conv] if variant == "script" else \
-                        [heard.get(i, "") for i in conv]
+                texts = (
+                    [lines[i].request for i in conv]
+                    if variant == "script"
+                    else [heard.get(i, "") for i in conv]
+                )
                 brain = hv.direct_brain()
                 for lid, text in zip(conv, texts, strict=True):
                     row = {"id": lid, "variant": variant, "said": text, "tools": [], "reply": ""}
@@ -117,12 +123,17 @@ def run(rows: list[dict], out: Path, say=print) -> str:
                         turn = brain.last_turn
                     except Exception as e:  # noqa: BLE001 - one broken turn fails one line
                         turn = {"reply": f"(error: {e})", "tools": []}
-                    row.update(tools=[t["name"] for t in turn.get("tools", [])],
-                               reply=turn.get("reply", ""), seconds=round(time.time() - started, 1),
-                               problems=judge(wants[lid], greetings, turn))
+                    row.update(
+                        tools=[t["name"] for t in turn.get("tools", [])],
+                        reply=turn.get("reply", ""),
+                        seconds=round(time.time() - started, 1),
+                        problems=judge(wants[lid], greetings, turn),
+                    )
                     results.append(row)
-                    say(f"  {lid:>4} {variant:6} {'ok ' if not row['problems'] else 'BAD'} "
-                        f"{','.join(row['tools']) or '-':32} {text[:50]}")
+                    say(
+                        f"  {lid:>4} {variant:6} {'ok ' if not row['problems'] else 'BAD'} "
+                        f"{','.join(row['tools']) or '-':32} {text[:50]}"
+                    )
     finally:
         shutil.rmtree(box, ignore_errors=True)
     out.with_suffix(".json").write_text(json.dumps(results, indent=1))
@@ -140,19 +151,26 @@ def _cell(r: dict) -> str:
 def markdown(take: str, results: list[dict], lines: dict) -> str:
     by = {(r["id"], r["variant"]): r for r in results}
     ids = list(dict.fromkeys(r["id"] for r in results))
-    ok = {v: sum(not by[(i, v)]["problems"] for i in ids if (i, v) in by)
-          for v in ("script", "heard")}
+    ok = {
+        v: sum(not by[(i, v)]["problems"] for i in ids if (i, v) in by) for v in ("script", "heard")
+    }
     greet = [i for i in ids if lines[i].section == 3]
-    out = [f"# Brain check: {take}", "",
-           "Understanding is the brain given the script's words; end to end is the brain given "
-           "what hands-free listening heard.", "",
-           "| | Understanding | End to end |", "| --- | --- | --- |",
-           f"| Right tool and reply | {ok['script']}/{len(ids)} | {ok['heard']}/{len(ids)} |",
-           f"| Greetings (section 3) | "
-           f"{sum(not by[(i, 'script')]['problems'] for i in greet)}/{len(greet)} | "
-           f"{sum(not by[(i, 'heard')]['problems'] for i in greet)}/{len(greet)} |", "",
-           "| Line | Script | Heard as | Understanding | End to end |",
-           "| --- | --- | --- | --- | --- |"]
+    out = [
+        f"# Brain check: {take}",
+        "",
+        "Understanding is the brain given the script's words; end to end is the brain given "
+        "what hands-free listening heard.",
+        "",
+        "| | Understanding | End to end |",
+        "| --- | --- | --- |",
+        f"| Right tool and reply | {ok['script']}/{len(ids)} | {ok['heard']}/{len(ids)} |",
+        f"| Greetings (section 3) | "
+        f"{sum(not by[(i, 'script')]['problems'] for i in greet)}/{len(greet)} | "
+        f"{sum(not by[(i, 'heard')]['problems'] for i in greet)}/{len(greet)} |",
+        "",
+        "| Line | Script | Heard as | Understanding | End to end |",
+        "| --- | --- | --- | --- | --- |",
+    ]
     for i in ids:
         s, h = by[(i, "script")], by[(i, "heard")]
         out.append(f"| {i} | {lines[i].request} | {h['said']} | {_cell(s)} | {_cell(h)} |")
