@@ -14,6 +14,12 @@ Claude Code, in which directory, and against which model is decided by halvoice/
 by default that is "whatever Claude Code you already have, in the current directory".
 
 This module yields *text deltas*; the loop reassembles them into sentences for TTS.
+
+Bounds: each turn's `claude -p` runs in its own process group, killed whole when the turn
+passes `brain.turn_timeout_s` or on barge-in (`cancel`), so a hung tool call cannot keep
+HAL silent or leave children behind. This mode runs Claude Code on the host, outside Hal's
+sandbox, so `claude.permission_mode` defaults to `default`: headless Claude Code cannot ask,
+so anything that needs a permission is refused rather than auto-accepted.
 """
 
 from __future__ import annotations
@@ -21,14 +27,20 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import shutil
+import signal
 import subprocess
 import threading
 from collections.abc import Iterator
 
 from .. import config, connect
 from ..util import get_logger
+from . import BrainUnavailable, TurnTimeout
 
 log = get_logger(__name__)
+
+DEFAULT_TURN_TIMEOUT_S = 300.0
+EXIT_WAIT_S = 10  # Claude Code writes its session file after the result event, then exits
 
 
 class ClaudeSession:
@@ -37,11 +49,26 @@ class ClaudeSession:
     def __init__(self, cwd: str | None = None) -> None:
         cfg = config.load()
         self.c = cfg.claude
+        command = str(self.c.get("command") or "claude")
+        self.command = shutil.which(command)
+        if self.command is None:
+            raise BrainUnavailable(
+                f"brain.mode is claude but claude.command {command!r} is not an executable "
+                "path or on PATH: install Claude Code or set claude.command to its full path"
+            )
+        self.turn_timeout = float(cfg.get("brain.turn_timeout_s") or DEFAULT_TURN_TIMEOUT_S)
         # Which Claude Code, and where -- see halvoice/connect.py for the full order.
         self.conn = connect.resolve()
         self.cwd = cwd or self.conn.project_dir
         self.session_id: str | None = None
         self._env = self._build_env()
+        self._proc: subprocess.Popen[str] | None = None
+        log.warning(
+            "brain.mode claude runs Claude Code on the host, outside Hal's sandbox, in %s "
+            "(permission mode %s)",
+            self.cwd,
+            self.c.get("permission_mode") or "Claude Code's own",
+        )
         log.info("Claude Code: %s", self.conn.describe())
 
     def _build_env(self) -> dict:
@@ -62,7 +89,7 @@ class ClaudeSession:
 
     def _base_cmd(self) -> list[str]:
         cmd = [
-            str(self.c.get("command", "claude")),
+            str(self.command),
             "-p",
             "--output-format",
             "stream-json",
@@ -96,7 +123,18 @@ class ClaudeSession:
             stderr=subprocess.PIPE,
             text=True,
             bufsize=1,
+            start_new_session=True,  # its own process group, so a kill takes its tools too
         )
+        self._proc = proc
+        timed_out = threading.Event()
+
+        def expire() -> None:
+            timed_out.set()
+            _kill_group(proc)
+
+        timer = threading.Timer(self.turn_timeout, expire)
+        timer.daemon = True
+        timer.start()
 
         # Drain stderr in the background so it can't deadlock the pipe.
         def _drain_err():
@@ -147,9 +185,34 @@ class ClaudeSession:
                         self.session_id = evt["session_id"]
                     break
         finally:
+            timer.cancel()
             with contextlib.suppress(OSError, ValueError):  # the pipe may already be closed
                 proc.stdout.close()  # type: ignore[union-attr]  # a pipe, because Popen got stdout=PIPE
-            proc.wait(timeout=10)
+            try:
+                proc.wait(timeout=EXIT_WAIT_S)
+            except subprocess.TimeoutExpired:
+                log.warning("claude did not exit %d s after its reply; killing it", EXIT_WAIT_S)
+                _kill_group(proc)
+                proc.wait(timeout=EXIT_WAIT_S)
+            self._proc = None
+        if timed_out.is_set():
+            raise TurnTimeout(f"claude -p was killed after {self.turn_timeout:g} s")
+
+    def cancel(self) -> None:
+        """Ends the turn in progress (barge-in) by killing its process group."""
+        proc = self._proc
+        if proc is not None:
+            _kill_group(proc)
+
+    def close(self) -> None:
+        """Ends any turn in progress; nothing else is held between turns."""
+        self.cancel()
+
+
+def _kill_group(proc: subprocess.Popen) -> None:
+    """SIGKILLs the process group `proc` leads; a group that has already gone is fine."""
+    with contextlib.suppress(ProcessLookupError):
+        os.killpg(proc.pid, signal.SIGKILL)
 
 
 if __name__ == "__main__":  # quick manual test: python -m halvoice.brains.claude "hello"

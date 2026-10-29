@@ -35,7 +35,7 @@ NEEDS_TIMEOUT = {
 FORBIDDEN = {"urllib.request.urlretrieve", "urlretrieve"}
 # Popen has no timeout argument. Each file below says why its process is bounded another way.
 POPEN_ALLOWED = {
-    "halvoice/brains/claude.py": "the turn deadline is added with the claude brain timeout",
+    "halvoice/brains/claude.py": "its process group is killed after brain.turn_timeout_s",
     "voicebuild/build.py": "the TTS server runs until Server.stop() ends its process group",
 }
 

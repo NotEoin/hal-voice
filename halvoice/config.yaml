@@ -121,11 +121,13 @@ brain:
   #         For use without Hal.
   # claude: every turn is a Claude Code run on the host (the original behaviour; slower to start).
   mode: direct
+  # openai and claude modes: a reply still unfinished after this ends with "That took too long"
+  # (claude mode kills the claude -p process and its children).
+  turn_timeout_s: 300
   # openai mode only. No default: an empty base_url stops hal-voice with an error naming it.
   base_url: ""              # e.g. http://127.0.0.1:8080/v1 (the part before /chat/completions)
   api_key_file: ""          # a file holding the bearer token, when the server needs one
   connect_timeout_s: 5      # a local server answers in well under a second
-  turn_timeout_s: 300       # a reply still unfinished after this ends with "That took too long"
   # Empty values below leave the shared ~/.config/hal/config.toml in charge ([brain], then [hal])
   # in direct mode; in openai mode an empty model means the server's default.
   model: ""                 # empty = [brain].model, else [hal].chat_model
@@ -190,7 +192,10 @@ claude:
   env_file: null
 
   max_output_tokens: 8192
-  permission_mode: acceptEdits   # default|acceptEdits|plan|bypassPermissions (headless needs a non-interactive choice)
+  # default|acceptEdits|plan|bypassPermissions. This mode runs Claude Code on the host, outside
+  # Hal's sandbox; with `default`, headless Claude Code refuses anything that needs a permission.
+  # acceptEdits lets it change files without asking.
+  permission_mode: default
   allowed_tools: []         # optionally restrict tools in voice mode, e.g. ["Read","mcp__hal__ask_vault"]
   add_dirs: []              # extra --add-dir paths if voice mode runs outside the vault.
   # System prompt appended to define HAL's identity, persona, and speakable output.

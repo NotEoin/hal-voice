@@ -86,7 +86,11 @@ Set it permanently as `claude.project_dir` in `~/.config/hal-voice/config.yaml` 
   `brain.history_turns` exchanges (8 when empty), and a reply still unfinished after
   `brain.turn_timeout_s` (300 s) ends with "That took too long".
 - `claude` runs Claude Code for every turn, so HAL has that project's full toolset and memory, at the
-  cost of a few seconds' start-up per turn.
+  cost of a few seconds' start-up per turn. Claude Code runs on the host, outside Hal's sandbox, and
+  hal-voice logs a warning saying so at start. `claude.permission_mode` defaults to `default`, so
+  headless Claude Code refuses anything that needs a permission; set `acceptEdits` to let it change
+  files. A turn still running after `brain.turn_timeout_s` (300 s) is killed with its child
+  processes, and HAL says "That took too long".
 
 ```yaml
 # ~/.config/hal-voice/config.yaml: a local llama-server, no Hal
