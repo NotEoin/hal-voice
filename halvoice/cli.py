@@ -10,6 +10,9 @@ from __future__ import annotations
 import os
 import sys
 from collections.abc import Callable
+from pathlib import Path
+
+from .util import ca_bundle
 
 USAGE = """\
 hal-voice - a HAL-9000 voice: speak to it, it answers aloud.
@@ -18,6 +21,7 @@ hal-voice - a HAL-9000 voice: speak to it, it answers aloud.
   hal-voice repl         alias for the default voice loop
   hal-voice mcp          run ONLY the MCP speak/listen server (for use inside another harness)
   hal-voice tts "text"   one-shot: synthesize and speak a line in HAL's voice
+  hal-voice tts-server   run the GPT-SoVITS server the voice speaks through
   hal-voice listen       one-shot: capture one utterance and print the transcript
   hal-voice devices      list audio input/output devices
   hal-voice eye          run the red-eye UI on its own (demo the animation states)
@@ -71,6 +75,25 @@ def _tts(args: list[str]) -> int:
     return 0
 
 
+def _tts_server(args: list[str]) -> int:
+    """Starts the GPT-SoVITS server, or exits 1 naming the directory it could not find."""
+    from . import config
+
+    server_dir = config.resolve(str(config.load().get("tts.server.gptsovits_dir", "")))
+    if not server_dir or not Path(server_dir).is_dir():
+        print(
+            f"GPT-SoVITS not found at {server_dir or '(tts.server.gptsovits_dir is empty)'}.\n"
+            "Run ./setup-voice.sh (it clones it), or set tts.server.gptsovits_dir.\n"
+            "If it lives on a drive that mounts late, add RequiresMountsFor=<path> to hal-tts.service\n"
+            "with `systemctl --user edit hal-tts.service`.",
+            file=sys.stderr,
+        )
+        return 1
+    script = config.root_dir() / "gptsovits" / "run-api.sh"
+    os.environ["GPTSOVITS_DIR"] = server_dir
+    os.execv(script, [str(script), *args])  # noqa: S606 - our own script; the server keeps this pid
+
+
 def _listen(args: list[str]) -> int:
     from . import stt
 
@@ -117,6 +140,7 @@ COMMANDS: dict[str, Callable[[list[str]], int]] = {
     "repl": _repl,
     "mcp": _mcp,
     "tts": _tts,
+    "tts-server": _tts_server,
     "listen": _listen,
     "devices": _devices,
     "eye": _eye,
@@ -138,6 +162,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Unknown command: {command}\n", file=sys.stderr)
         print(USAGE, end="", file=sys.stderr)
         return 1
+    ca_bundle()
     return handler(args[1:])
 
 

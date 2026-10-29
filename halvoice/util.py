@@ -3,13 +3,40 @@
 from __future__ import annotations
 
 import logging
+import os
 import queue
+import ssl
 import sys
 from typing import Literal
 
 from . import config
 
+# System CA bundles, first match wins. A virtualenv Python can lack a default one.
+CA_BUNDLES = (
+    "/etc/ssl/certs/ca-certificates.crt",  # Debian, Ubuntu
+    "/etc/pki/tls/certs/ca-bundle.crt",  # Fedora
+    "/etc/ssl/cert.pem",  # Arch, Alpine
+)
+
 State = Literal["idle", "listening", "thinking", "speaking"]
+
+
+def ca_bundle() -> str | None:
+    """Sets `SSL_CERT_FILE` to a system CA bundle when Python's own verify paths do not exist.
+
+    Returns the path it set, or None when nothing needed changing or no bundle was found.
+    An `SSL_CERT_FILE` already in the environment is never replaced.
+    """
+    if os.environ.get("SSL_CERT_FILE"):
+        return None
+    paths = ssl.get_default_verify_paths()
+    if any(p and os.path.exists(p) for p in (paths.cafile, paths.capath)):
+        return None
+    for candidate in CA_BUNDLES:
+        if os.path.exists(candidate):
+            os.environ["SSL_CERT_FILE"] = candidate
+            return candidate
+    return None
 
 
 def get_logger(name: str = "halvoice") -> logging.Logger:

@@ -1,12 +1,11 @@
 [Unit]
 Description=Hal voice server (GPT-SoVITS)
 PartOf=hal.target
-RequiresMountsFor=/mnt/data
 X-HalGPU=yes
 
 [Service]
 WorkingDirectory=@ROOT@
-ExecStart=@ROOT@/gptsovits/run-api.sh
+ExecStart=@ROOT@/hal-voice tts-server
 Restart=on-failure
 RestartSec=10
 

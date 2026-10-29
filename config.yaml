@@ -60,6 +60,9 @@ tts:
   backend: gpt-sovits
   # GPT-SoVITS api_v2 server (started by setup-voice.sh / gptsovits/run-api.sh).
   api_url: "http://127.0.0.1:9880"
+  server:
+    # Where `hal-voice tts-server` expects the GPT-SoVITS checkout (relative to this repository).
+    gptsovits_dir: "gptsovits/GPT-SoVITS"
   text_lang: en
   prompt_lang: en
   # The voice ./make-hal-voice builds from the film (see VOICE-BUILD.md); it writes these

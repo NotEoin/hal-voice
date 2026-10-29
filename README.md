@@ -157,6 +157,14 @@ with core Hal's, and copies them to `~/.config/systemd/user`. `hal-tts.service` 
 server and `hal-voice.service` the hands-free loop; both belong to `hal.target` and use the GPU, so
 `hal off` stops them.
 
+`hal-tts.service` starts `hal-voice tts-server`, which exits with an error naming
+`tts.server.gptsovits_dir` when the GPT-SoVITS checkout is missing. If the checkout is on a drive
+that mounts late, make the unit wait for it with a drop-in
+(`systemctl --user edit hal-tts.service`, then add `RequiresMountsFor=/path/to/the/drive`).
+`hal-voice.service` sets no `PATH`, so a `claude` installed under npm's global prefix needs
+`claude.command` set to its absolute path. Python's CA bundle is found automatically
+(`halvoice.util.ca_bundle`).
+
 It still runs on its own (`git clone https://github.com/NotEoin/hal-voice.git`, then
 `./setup-voice.sh`), in `claude` mode.
 
