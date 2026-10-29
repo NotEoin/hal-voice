@@ -96,7 +96,7 @@ Separately from training, GPT-SoVITS conditions each synthesis on a short **refe
 `voice-data/reference/hal_calm_reference.wav`. To choose explicitly, put a clip stem in
 `voice-data/reference.txt`.
 
-Then set `tts.prompt_text` in `config.yaml` to the **exact** words spoken in that clip -
+Then set `tts.prompt_text` in `~/.config/hal-voice/config.yaml` to the **exact** words spoken in that clip -
 `prepare_dataset.py` prints it for you to copy. A mismatch here costs noticeable quality and is
 easy to miss. Audition several and keep the flattest.
 

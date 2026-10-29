@@ -108,8 +108,17 @@ The following stages run in order:
    delivery with `gptsovits/analyse_voice.py` (melody, timing, word lengths and loudness, voice
    quality, spectrum) and checked for pronunciation with the recogniser. The best is kept, with
    samples beside the film's line in `voice-data/build/samples/` for you to compare.
-9. **Install.** The chosen weights and reference clip are copied into place and `config.yaml`
-   points at them. The previous `config.yaml` is kept beside it as `config.yaml.<time>.bak`.
+9. **Install.** The chosen weights and reference clip are copied into place (the ignored
+   `gptsovits/weights/` and `voice-data/reference/` folders), and their settings, pace and
+   sampling are written to `~/.config/hal-voice/built.yaml`. No file in the repository is
+   edited. The previous `built.yaml` is kept beside it as `built.yaml.prev`.
+
+A voice installed by an older hal-voice lives in the checkout's old `config.yaml` (or a
+`config.yaml.<time>.bak` beside it). Copy its settings into `built.yaml` once:
+
+```bash
+./hal-voice config import-built config.yaml.20261009-014500.bak   # or the old config.yaml
+```
 
 ## Your copy stays yours
 

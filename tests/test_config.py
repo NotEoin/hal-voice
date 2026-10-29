@@ -87,3 +87,49 @@ def test_unknown_environment_variable_is_ignored(monkeypatch):
     monkeypatch.setenv("HALVOICE_TTS_NOT_A_KEY", "1")
     cfg = config.load(force=True)
     assert "not_a_key" not in cfg["tts"]
+
+
+def test_build_owned_defaults_are_empty():
+    cfg = config.load(force=True)
+    for key in config.BUILD_KEYS:
+        assert cfg.get(f"tts.{key}") in ("", []), key
+
+
+def test_write_built_keeps_one_previous_file(isolated_config):
+    first = config.write_built({"speed": 0.9}, "voice build one")
+    config.write_built({"speed": 0.8}, "voice build two")
+    assert first == isolated_config / "built.yaml"
+    text = first.read_text()
+    assert text.startswith("# Written by hal-voice (voice build two) at ")
+    assert "Z.\n" in text.splitlines(keepends=True)[0]
+    assert "speed: 0.8" in text
+    assert "speed: 0.9" in (isolated_config / "built.yaml.prev").read_text()
+    assert sorted(p.name for p in isolated_config.iterdir()) == ["built.yaml", "built.yaml.prev"]
+    assert config.load(force=True).get("tts.speed") == 0.8
+
+
+def test_write_built_refuses_keys_the_build_does_not_own(isolated_config):
+    with pytest.raises(config.ConfigError, match="api_url"):
+        config.write_built({"api_url": "http://x"}, "test")
+    assert not (isolated_config / "built.yaml").exists()
+
+
+def test_import_built_copies_only_build_owned_keys(tmp_path, isolated_config):
+    old = write(
+        tmp_path / "config.yaml.20261009-014500.bak",
+        "tts:\n  api_url: http://elsewhere\n  gpt_weights: gptsovits/weights/hal-e12.ckpt\n"
+        "  speed: 0.92\naudio:\n  input_device: 3\n",
+    )
+    config.import_built(old)
+    cfg = config.load(force=True)
+    assert cfg.get("tts.gpt_weights") == "gptsovits/weights/hal-e12.ckpt"
+    assert cfg.get("tts.speed") == 0.92
+    assert cfg.get("tts.api_url") == "http://127.0.0.1:9880"
+    assert cfg.get("audio.input_device") is None
+    assert f"imported from {old}" in (isolated_config / "built.yaml").read_text()
+
+
+def test_import_built_without_voice_keys_fails(tmp_path):
+    old = write(tmp_path / "config.yaml", "audio:\n  input_device: 3\n")
+    with pytest.raises(config.ConfigError, match="no build-owned tts keys"):
+        config.import_built(old)

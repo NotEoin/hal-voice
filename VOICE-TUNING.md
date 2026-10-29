@@ -1,8 +1,8 @@
 # HAL Voice -- Tuning Notes
 
 A log of how the HAL voice was dialled in, and why each setting ended up where it did.
-All settings live in [`config.yaml`](halvoice/config.yaml) under `tts:` (sampling + `fx:` chain) and
-`claude.voice_system_prompt` (persona). The voice = **GPT-SoVITS clone -> FX chain (client-side)**.
+All settings and their defaults are in [`halvoice/config.yaml`](halvoice/config.yaml) under `tts:` (sampling +
+`fx:` chain) and `claude.voice_system_prompt` (persona); change them in `~/.config/hal-voice/config.yaml`. The voice = **GPT-SoVITS clone -> FX chain (client-side)**.
 
 ## Current settings
 
@@ -67,5 +67,5 @@ All settings live in [`config.yaml`](halvoice/config.yaml) under `tts:` (samplin
 ```bash
 python voice-data/prepare_dataset.py                       # rebuild the weighted dataset
 conda activate gptsovits && python gptsovits/train_hal.py  # ~15 min on a 24GB card
-# then point config.yaml tts.gpt_weights/sovits_weights at the new gptsovits/weights/ files
+# then point tts.gpt_weights/sovits_weights in ~/.config/hal-voice/config.yaml at the new files
 ```

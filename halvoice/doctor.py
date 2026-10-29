@@ -73,16 +73,31 @@ def _stt_model():
     return f"faster-whisper available (model '{name}' downloads on first use)"
 
 
+def _old_voice_backups() -> list[Path]:
+    """`config.yaml.*.bak` files an older voice build left in the checkout, newest first."""
+    root = config.root_dir()
+    found = [*root.glob("config.yaml.*.bak"), *(root / "halvoice").glob("config.yaml.*.bak")]
+    return sorted(found, reverse=True)
+
+
 def _reference_clip():
     cfg = config.load()
     ref = config.resolve(cfg.get("tts.ref_audio_path"))
-    if not ref or not Path(ref).exists():
+    if not ref:
+        hint = ""
+        backups = _old_voice_backups()
+        if not config.built_file().exists() and backups:
+            hint = f"; to keep an older voice: hal-voice config import-built {backups[0]}"
+        raise Exception(config.NO_VOICE + hint)
+    if not Path(ref).exists():
         raise Exception(f"reference clip not found: {ref} (see voice-data/README.md)")
     return ref
 
 
 def _weights():
     cfg = config.load()
+    if not cfg.get("tts.gpt_weights") and not cfg.get("tts.sovits_weights"):
+        raise _Warn("no fine-tuned weights set; the server's own voice speaks (run make-hal-voice)")
     missing = []
     for key in ("tts.gpt_weights", "tts.sovits_weights"):
         p = config.resolve(cfg.get(key))

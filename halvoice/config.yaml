@@ -68,24 +68,27 @@ tts:
     gptsovits_dir: "gptsovits/GPT-SoVITS"
   text_lang: en
   prompt_lang: en
-  # The voice ./make-hal-voice builds from the film (see VOICE-BUILD.md); it writes these
-  # settings when it installs. GPT-SoVITS copies the reference clip's delivery into every line,
-  # so the reference is "I'm sorry, Dave" itself.
-  ref_audio_path: "voice-data/reference/hal_film_reference.wav"
-  prompt_text: "I'm sorry, Dave. I'm afraid I can't do that."
+  # The voice. ./make-hal-voice builds it from the film (see VOICE-BUILD.md) and writes these
+  # keys, and the sampling and pace below, to ~/.config/hal-voice/built.yaml; they are empty
+  # here because no voice ships with hal-voice. Relative paths resolve against the checkout.
+  # GPT-SoVITS copies the reference clip's delivery into every line, so the build's reference
+  # is "I'm sorry, Dave" itself.
+  ref_audio_path: ""        # the reference clip; required to speak
+  prompt_text: ""           # the exact words spoken in the reference clip
   # Further HAL lines blended in for timbre only; the film reference stands alone.
   aux_ref_audio_paths: []
-  gpt_weights: "gptsovits/weights/hal-film-v2-e12.ckpt"      # the GPT (AR) checkpoint
-  sovits_weights: "gptsovits/weights/hal-film-v2_e12_s288.pth" # the SoVITS (decoder) checkpoint
+  gpt_weights: ""           # the GPT (AR) checkpoint; empty = the server's own
+  sovits_weights: ""        # the SoVITS (decoder) checkpoint; empty = the server's own
   # Replies are split into short groups of sentences before synthesis (halvoice/tts.py), and
   # each group is said whole: splitting inside one lets a sentence drop out.
   text_split_method: cut0
   batch_size: 1
-  # The sampling and pace the voice was chosen at.
-  top_k: 15
-  top_p: 0.9
-  temperature: 0.8
-  speed: 0.92               # < 1.0 = slower. HAL is unhurried.
+  # The sampling and pace the voice was chosen at, written by the build; empty = the server's
+  # defaults. The film voice uses top_k 15, top_p 0.9, temperature 0.8 and speed 0.92.
+  top_k: ""
+  top_p: ""
+  temperature: ""
+  speed: ""                 # < 1.0 = slower. HAL is unhurried.
 
   # ---- The "HAL effect" DSP chain (applied to GPT-SoVITS output) ------------
   # The film voice is used as it comes: the EQ and cabin tail ship at zero, and only loudness is

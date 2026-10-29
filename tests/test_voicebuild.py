@@ -466,3 +466,49 @@ class InputTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_voice_build_install_writes_built_yaml_only(tmp_path, isolated_config, monkeypatch):
+    """The install stage used to rewrite the tracked config.yaml and leave .bak files beside it."""
+    import json
+
+    from halvoice import config
+    from voicebuild import build
+
+    checkout = tmp_path / "checkout"
+    monkeypatch.setattr(build, "ROOT", checkout)
+    monkeypatch.setattr(build, "GPTSOVITS", checkout / "gptsovits")
+    work = tmp_path / "work"
+    trained = work / "trained"
+    trained.mkdir(parents=True)
+    for name in ("hal-film-v2-e12.ckpt", "hal-film-v2_e12_s288.pth", "ref.wav"):
+        (trained / name).write_bytes(b"x")
+    b = build.Build(films=[], subtitles=[], work=work)
+    best = {
+        "gpt": str(trained / "hal-film-v2-e12.ckpt"),
+        "sovits": str(trained / "hal-film-v2_e12_s288.pth"),
+        "ref": str(trained / "ref.wav"),
+        "prompt": 'I\'m sorry, Dave. "Quoted".',
+        "speed": 0.9,
+        "top_k": 12,
+    }
+    b.path(f"selection-{build.experiment(b)}.json").write_text(json.dumps({"best": best}))
+    packaged = config.DEFAULTS_FILE.read_bytes()
+
+    build.install(b)
+
+    assert config.DEFAULTS_FILE.read_bytes() == packaged
+    written = sorted(str(p.relative_to(checkout)) for p in checkout.rglob("*") if p.is_file())
+    assert written == [
+        "gptsovits/weights/hal-film-v2-e12.ckpt",
+        "gptsovits/weights/hal-film-v2_e12_s288.pth",
+        "voice-data/reference/hal_film_reference.wav",
+    ]
+    assert [p.name for p in isolated_config.iterdir()] == ["built.yaml"]
+    cfg = config.load(force=True)
+    assert cfg.get("tts.gpt_weights") == "gptsovits/weights/hal-film-v2-e12.ckpt"
+    assert cfg.get("tts.prompt_text") == 'I\'m sorry, Dave. "Quoted".'
+    assert cfg.get("tts.speed") == 0.9
+    assert cfg.get("tts.top_k") == 12
+    assert cfg.get("tts.top_p") == build.SAMPLING["top_p"]
+    assert cfg.get("tts.aux_ref_audio_paths") == []

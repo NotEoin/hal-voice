@@ -47,7 +47,8 @@ The WebUI walks the whole pipeline. Its tabs cover dataset preparation and train
 Timbre comes from the fine-tune. The flat, unhurried delivery comes from these:
 
 - **Reference clip selection** dominates prosody. Audition several 3-10 s references and keep
-  the one that sounds most level and unhurried. Lock it into `config.yaml: tts.ref_audio_path`
+  the one that sounds most level and unhurried. Lock it into `tts.ref_audio_path` in
+  `~/.config/hal-voice/config.yaml`
   (+ exact `prompt_text`).
 - **Don't over-train the GPT model.** Too many epochs -> clipped, robotic delivery. HAL is
   smooth and legato. If he sounds choppy, train the GPT model *fewer* epochs.
@@ -56,14 +57,14 @@ Timbre comes from the fine-tune. The flat, unhurried delivery comes from these:
   affectless lines.
 - **Speed.** HAL is slow. Keep `tts.speed ~= 0.90` in config; bake the rest into reference
   choice rather than slowing so far it sounds drugged.
-- The remaining character comes from **hal-voice's FX chain** (`tts.fx` in config.yaml):
+- The remaining character comes from **hal-voice's FX chain** (`tts.fx`):
   low-shelf body, presence de-emphasis and the cabin reverb. Tune those *after* the clone
   sounds right on its own - see [VOICE-TUNING.md](../VOICE-TUNING.md).
 
 ## 3. Install the weights
 
-Copy the two checkpoints GPT-SoVITS produced into `gptsovits/weights/` and name them to
-match `config.yaml` (or edit config to match your filenames):
+Copy the two checkpoints GPT-SoVITS produced into `gptsovits/weights/` and set their names in
+`~/.config/hal-voice/config.yaml` (`./make-hal-voice` does both for you):
 
 ```
 gptsovits/weights/hal-e15.ckpt        # GPT  (tts.gpt_weights)

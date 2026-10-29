@@ -26,6 +26,8 @@ hal-voice - a HAL-9000 voice: speak to it, it answers aloud.
   hal-voice doctor       check that every dependency and the GPT-SoVITS server are reachable
   hal-voice voicetest    replay a recording of voicetest/script.txt through hands-free listening
   hal-voice connection   show which Claude Code setup it will drive, and why
+  hal-voice config import-built OLDFILE
+                         copy the voice settings of an older checkout's config.yaml into built.yaml
   hal-voice help         show this help
 
 Global option:  --project DIR   run Claude Code in DIR (claude mode; default: [hal].vault)
@@ -129,6 +131,21 @@ def _connection(args: list[str]) -> int:
     return 0
 
 
+def _config(args: list[str]) -> int:
+    """`config import-built OLDFILE`: moves an old in-repo voice into `built.yaml`."""
+    from . import config
+
+    if len(args) != 2 or args[0] != "import-built":
+        print("usage: hal-voice config import-built OLDFILE", file=sys.stderr)
+        return 2
+    old = Path(args[1]).expanduser()
+    if not old.is_file():
+        print(f"hal-voice: no such file: {old}", file=sys.stderr)
+        return 1
+    print(f"voice settings written to {config.import_built(old)}")
+    return 0
+
+
 def _voicetest(args: list[str]) -> int:
     from voicetest.__main__ import main as voicetest_main
 
@@ -145,6 +162,7 @@ COMMANDS: dict[str, Callable[[list[str]], int]] = {
     "eye": _eye,
     "doctor": _doctor,
     "connection": _connection,
+    "config": _config,
     "voicetest": _voicetest,
 }
 

@@ -130,7 +130,8 @@ stt:
 Settings load in this order, later wins:
 
 1. `halvoice/config.yaml`, the packaged defaults;
-2. `~/.config/hal-voice/built.yaml`, written by the voice build (`make-hal-voice`);
+2. `~/.config/hal-voice/built.yaml`, written by the voice build (`make-hal-voice`) or by
+   `hal-voice config import-built OLDFILE` from an older checkout's `config.yaml`;
 3. `~/.config/hal-voice/config.yaml`, or the file `HALVOICE_CONFIG` names;
 4. environment variables `HALVOICE_<SECTION>_<KEY>`.
 

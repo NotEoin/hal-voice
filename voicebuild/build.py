@@ -2,9 +2,9 @@
 
 Stages: find (lines HAL speaks clearly, per film), clean (Demucs and DeepFilterNet, in the
 denoise environment), dataset, train (GPT-SoVITS), select (the checkpoints, reference clip and
-pace, with samples to compare with the film) and install (into config.yaml, with the previous
-voice kept). Every stage writes its result into the work folder, so a run that
-stops resumes where it left off.
+pace, with samples to compare with the film) and install (settings into
+~/.config/hal-voice/built.yaml, with the previous voice kept). Every stage writes its result
+into the work folder, so a run that stops resumes where it left off.
 """
 
 from __future__ import annotations
@@ -21,6 +21,8 @@ import time
 import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from halvoice import config
 
 ROOT = Path(__file__).resolve().parents[1]
 GPTSOVITS = ROOT / "gptsovits"
@@ -696,39 +698,28 @@ def select(b: Build) -> None:
 
 
 def install(b: Build) -> None:
-    """Points hal-voice's config.yaml at the chosen weights, reference, pace and sampling,
-    keeping a backup."""
+    """Copies the chosen weights and reference clip into place and writes their settings,
+    pace and sampling to `~/.config/hal-voice/built.yaml` (the previous file kept as
+    `built.yaml.prev`). No file in the repository is edited."""
     best = json.loads(b.path(f"selection-{experiment(b)}.json").read_text())["best"]
     weights = GPTSOVITS / "weights"
+    weights.mkdir(parents=True, exist_ok=True)
     gpt, sov = Path(best["gpt"]), Path(best["sovits"])
     shutil.copy2(gpt, weights / gpt.name)
     shutil.copy2(sov, weights / sov.name)
     refdir = ROOT / "voice-data" / "reference"
     refdir.mkdir(parents=True, exist_ok=True)
     shutil.copy2(best["ref"], refdir / "hal_film_reference.wav")
-    cfg = ROOT / "halvoice" / "config.yaml"
-    text = cfg.read_text()
-    backup = cfg.with_name(f"config.yaml.{time.strftime('%Y%m%d-%H%M%S')}.bak")
-    backup.write_text(text)
-    prompt = best["prompt"].replace('"', '\\"')
-    for key, value in (
-        ("gpt_weights", f'"gptsovits/weights/{gpt.name}"'),
-        ("sovits_weights", f'"gptsovits/weights/{sov.name}"'),
-        ("ref_audio_path", '"voice-data/reference/hal_film_reference.wav"'),
-        ("prompt_text", f'"{prompt}"'),
-        ("speed", str(best["speed"])),
-        *((k, str(best.get(k, v))) for k, v in SAMPLING.items()),
-    ):
-        text = re.sub(
-            rf"^(  {key}:\s*)[^#\n]*?(\s*(#.*)?)$",
-            lambda m, value=value: f"{m.group(1)}{value}{m.group(2)}",
-            text,
-            count=1,
-            flags=re.M,
-        )
-    # The film reference stands alone; blended references came from another recording.
-    text = re.sub(
-        r"^(  aux_ref_audio_paths:)\n(    - .*\n)+", r"\1 []\n", text, count=1, flags=re.M
-    )
-    cfg.write_text(text)
-    b.say(f"installed {gpt.name} and {sov.name}; previous settings in {backup.name}")
+    values = {
+        # Relative to the checkout, so the file stays valid if the checkout moves.
+        "gpt_weights": f"gptsovits/weights/{gpt.name}",
+        "sovits_weights": f"gptsovits/weights/{sov.name}",
+        "ref_audio_path": "voice-data/reference/hal_film_reference.wav",
+        "prompt_text": best["prompt"],
+        # The film reference stands alone; blended references came from another recording.
+        "aux_ref_audio_paths": [],
+        "speed": best["speed"],
+        **{k: best.get(k, v) for k, v in SAMPLING.items()},
+    }
+    path = config.write_built(values, f"voice build {experiment(b)}")
+    b.say(f"installed {gpt.name} and {sov.name}; settings in {path}")

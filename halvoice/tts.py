@@ -19,6 +19,7 @@ import re
 import sys
 import threading
 from collections.abc import Iterator
+from typing import Any
 
 import numpy as np
 
@@ -59,6 +60,11 @@ def split_sentences(text: str) -> list[str]:
 TTS_TIMEOUT_S = (3, 60)
 
 
+def _optional(value: object, cast: type) -> Any:
+    """`cast(value)`, or None for an empty setting."""
+    return None if value in (None, "") else cast(value)
+
+
 class GPTSoVITSClient:
     """Thin HTTP client for GPT-SoVITS api_v2 /tts (and weight hot-swap endpoints)."""
 
@@ -74,10 +80,11 @@ class GPTSoVITSClient:
         self.prompt_text = str(t.get("prompt_text", ""))
         self.split_method = str(t.get("text_split_method", "cut2"))
         self.batch_size = int(t.get("batch_size", 1))
-        self.top_k = int(t.get("top_k", 10))
-        self.top_p = float(t.get("top_p", 0.7))
-        self.temperature = float(t.get("temperature", 0.7))
-        self.speed = float(t.get("speed", 0.92))
+        # Empty sampling and pace leave the server's defaults in charge (no voice built yet).
+        self.top_k = _optional(t.get("top_k"), int)
+        self.top_p = _optional(t.get("top_p"), float)
+        self.temperature = _optional(t.get("temperature"), float)
+        self.speed = _optional(t.get("speed"), float)
         self._weights_set = False
 
     def ensure_weights(self) -> None:
@@ -110,6 +117,8 @@ class GPTSoVITSClient:
         import requests
         import soundfile as sf
 
+        if not self.ref_audio:
+            raise RuntimeError(config.NO_VOICE)
         self.ensure_weights()
         payload = {
             "text": text,
@@ -127,6 +136,7 @@ class GPTSoVITSClient:
             "temperature": self.temperature,
             "speed_factor": self.speed,
         }
+        payload = {k: v for k, v in payload.items() if v is not None}
         r = requests.post(f"{self.url}/tts", json=payload, timeout=TTS_TIMEOUT_S)
         if r.status_code != 200:
             raise RuntimeError(f"GPT-SoVITS /tts failed ({r.status_code}): {r.text[:200]}")

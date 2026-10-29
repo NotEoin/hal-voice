@@ -20,6 +20,8 @@ Access is dict-with-dots: `cfg.tts.speed`, `cfg["tts"]["speed"]`, or `cfg.get("t
 from __future__ import annotations
 
 import os
+import shutil
+import time
 from pathlib import Path
 from typing import Any
 
@@ -139,6 +141,62 @@ def _merge(base: dict, over: dict, source: Path, prefix: str = "") -> None:
             _merge(current, value, source, f"{dotted}.")
         else:
             base[key] = value
+
+
+NO_VOICE = "no voice built or configured: run make-hal-voice or set tts.ref_audio_path"
+
+# `tts` keys the voice build owns: written only to `built.yaml`, empty in the packaged defaults.
+BUILD_KEYS = (
+    "gpt_weights",
+    "sovits_weights",
+    "ref_audio_path",
+    "prompt_text",
+    "aux_ref_audio_paths",
+    "speed",
+    "top_k",
+    "top_p",
+    "temperature",
+)
+
+
+def write_built(tts_values: dict[str, Any], origin: str) -> Path:
+    """Writes the voice build's `tts` settings to `built.yaml` atomically and returns its path.
+
+    The previous file is kept as `built.yaml.prev`; on any failure the old file stays in
+    place. `origin` names the build (or import) in the header comment.
+    """
+    unknown = sorted(set(tts_values) - set(BUILD_KEYS))
+    if unknown:
+        raise ConfigError(f"not build-owned tts keys: {', '.join(unknown)}")
+    path = built_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    stamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    header = (
+        f"# Written by hal-voice ({origin}) at {stamp}.\n"
+        "# Rerun make-hal-voice to replace it; set keys in config.yaml beside it to override.\n"
+    )
+    body = yaml.safe_dump({"tts": dict(tts_values)}, sort_keys=False, allow_unicode=False)
+    tmp = path.with_name(path.name + ".tmp")
+    with tmp.open("w", encoding="utf-8") as f:
+        f.write(header + body)
+        f.flush()
+        os.fsync(f.fileno())
+    if path.exists():
+        shutil.copy2(path, path.with_name(path.name + ".prev"))
+    os.replace(tmp, path)
+    return path
+
+
+def import_built(old_config: Path) -> Path:
+    """Copies the build-owned `tts` keys of an old checkout `config.yaml` into `built.yaml`.
+
+    Relative paths are copied as they are: they resolve against the checkout, as before.
+    """
+    tts = _read_yaml(old_config).get("tts") or {}
+    values = {k: tts[k] for k in BUILD_KEYS if k in tts}
+    if not values:
+        raise ConfigError(f"{old_config}: no build-owned tts keys ({', '.join(BUILD_KEYS)})")
+    return write_built(values, f"imported from {old_config}")
 
 
 def layers() -> list[Path]:

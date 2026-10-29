@@ -135,3 +135,15 @@ def test_settings_error_exits_2_and_names_the_problem(monkeypatch, capsys):
     monkeypatch.setitem(cli.COMMANDS, "doctor", broken)
     assert cli.main(["doctor"]) == cli.CONFIG_ERROR_EXIT
     assert "unknown key 'tts.sped'" in capsys.readouterr().err
+
+
+def test_config_import_built_writes_built_yaml(tmp_path, isolated_config, capsys):
+    old = tmp_path / "config.yaml"
+    old.write_text("tts:\n  prompt_text: I'm sorry, Dave.\n")
+    assert cli.main(["config", "import-built", str(old)]) == 0
+    assert str(isolated_config / "built.yaml") in capsys.readouterr().out
+
+
+def test_config_without_subcommand_is_a_usage_error(capsys):
+    assert cli.main(["config"]) == 2
+    assert "import-built" in capsys.readouterr().err
