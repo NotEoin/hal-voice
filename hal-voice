@@ -8,7 +8,7 @@ set -uo pipefail
 VOICE_ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 VENV="$VOICE_ROOT/.venv"
 PY="$VENV/bin/python"
-CONFIG="${HALVOICE_CONFIG:-$VOICE_ROOT/config.yaml}"
+CONFIG="${HALVOICE_CONFIG:-$VOICE_ROOT/halvoice/config.yaml}"
 
 # Fall back to system python if the venv isn't built yet (so `doctor` can still run).
 if [ ! -x "$PY" ]; then PY="$(command -v python3 || true)"; fi

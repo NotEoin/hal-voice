@@ -706,7 +706,7 @@ def install(b: Build) -> None:
     refdir = ROOT / "voice-data" / "reference"
     refdir.mkdir(parents=True, exist_ok=True)
     shutil.copy2(best["ref"], refdir / "hal_film_reference.wav")
-    cfg = ROOT / "config.yaml"
+    cfg = ROOT / "halvoice" / "config.yaml"
     text = cfg.read_text()
     backup = cfg.with_name(f"config.yaml.{time.strftime('%Y%m%d-%H%M%S')}.bak")
     backup.write_text(text)

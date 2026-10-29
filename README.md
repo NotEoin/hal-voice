@@ -66,7 +66,7 @@ In `claude` mode, Claude Code is launched *inside a directory*, and picks up tha
 ./hal-voice connection                    # show what it resolved, and why
 ```
 
-Set it permanently as `claude.project_dir` in [`config.yaml`](config.yaml).
+Set it permanently as `claude.project_dir` in [`config.yaml`](halvoice/config.yaml).
 
 ### Choosing a brain
 
@@ -114,7 +114,7 @@ Hold **space** to talk, release to send. Speaking again while it's replying inte
 
 ### Configuration
 
-Everything lives in [`config.yaml`](config.yaml) - audio devices, activation, model choices, voice
+Everything lives in [`config.yaml`](halvoice/config.yaml) - audio devices, activation, model choices, voice
 tuning, the effects chain and the eye. Any value can be overridden with an environment variable:
 
 ```bash

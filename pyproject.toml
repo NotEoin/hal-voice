@@ -41,6 +41,7 @@ packages = ["halvoice", "voicebuild", "voicetest"]
 [tool.setuptools.package-data]
 voicetest = ["script.txt", "tools.toml"]
 voicebuild = ["disclaimer.md"]
+halvoice = ["config.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -241,7 +241,7 @@ fi
 if [ -n "$HAL_ROOT_ARG" ]; then
   log "Wiring hal-voice to the Hal checkout at '$HAL_ROOT_ARG'"
   if have python3; then
-    HAL_ROOT_ARG="$HAL_ROOT_ARG" python3 - "$VOICE_ROOT/config.yaml" <<'PY' && ok "config.yaml: claude.hal_root set" || warn "Could not update config.yaml - set claude.hal_root by hand"
+    HAL_ROOT_ARG="$HAL_ROOT_ARG" python3 - "$VOICE_ROOT/halvoice/config.yaml" <<'PY' && ok "config.yaml: claude.hal_root set" || warn "Could not update config.yaml - set claude.hal_root by hand"
 import os, pathlib, re, sys
 p = pathlib.Path(sys.argv[1])
 text = p.read_text(encoding="utf-8")

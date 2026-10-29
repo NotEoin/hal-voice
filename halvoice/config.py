@@ -1,6 +1,6 @@
 """Configuration loader for hal-voice.
 
-Loads config.yaml, then lets environment variables override individual values using
+Loads halvoice/config.yaml, then lets environment variables override individual values using
 the convention HALVOICE_<SECTION>_<KEY> (uppercased, dots/nesting joined by '_').
 Access is dict-with-dots: cfg.tts.speed, cfg["tts"]["speed"], or cfg.get("tts.speed").
 """
@@ -76,14 +76,11 @@ def _config_path() -> Path:
     env = os.environ.get("HALVOICE_CONFIG")
     if env:
         return Path(env)
-    root = os.environ.get("HALVOICE_ROOT")
-    if root:
-        return Path(root) / "config.yaml"
-    return Path(__file__).resolve().parent.parent / "config.yaml"
+    return Path(__file__).resolve().parent / "config.yaml"
 
 
 def root_dir() -> Path:
-    """Absolute path to the hal-voice package root (where config.yaml lives)."""
+    """Absolute path to the hal-voice checkout, which relative config paths resolve against."""
     env = os.environ.get("HALVOICE_ROOT")
     return Path(env) if env else Path(__file__).resolve().parent.parent
 
