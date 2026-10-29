@@ -1,8 +1,9 @@
 """`hal-voice doctor` -- check that everything voice-related is wired up and reachable.
 
-Verifies: python deps, audio I/O, the STT model, the direct brain (core hal, Ollama,
-hal-hub), the GPT-SoVITS server + HAL weights, the reference clip, and Claude Code on
-PATH. Prints a tidy pass/fail report; exits non-zero if anything essential is missing.
+Verifies: python deps, audio I/O, the STT model, the brain (core hal, Ollama and hal-hub in
+direct mode; the server in openai mode), the GPT-SoVITS server + HAL weights, the reference
+clip, and Claude Code on PATH. Prints a tidy pass/fail report; exits non-zero if anything
+essential is missing.
 """
 
 from __future__ import annotations
@@ -129,12 +130,28 @@ def _gptsovits_server():
     return f"reachable at {url}"
 
 
+def _mode() -> str:
+    return str(config.load().get("brain.mode", "direct"))
+
+
 def _direct() -> bool:
-    return str(config.load().get("brain.mode", "direct")) == "direct"
+    return _mode() == "direct"
+
+
+def _openai_brain():
+    """The openai brain: `brain.base_url` set, and its `/models` answering."""
+    from .brains.openai import OpenAIBrain
+
+    b = OpenAIBrain()  # raises BrainUnavailable naming the key when base_url is empty
+    b.probe()
+    return f"OpenAI-compatible server at {b.base_url}, model {b.model or '(server default)'}"
 
 
 def _brain():
-    """The direct brain: core hal, its model in Ollama, and the tools hal-hub found."""
+    """The configured brain: the direct brain's core hal, Ollama model and hal-hub tools, or
+    the openai brain's server."""
+    if _mode() == "openai":
+        return _openai_brain()
     if not _direct():
         raise _Warn("brain.mode is claude: every turn is a Claude Code run")
     import json
@@ -160,6 +177,8 @@ def _claude():
         msg = "Claude Code ('claude') not on PATH - install it from https://claude.com/claude-code"
         if _direct():
             raise _Warn(msg + " (direct mode needs it only for long background jobs)")
+        if _mode() != "claude":
+            raise _Warn(msg + f" ({_mode()} mode does not use it)")
         raise Exception(msg)
     return "claude on PATH"
 

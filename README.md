@@ -79,8 +79,21 @@ Set it permanently as `claude.project_dir` in `~/.config/hal-voice/config.yaml` 
   through a `deep_work` tool, and HAL tells you when they finish. The model and the other brain
   settings come from `[brain]` in `~/.config/hal/config.toml`, shared with Hal's chat and Telegram;
   `brain.*` in your hal-voice config overrides them for voice only, and keeps HAL's persona.
+- `openai` streams the reply from any OpenAI-compatible server (llama-server, Ollama's `/v1`, vLLM, a
+  hosted API) at `brain.base_url`, with no tools. It is for running hal-voice without Hal. There is
+  no default URL: with `base_url` empty, hal-voice stops and says which key to set. A bearer token,
+  if the server needs one, is read from the file `brain.api_key_file`. HAL remembers the last
+  `brain.history_turns` exchanges (8 when empty), and a reply still unfinished after
+  `brain.turn_timeout_s` (300 s) ends with "That took too long".
 - `claude` runs Claude Code for every turn, so HAL has that project's full toolset and memory, at the
   cost of a few seconds' start-up per turn.
+
+```yaml
+# ~/.config/hal-voice/config.yaml: a local llama-server, no Hal
+brain:
+  mode: openai
+  base_url: http://127.0.0.1:8080/v1
+```
 
 ```bash
 HALVOICE_BRAIN_MODEL=mistral-small3.2:24b ./hal-voice   # another model, for this run only

@@ -28,6 +28,8 @@ NEEDS_TIMEOUT = {
     "requests.request",
     "urllib.request.urlopen",
     "urlopen",
+    "http.client.HTTPConnection",
+    "http.client.HTTPSConnection",
 }
 # `urlretrieve` takes no timeout at all.
 FORBIDDEN = {"urllib.request.urlretrieve", "urlretrieve"}

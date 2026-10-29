@@ -2,7 +2,7 @@
 
     activate (HAL's name, the wake word, or push-to-talk)
         -> transcribe (STT)
-            -> the brain streams a reply (the direct local brain, or Claude Code)
+            -> the brain streams a reply (halvoice/brains: direct, openai or claude)
                 -> each sentence is synthesised while the previous one plays (TTS)
                     -> barge-in: HAL's name while he is speaking stops him
                         -> follow-up: for a few seconds after, talk without the name
@@ -20,6 +20,7 @@ import threading
 import time
 
 from . import config, tts
+from .brains import BrainUnavailable, TurnTimeout, make_brain
 from .stt import Recorder, Transcriber
 from .util import StateBus, get_logger
 from .wake import Activator
@@ -50,19 +51,17 @@ def _accumulate_sentences(delta_iter):
         yield buf.strip()
 
 
-def make_brain():
-    """Returns the configured brain: 'direct' (local model with tools) or 'claude' (Claude Code)."""
-    mode = str(config.load().get("brain.mode", "direct"))
-    if mode == "direct":
-        from .brain import CoreNotFound, DirectBrain
+TOO_LONG = "That took too long."
+UNAVAILABLE = "My brain is not available."
 
-        try:
-            return DirectBrain()
-        except CoreNotFound as e:
-            log.error("%s. Falling back to claude mode.", e)
-    from .brains.claude import ClaudeSession
 
-    return ClaudeSession()
+def _with_timeout_notice(deltas):
+    """Passes the reply through; a turn timeout becomes a spoken notice instead of silence."""
+    try:
+        yield from deltas
+    except TurnTimeout as e:
+        log.warning("brain: %s", e)
+        yield f" {TOO_LONG}"
 
 
 class VoiceLoop:
@@ -199,7 +198,13 @@ class VoiceLoop:
                     first["t"] = time.time() - started
                 yield d
 
-        finished = self.speak_stream(_accumulate_sentences(timed(self.brain.ask(text))))
+        deltas = _with_timeout_notice(timed(self.brain.ask(text)))
+        finished = self.speak_stream(_accumulate_sentences(deltas))
+        if not finished:
+            # The direct brain has no cancel; its reply simply stops being spoken.
+            cancel = getattr(self.brain, "cancel", None)
+            if cancel is not None:
+                cancel()
         if first["t"] is not None:
             log.info("first words after %.2fs", first["t"])
         self.bus.set("idle")
@@ -259,8 +264,24 @@ class VoiceLoop:
                 self.activator.stop()
 
 
+def _say_unavailable() -> None:
+    """Says once that there is no brain, when the voice works; never raises."""
+    try:
+        tts.speak(UNAVAILABLE)
+    except Exception as e:  # noqa: BLE001 - the brain error is the one to report; TTS is best effort
+        log.debug("could not say the brain is unavailable: %s", e)
+
+
 def main() -> None:
-    VoiceLoop().run()
+    """Runs the voice loop until interrupted; exits 1 when the brain cannot start."""
+    try:
+        voice = VoiceLoop()
+    except BrainUnavailable as e:
+        log.error("brain unavailable: %s", e)
+        _say_unavailable()
+        logging.shutdown()
+        sys.exit(1)
+    voice.run()
     # CTranslate2's CUDA state crashes the interpreter's own teardown (SIGSEGV), which systemd
     # records as a failure with a core dump; everything worth closing is closed by now.
     logging.shutdown()
