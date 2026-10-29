@@ -62,3 +62,8 @@ voice-data/tests/
 
 # Backups the voice build writes before it changes config.yaml
 config.yaml.*.bak
+
+# Python packaging output
+*.egg-info/
+build/
+dist/
