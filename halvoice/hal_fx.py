@@ -39,7 +39,7 @@ def _flatten_pitch(audio: np.ndarray, sr: int, amount: float) -> np.ndarray:
         return audio
     try:
         from scipy.signal import hilbert
-    except Exception as e:  # noqa: BLE001
+    except ImportError as e:
         log.warning("scipy missing, skipping pitch flatten (%s)", e)
         return audio
     analytic = hilbert(audio)
@@ -74,7 +74,7 @@ def _pedalboard_chain(audio: np.ndarray, sr: int, fx: dict) -> np.ndarray:
             PitchShift,
             Reverb,
         )
-    except Exception as e:  # noqa: BLE001
+    except ImportError as e:
         log.warning("pedalboard missing, skipping EQ/reverb/pitch (%s)", e)
         return audio
 
@@ -123,7 +123,7 @@ def _pedalboard_chain(audio: np.ndarray, sr: int, fx: dict) -> np.ndarray:
 def _normalize_loudness(audio: np.ndarray, sr: int, target_lufs: float) -> np.ndarray:
     try:
         import pyloudnorm as pyln
-    except Exception as e:  # noqa: BLE001
+    except ImportError as e:
         log.warning("pyloudnorm missing, skipping loudness norm (%s)", e)
         peak = np.max(np.abs(audio)) or 1.0
         return audio / peak * 0.9
@@ -131,7 +131,7 @@ def _normalize_loudness(audio: np.ndarray, sr: int, target_lufs: float) -> np.nd
     try:
         loud = meter.integrated_loudness(audio)
         out = pyln.normalize.loudness(audio, loud, target_lufs)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001 - any measurement failure falls back to peak normalising
         log.warning("loudness measurement failed (%s); peak-normalizing instead", e)
         peak = np.max(np.abs(audio)) or 1.0
         return audio / peak * 0.9

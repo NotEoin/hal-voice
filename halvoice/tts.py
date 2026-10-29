@@ -76,7 +76,7 @@ class GPTSoVITSClient:
         self._weights_set = False
 
     def ensure_weights(self) -> None:
-        """Tell the server to load HAL's fine-tuned checkpoints (once per process)."""
+        """Loads HAL's fine-tuned checkpoints into the server; a failed swap is retried next call."""
         if self._weights_set:
             return
         import requests
@@ -85,22 +85,20 @@ class GPTSoVITSClient:
         gpt = config.resolve(cfg.get("tts.gpt_weights"))
         sov = config.resolve(cfg.get("tts.sovits_weights"))
         try:
-            if gpt:
-                requests.get(
-                    f"{self.url}/set_gpt_weights", params={"weights_path": gpt}, timeout=60
+            for endpoint, path in (("set_gpt_weights", gpt), ("set_sovits_weights", sov)):
+                if not path:
+                    continue
+                reply = requests.get(
+                    f"{self.url}/{endpoint}", params={"weights_path": path}, timeout=60
                 )
-            if sov:
-                requests.get(
-                    f"{self.url}/set_sovits_weights", params={"weights_path": sov}, timeout=60
-                )
+                if reply.status_code != 200:
+                    raise RuntimeError(f"{endpoint} answered {reply.status_code}")
             self._weights_set = True
             log.info("GPT-SoVITS HAL weights loaded")
-        except Exception as e:  # noqa: BLE001
-            # Not fatal: the server may already have them baked in via -g/-s flags.
-            log.warning(
-                "could not hot-swap weights (%s) - assuming server already has HAL loaded", e
-            )
-            self._weights_set = True
+        except (requests.RequestException, RuntimeError) as e:
+            # Not fatal, and not remembered: the next line tries the swap again, so a server
+            # that was still starting up ends up with HAL's weights instead of the default voice.
+            log.warning("could not hot-swap weights (%s); retrying on the next line", e)
 
     def synth_raw(self, text: str) -> tuple[np.ndarray, int]:
         """POST one text chunk, return (mono float32 audio, sample_rate) -- no FX."""

@@ -111,7 +111,7 @@ def demo() -> None:
                     bus.set("speaking", abs(math.sin(time.time() * 6)))
                     time.sleep(0.05)
             else:
-                bus.set(st)  # type: ignore[arg-type]
+                bus.set(st)  # type: ignore[arg-type]  # `st` comes from a plain list of the four State names
                 time.sleep(2.5)
             i += 1
 

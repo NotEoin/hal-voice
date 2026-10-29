@@ -100,7 +100,7 @@ class ClaudeSession:
 
         # Drain stderr in the background so it can't deadlock the pipe.
         def _drain_err():
-            for line in proc.stderr:  # type: ignore[union-attr]
+            for line in proc.stderr:  # type: ignore[union-attr]  # a pipe, because Popen got stderr=PIPE
                 log.debug("claude stderr: %s", line.rstrip())
 
         threading.Thread(target=_drain_err, daemon=True).start()
@@ -108,7 +108,7 @@ class ClaudeSession:
         emitted = 0  # chars of the final assistant message already yielded
         final_text = ""
         try:
-            for line in proc.stdout:  # type: ignore[union-attr]
+            for line in proc.stdout:  # type: ignore[union-attr]  # a pipe, because Popen got stdout=PIPE
                 line = line.strip()
                 if not line:
                     continue
@@ -148,7 +148,7 @@ class ClaudeSession:
                     break
         finally:
             with contextlib.suppress(OSError, ValueError):  # the pipe may already be closed
-                proc.stdout.close()  # type: ignore[union-attr]
+                proc.stdout.close()  # type: ignore[union-attr]  # a pipe, because Popen got stdout=PIPE
             proc.wait(timeout=10)
 
 

@@ -24,7 +24,7 @@ class Cfg(dict):
             raise AttributeError(name) from e
         return Cfg(val) if isinstance(val, dict) else val
 
-    def get(self, dotted: str, default: Any = None) -> Any:  # type: ignore[override]
+    def get(self, dotted: str, default: Any = None) -> Any:  # type: ignore[override]  # takes a dotted path where dict.get takes a key, on purpose
         node: Any = self
         for part in dotted.split("."):
             if not isinstance(node, dict) or part not in node:

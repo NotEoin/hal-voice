@@ -24,7 +24,7 @@ def _check(label, fn):
     except _Warn as w:
         print(f"  {WARN} {label} - {w}")
         return True
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001 - doctor reports every failure as a line, never crashes
         print(f"  {BAD} {label} - {e}")
         return False
 
@@ -40,7 +40,7 @@ def _imports():
     for m in ("faster_whisper", "webrtcvad", "pynput", "pedalboard", "pyloudnorm", "pygame", "mcp"):
         try:
             __import__(m)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 - any import failure, not only ImportError, means unusable
             mods.append(m)
     if mods:
         raise _Warn("modules missing: " + ", ".join(mods) + " - re-run ./setup-voice.sh")
@@ -49,7 +49,7 @@ def _imports():
     try:
         __import__("openwakeword")
         return "all deps import, including wake word"
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001 - any import failure means wake word is not usable
         return "all deps import (wake word not installed - optional, push-to-talk unaffected)"
 
 
@@ -68,7 +68,7 @@ def _audio():
 def _stt_model():
     cfg = config.load()
     name = cfg.get("stt.model", "small.en")
-    from faster_whisper import WhisperModel  # noqa: F401
+    from faster_whisper import WhisperModel  # noqa: F401 - the import is the check
 
     return f"faster-whisper available (model '{name}' downloads on first use)"
 

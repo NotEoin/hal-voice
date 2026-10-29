@@ -46,7 +46,7 @@ def speak(text: str) -> str:
         return "Nothing to speak."
     try:
         tts.speak(text)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001 - a tool error goes back to the model as text
         return f"Could not speak (is the GPT-SoVITS server running?): {e}"
     return f"Spoke {len(text)} characters."
 
@@ -60,7 +60,7 @@ def listen(seconds: int = 30) -> str:
     """
     try:
         text = listen_once(max_utterance_s=int(seconds))
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001 - a tool error goes back to the model as text
         return f"Could not listen (is a microphone available?): {e}"
     return text or "(heard nothing)"
 

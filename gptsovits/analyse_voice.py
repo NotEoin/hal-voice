@@ -163,7 +163,7 @@ def frames(y: np.ndarray) -> dict:
 
 def mapping(film: dict, cand: dict) -> np.ndarray:
     """For each film frame, the matching candidate frame, by dynamic time warping on MFCCs."""
-    z = lambda x: (x - x.mean(axis=1, keepdims=True)) / (x.std(axis=1, keepdims=True) + 1e-6)  # noqa: E731
+    z = lambda x: (x - x.mean(axis=1, keepdims=True)) / (x.std(axis=1, keepdims=True) + 1e-6)  # noqa: E731 - a one-line helper used only in this function
     _, path = librosa.sequence.dtw(
         X=z(film["mfcc"][:, : film["n"]]), Y=z(cand["mfcc"][:, : cand["n"]]), metric="euclidean"
     )
@@ -289,7 +289,7 @@ def compare(name: str, y: np.ndarray, fp: dict, film_fr: dict) -> dict:
         cgap = (cs - prev_cend) * HOP if prev_cend is not None else 0.0
         prev_end, prev_cend = fe, ce
         ratio = cw["length_s"] / max(fw["length_s"], 1e-3)
-        fmt = lambda x: "  n/a" if x is None else f"{x:+5.1f}"  # noqa: E731
+        fmt = lambda x: "  n/a" if x is None else f"{x:+5.1f}"  # noqa: E731 - a one-line helper used only in this function
         rows.append(
             f"  {word:7} length {cw['length_s']:.2f}s vs {fw['length_s']:.2f}s ({(ratio - 1) * 100:+4.0f}%) | "
             f"gap {cgap:.2f}s vs {fgap:.2f}s | pitch {fmt(cw['pitch_st'])} vs {fmt(fw['pitch_st'])} st | "

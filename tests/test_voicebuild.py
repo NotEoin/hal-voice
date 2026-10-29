@@ -1,13 +1,10 @@
 """Tests for voicebuild's stdlib parts: subtitle parsing and cleaning, stream choice, sync fitting.
 
-Run with: python3 -m unittest discover -s tests
+Run with: pytest
 """
 
-import sys
 import unittest
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from voicebuild import media, subtitles, sync
 

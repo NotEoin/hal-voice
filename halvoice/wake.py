@@ -61,7 +61,7 @@ class _PushToTalk:
     def _matches(key, target) -> bool:
         try:
             return key == target or getattr(key, "char", None) == getattr(target, "char", None)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 - pynput key objects differ by platform; an odd key never matches
             return False
 
     def stop(self) -> None:
@@ -94,7 +94,7 @@ class _WakeWord:
         kwargs = {"wakeword_models": [self.custom]} if self.custom else {}
         try:
             oww = Model(**kwargs)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:  # noqa: BLE001 - any model failure disables wake word; push-to-talk stays
             log.error("wake word model failed to load (%s) - disabling wake word.", e)
             return
         # openWakeWord expects 16 kHz int16 frames of 1280 samples (80 ms).

@@ -150,7 +150,7 @@ def fetch(source: str, dest: Path) -> int:
                 fname += ".tar.gz"
             dl = tmp / fname
             print(f"  downloading {source}")
-            urllib.request.urlretrieve(source, dl)  # noqa: S310 (user-supplied URL)
+            urllib.request.urlretrieve(source, dl)  # noqa: S310 - the URL is the source the user configured
             ext = tmp / "extracted"
             ext.mkdir()
             _extract_archive(dl, ext)

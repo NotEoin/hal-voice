@@ -56,7 +56,7 @@ class StateBus:
         last = (self.state, self.level)
         try:
             while True:
-                last = self._q.get_nowait()  # type: ignore[assignment]
+                last = self._q.get_nowait()  # type: ignore[assignment]  # only State values are queued
         except queue.Empty:
             pass
-        return last  # type: ignore[return-value]
+        return last  # type: ignore[return-value]  # same: the queue is typed with plain str

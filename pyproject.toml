@@ -43,6 +43,7 @@ voicetest = ["script.txt", "tools.toml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]  # the checkout imports without an install
 markers = ["integration: builds and installs a wheel; slow, run on request (-m integration)"]
 addopts = "-m 'not integration'"
 

@@ -98,14 +98,14 @@ class VoiceLoop:
             return
         try:
             from .ui_eye import RedEye
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:  # noqa: BLE001 - the UI is optional; any import failure means headless
             log.warning("red-eye UI unavailable (%s) - running headless", e)
             return
 
         def run():
             try:
                 RedEye(self.bus).run()
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:  # noqa: BLE001 - a UI crash must not stop the voice loop
                 log.warning("red-eye UI crashed (%s) - continuing headless", e)
 
         self._ui_thread = threading.Thread(target=run, daemon=True)

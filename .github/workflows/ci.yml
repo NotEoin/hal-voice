@@ -24,6 +24,7 @@ jobs:
       - run: scripts/ascii-check.sh
       - run: scripts/portability-check.sh
       - run: scripts/audio-guard.sh
+      - run: scripts/lint-reasons-check.sh
 
   test:
     runs-on: ubuntu-latest
