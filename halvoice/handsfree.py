@@ -118,7 +118,7 @@ class Segmenter:
         self.speech_frames = self.silent = 0
         self.lead_s = 0.0       # pre-roll at the front of the last utterance returned
 
-    def feed(self, chunk: np.ndarray) -> "np.ndarray | None":
+    def feed(self, chunk: np.ndarray) -> np.ndarray | None:
         """Takes one frame; returns an utterance as float32 audio when one has just ended."""
         heard = chunk
         if self.sos is not None:
@@ -176,7 +176,7 @@ class Ears:
         self.command_window = float(cfg.get("activation.keyword.command_window_s", 6))
         self.followup_s = float(cfg.get("activation.followup_s", 8))
         self.transcribe = transcribe
-        self.requests: "queue.Queue[Heard]" = queue.Queue()
+        self.requests: queue.Queue[Heard] = queue.Queue()
         self.interrupt = threading.Event()
         self.speaking = threading.Event()
         self._armed_until = 0.0         # a request without the name is accepted until then
@@ -184,7 +184,7 @@ class Ears:
         self._said: collections.deque = collections.deque(maxlen=12)   # HAL's recent sentences
         self._pending_name_at = 0.0     # when a bare "Hal" was heard
         self._stop = threading.Event()
-        self._audio: "queue.Queue[np.ndarray]" = queue.Queue()
+        self._audio: queue.Queue[np.ndarray] = queue.Queue()
         self.clock = time.time          # the replay test runs on the recording's own clock
 
     # -- windows ----------------------------------------------------------------

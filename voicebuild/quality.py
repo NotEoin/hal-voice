@@ -66,7 +66,7 @@ def join_runs(lines: list[Line], verdicts: list[dict]) -> list[tuple[Line, dict]
     nobody else speaking between) joined into one line, pauses kept, up to MAX_S long."""
     out: list[tuple[Line, dict]] = []
     prev = -2
-    for i, (ln, v) in enumerate(zip(lines, verdicts)):
+    for i, (ln, v) in enumerate(zip(lines, verdicts, strict=False)):
         if not v["hal"]:
             continue
         if out and prev == i - 1 and "sings" not in ln.tags:
@@ -111,7 +111,7 @@ def screen(
     """Returns the HAL lines that pass every check, and a record of every HAL line dropped."""
     # Other voices by their recognised words, so a reply a beat later doesn't count as overlap.
     others = [
-        (w["start"], w["end"]) for ln, v in zip(lines, verdicts) if not v["hal"] for w in ln.words
+        (w["start"], w["end"]) for ln, v in zip(lines, verdicts, strict=False) if not v["hal"] for w in ln.words
     ]
     candidates, dropped = [], []
     for ln, v in join_runs(lines, verdicts):

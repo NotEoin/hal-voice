@@ -125,7 +125,7 @@ class VoiceLoop:
 
         Returns False if HAL was interrupted.
         """
-        audio_q: "queue.Queue" = queue.Queue(maxsize=3)
+        audio_q: queue.Queue = queue.Queue(maxsize=3)
         cancel = threading.Event()
 
         def synthesise():

@@ -18,7 +18,7 @@ import io
 import re
 import sys
 import threading
-from typing import Iterator
+from collections.abc import Iterator
 
 import numpy as np
 
@@ -169,10 +169,10 @@ def synth(text: str) -> tuple[np.ndarray, int]:
     return hal_fx.apply(full, sr), sr
 
 
-_client: "GPTSoVITSClient | None" = None
+_client: GPTSoVITSClient | None = None
 
 
-def _shared_client() -> "GPTSoVITSClient":
+def _shared_client() -> GPTSoVITSClient:
     """One client per process, so HAL's weights are sent to the server once, not per sentence."""
     global _client
     if _client is None:
@@ -231,7 +231,7 @@ class Player:
         return not self._stop.is_set()
 
 
-def speak(text: str, player: "Player | None" = None, on_level=None) -> None:
+def speak(text: str, player: Player | None = None, on_level=None) -> None:
     """Synthesize + speak the full text (sentence-streamed). Blocking."""
     player = player or Player()
     for audio, sr in synth_stream(text):

@@ -54,7 +54,7 @@ def theil_sen(xs: list[float], ys: list[float]) -> tuple[float, float]:
         if xs[j] - xs[i] > 30
     ]
     slope = statistics.median(slopes) if slopes else 0.0
-    intercept = statistics.median(y - slope * x for x, y in zip(xs, ys))
+    intercept = statistics.median(y - slope * x for x, y in zip(xs, ys, strict=False))
     return intercept, slope
 
 
@@ -77,7 +77,7 @@ def correct(text: str, heard: list[str]) -> str:
     """Replaces single subtitle words the recogniser heard differently (OCR slips)."""
     pieces = re.findall(r"\S+", text)
     norm = [(_WORD.findall(p.lower()) or [""])[0] for p in pieces]
-    norm = [n if n else re.sub(r"\W", "", p) or "?" for n, p in zip(norm, pieces)]
+    norm = [n if n else re.sub(r"\W", "", p) or "?" for n, p in zip(norm, pieces, strict=False)]
     sm = difflib.SequenceMatcher(None, norm, heard, autojunk=False)
     for op, a0, a1, b0, b1 in sm.get_opcodes():
         if op == "replace" and a1 - a0 == b1 - b0:
@@ -130,7 +130,7 @@ def align(cues: list[Cue], words: list[dict]) -> tuple[list[Line], dict]:
             ys.append(words[min(got)]["start"] - c.start)
     if len(xs) >= 5:
         a, b = theil_sen(xs, ys)
-        local = rolling_median([y - (a + b * x) for x, y in zip(xs, ys)], 9)
+        local = rolling_median([y - (a + b * x) for x, y in zip(xs, ys, strict=False)], 9)
     else:
         a, b, local = 0.0, 0.0, []
 

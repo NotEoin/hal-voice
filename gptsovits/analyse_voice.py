@@ -200,7 +200,7 @@ def compare(name: str, y: np.ndarray, fp: dict, film_fr: dict) -> dict:
         gaps.append((abs(z), f"{NAMES.get(k, k)}: {v[k]:.1f} {UNITS.get(k, '')} vs film {mean:.1f}±{sd:.1f} (z={z:+.1f})"))
     film_ltas, film_sd = np.array(fp["ltas_db"][0]), np.array(fp["ltas_db"][1])
     diff = np.array(v["ltas_db"]) - film_ltas
-    for f, d, s in zip(BANDS, diff, film_sd):
+    for f, d, s in zip(BANDS, diff, film_sd, strict=False):
         if abs(d) > max(2.0, 1.5 * s):
             gaps.append((abs(d) / max(s, 1.0), f"spectrum at {f} Hz: {d:+.1f} dB vs film"))
     mel = melody(film_fr, fr, m)
@@ -252,7 +252,7 @@ def match(y: np.ndarray, fp: dict, film_fr: dict, film_words: list | None = None
     # The line's longest pause in the film, whichever words it falls between.
     gaps = [film_words[k][1] - film_words[k - 1][2] for k in range(1, len(film_words))]
     pause_at = 1 + int(np.argmax(gaps)) if gaps else -1
-    for k, (word, s, e) in enumerate(film_words):
+    for k, (_word, s, e) in enumerate(film_words):
         fs, fe = int(s / HOP), min(int(e / HOP), len(m) - 1)
         cs, ce = int(m[fs]), int(m[max(fe - 1, fs)]) + 1
         fw, cw = word_stats(film_fr, fs, fe, film_db), word_stats(fr, cs, ce, cand_db)

@@ -63,8 +63,15 @@ def _flatten_pitch(audio: np.ndarray, sr: int, amount: float) -> np.ndarray:
 def _pedalboard_chain(audio: np.ndarray, sr: int, fx: dict) -> np.ndarray:
     """EQ + pitch shift + drive + reverb via Spotify's pedalboard. Skipped if absent."""
     try:
-        from pedalboard import (Distortion, HighShelfFilter, LowShelfFilter,
-                                PeakFilter, Pedalboard, PitchShift, Reverb)
+        from pedalboard import (
+            Distortion,
+            HighShelfFilter,
+            LowShelfFilter,
+            PeakFilter,
+            Pedalboard,
+            PitchShift,
+            Reverb,
+        )
     except Exception as e:  # noqa: BLE001
         log.warning("pedalboard missing, skipping EQ/reverb/pitch (%s)", e)
         return audio

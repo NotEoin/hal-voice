@@ -119,7 +119,7 @@ class Judge:
         parts = [self.av.match(t.astype(np.float64), self.fp, self.film_fr) for t in takes]
         avg = {k: float(np.mean([p[k] for p in parts])) for k in parts[0]}
         avg["wer"] = float(np.mean([self.wer(t, self.text) for t in takes] +
-                                   [self.wer(y, s) for y, s in zip(novel, NOVEL)]))
+                                   [self.wer(y, s) for y, s in zip(novel, NOVEL, strict=False)]))
         # A take the recogniser can't follow is out, however close its melody.
         avg["score"] = 0.0 if avg["wer"] > 0.3 else avg["match_pct"]
         return {k: round(v, 3) for k, v in avg.items()}
@@ -180,7 +180,7 @@ def search(judge: Judge, label: str, pairs: list[tuple[str, str]]) -> dict:
             best, pair = r, (gpt, sov)
     set_weights(*pair)
     ref = default_ref
-    for stem, candidate in refs.items():
+    for _stem, candidate in refs.items():
         r = evaluate(judge, label, *pair, candidate, p)
         if r["score"] > best["score"]:
             best, ref = r, candidate

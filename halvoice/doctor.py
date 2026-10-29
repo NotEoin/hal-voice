@@ -34,7 +34,8 @@ class _Warn(Exception):
 
 
 def _imports():
-    import numpy, requests, soundfile, sounddevice, yaml  # noqa: F401
+    for essential in ("numpy", "requests", "soundfile", "sounddevice", "yaml"):
+        __import__(essential)  # the import itself is the check; a failure is reported by _check
     mods = []
     for m in ("faster_whisper", "webrtcvad", "pynput",
               "pedalboard", "pyloudnorm", "pygame", "mcp"):
@@ -99,13 +100,13 @@ def _gptsovits_server():
     url = str(cfg.get("tts.api_url", "http://127.0.0.1:9880")).rstrip("/")
     try:
         requests.get(url + "/", timeout=2)
-    except Exception:
+    except Exception:  # noqa: BLE001 - any failure of the first probe falls through to the second
         # try a harmless control endpoint
         try:
             requests.get(url + "/set_gpt_weights", timeout=2)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             raise _Warn(f"GPT-SoVITS api not reachable at {url} "
-                        f"(start it: gptsovits/run-api.sh): {e}")
+                        f"(start it: gptsovits/run-api.sh): {e}") from e
     return f"reachable at {url}"
 
 
@@ -124,10 +125,10 @@ def _brain():
     core = brain.find_core()
     b = brain.direct_brain()
     try:
-        with urllib.request.urlopen(f"{b.url}/api/tags", timeout=3) as r:
+        with urllib.request.urlopen(f"{b.url}/api/tags", timeout=3) as r:  # noqa: S310 - a configured local http URL
             names = {m["name"] for m in json.loads(r.read()).get("models", [])}
     except OSError as e:
-        raise Exception(f"Ollama not reachable at {b.url}: {e}")
+        raise Exception(f"Ollama not reachable at {b.url}: {e}") from e
     if b.model not in names and f"{b.model}:latest" not in names:
         raise Exception(f"model {b.model} is not in Ollama (ollama pull {b.model})")
     tools = f"{len(b.hub.all_tools())} tools" if b.hub else "no tools (hal-hub not found)"

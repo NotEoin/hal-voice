@@ -180,7 +180,7 @@ def find(b: Build) -> None:
         # Lines the user asked to leave out go before monologues are joined, so the rest of a
         # joined run (HAL's chess moves after "I'm sorry, Frank") is kept.
         left_out = []
-        for ln, v in zip(lines, verdicts):
+        for ln, v in zip(lines, verdicts, strict=False):
             if v["hal"] and excluded(ln.text, exclusions(b)):
                 v["hal"] = False
                 left_out.append(
@@ -201,7 +201,7 @@ def find(b: Build) -> None:
         # How far each clip may grow: up to the nearest word anyone else says.
         others = sorted(
             (w["start"], w["end"])
-            for ln, v in zip(lines, verdicts)
+            for ln, v in zip(lines, verdicts, strict=False)
             if not v["hal"]
             for w in ln.words
         )
@@ -213,7 +213,7 @@ def find(b: Build) -> None:
             if f != film and b.path(slug(f), "lines.json").exists()
             for it in json.loads(b.path(slug(f), "lines.json").read_text())["kept"]
         }
-        for n, (ln, rec) in enumerate(kept):
+        for ln, rec in kept:
             before = max((e for s, e in others if e <= ln.start), default=ln.start - 1.0)
             after = min((s for s, e in others if s >= ln.end), default=ln.end + 1.0)
             items.append(
@@ -478,7 +478,7 @@ class Server:
         )
         for _ in range(120):
             try:
-                urllib.request.urlopen(self.url, timeout=2)
+                urllib.request.urlopen(self.url, timeout=2)  # noqa: S310 - the local server URL built above
             except OSError as e:
                 if getattr(e, "code", None):  # any HTTP answer means it is up
                     return
@@ -500,7 +500,6 @@ def checkpoints(b: Build) -> list[tuple[Path, Path]]:
 
 def references(b: Build, n: int = 4) -> list[tuple[Path, str]]:
     """Returns the calmest clear clips of 3 to 10 s; GPT-SoVITS copies delivery from these."""
-    import soundfile as sf
 
     sys.path.insert(0, str(GPTSOVITS))
     import analyse_voice as av
@@ -516,13 +515,12 @@ def references(b: Build, n: int = 4) -> list[tuple[Path, str]]:
             pool.append((c["snr_db"], Path(c["path"]), it["text"]))
     pool = sorted(pool, reverse=True)[:12]
     calm = []
-    for snr, path, text in pool:
-        y, _ = sf.read(path, dtype="float32")
+    for _snr, path, text in pool:
         calm.append((av.voice(av.load(path)).get("pitch_range_st", 99.0), path, text))
     return [(p, t) for _, p, t in sorted(calm)[:n]]
 
 
-def synth(server: Server, text: str, ref: tuple[Path, str], speed: float) -> "object":
+def synth(server: Server, text: str, ref: tuple[Path, str], speed: float) -> object:
     import io
 
     import librosa
@@ -601,8 +599,8 @@ def select(b: Build) -> None:
         return best
 
     def use(gpt, sov) -> None:
-        urllib.request.urlopen(f"{server.url}/set_gpt_weights?weights_path={gpt}", timeout=180)
-        urllib.request.urlopen(f"{server.url}/set_sovits_weights?weights_path={sov}", timeout=180)
+        urllib.request.urlopen(f"{server.url}/set_gpt_weights?weights_path={gpt}", timeout=180)  # noqa: S310 - local server
+        urllib.request.urlopen(f"{server.url}/set_sovits_weights?weights_path={sov}", timeout=180)  # noqa: S310 - local server
 
     results = []
     server = Server()
@@ -670,7 +668,7 @@ def select(b: Build) -> None:
         samples = b.path("samples", experiment(b), "film.wav").parent
         shutil.copy2(b.path("held-out.wav"), samples / "0-film-held-out.wav")
         wers = []
-        for k, text in enumerate([held["text"]] + NOVEL, start=1):
+        for k, text in enumerate([held["text"], *NOVEL], start=1):
             y, wer = checked(text, (Path(best["ref"]), best["prompt"]), best["speed"])
             sf.write(samples / f"{k}-hal.wav", y, 16000)
             wers.append(wer)
@@ -712,7 +710,7 @@ def install(b: Build) -> None:
     ):
         text = re.sub(
             rf"^(  {key}:\s*)[^#\n]*?(\s*(#.*)?)$",
-            lambda m: f"{m.group(1)}{value}{m.group(2)}",
+            lambda m, value=value: f"{m.group(1)}{value}{m.group(2)}",
             text,
             count=1,
             flags=re.M,

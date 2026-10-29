@@ -39,7 +39,7 @@ class StateBus:
     """
 
     def __init__(self) -> None:
-        self._q: "queue.Queue[tuple[str, float]]" = queue.Queue()
+        self._q: queue.Queue[tuple[str, float]] = queue.Queue()
         self.state: State = "idle"
         self.level: float = 0.0
         self.on_change = None   # called with the new state whenever it changes

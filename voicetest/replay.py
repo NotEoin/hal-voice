@@ -79,7 +79,7 @@ class CachedTranscriber:
         self.key = json.dumps([cfg.get("stt"), cfg.get("audio")], sort_keys=True, default=str)
 
     def __call__(self, audio: np.ndarray) -> tuple[str, float]:
-        k = hashlib.sha1(self.key.encode() + audio.tobytes()).hexdigest()
+        k = hashlib.sha1(self.key.encode() + audio.tobytes(), usedforsecurity=False).hexdigest()
         if k not in self.cache:
             self.inner._load()
             t = time.perf_counter()

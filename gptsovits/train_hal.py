@@ -9,14 +9,15 @@ Replicates exactly what the GPT-SoVITS WebUI does for:
 
 Run with the gptsovits conda python, from anywhere — it cd's into the GPT-SoVITS dir.
 """
-import os
-import sys
-import json
-import yaml
 import glob
+import json
+import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
+
+import yaml
 
 # ---------------------------------------------------------------- paths / config
 # Resolve everything relative to this file so the repo works wherever it's cloned.
@@ -114,7 +115,8 @@ if not (os.path.exists(path_text) and len(open(path_text, encoding="utf8").read(
     os.remove(p0)
     with open(path_text, "w", encoding="utf8") as f:
         f.write("\n".join(opt) + "\n")
-    assert len("".join(opt)) > 0, "1A produced no text"
+    if not "".join(opt):
+        sys.exit("1A produced no text")
 print("1A done")
 
 # ============================================================ 1B: HuBERT / wav32k
@@ -175,7 +177,7 @@ s1_dir = f"{EXP_ROOT}/{EXP}"
 shutil.rmtree(f"{s1_dir}/logs_s1_{VERSION}", ignore_errors=True)
 os.makedirs(f"{s1_dir}/logs_s1", exist_ok=True)
 with open("GPT_SoVITS/configs/s1longer-v2.yaml") as f:
-    s1 = yaml.load(f, Loader=yaml.FullLoader)
+    s1 = yaml.safe_load(f)
 s1["train"]["batch_size"] = GPT_BATCH
 s1["train"]["epochs"] = GPT_EPOCHS
 s1["pretrained_s1"] = S1

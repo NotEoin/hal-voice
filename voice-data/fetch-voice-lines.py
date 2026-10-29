@@ -114,10 +114,10 @@ def _extract_archive(archive: Path, into: Path) -> None:
     low = archive.name.lower()
     if low.endswith(".zip"):
         with zipfile.ZipFile(archive) as zf:
-            zf.extractall(into)
+            zf.extractall(into)  # noqa: S202 - ZipFile.extractall drops ".." and absolute names
     else:
         with tarfile.open(archive) as tf:
-            tf.extractall(into)
+            tf.extractall(into, filter="data")
 
 
 def _collect_audio(src_dir: Path, dest: Path) -> int:

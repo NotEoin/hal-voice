@@ -6,8 +6,8 @@ from __future__ import annotations
 def main() -> None:
     try:
         import sounddevice as sd
-    except Exception as e:  # noqa: BLE001
-        raise SystemExit(f"sounddevice not available: {e}\nRun ./setup-voice.sh first.")
+    except Exception as e:
+        raise SystemExit(f"sounddevice not available: {e}\nRun ./setup-voice.sh first.") from e
 
     print("Audio devices (index: name  [in/out channels]  @default_samplerate):\n")
     default_in, default_out = sd.default.device

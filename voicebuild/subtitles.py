@@ -91,7 +91,7 @@ def parse_ass(text: str) -> list[tuple[float, float, str]]:
             fields = [f.strip().lower() for f in s.split(":", 1)[1].split(",")]
         elif s.lower().startswith("dialogue:") and fields:
             parts = s.split(":", 1)[1].split(",", len(fields) - 1)
-            row = dict(zip(fields, (p.strip() for p in parts)))
+            row = dict(zip(fields, (p.strip() for p in parts), strict=False))
             body = (
                 re.sub(r"\{[^}]*\}", "", row.get("text", ""))
                 .replace("\\N", "\n")

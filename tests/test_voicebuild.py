@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from voicebuild import media, subtitles, sync  # noqa: E402
+from voicebuild import media, subtitles, sync
 
 SRT = """\ufeff1
 00:01:02,500 --> 00:01:04,000
@@ -133,7 +133,7 @@ def film(offset: float, drift: float, jump_at: float = 1e9, jump: float = 0.0, s
     """Returns subtitle cues and recognised words for a synthetic film with known timing errors."""
     import random
 
-    rnd = random.Random(1)
+    rnd = random.Random(1)  # noqa: S311 - a seeded fixture generator, not security
     vocab = (
         "open the pod bay doors hal i am sorry dave afraid cannot do that mission important".split()
     )
@@ -159,13 +159,13 @@ class SyncTest(unittest.TestCase):
         lines, report = sync.align(cues, words)
         self.assertAlmostEqual(report["offset_s"], 2.5, delta=0.05)
         self.assertAlmostEqual(report["drift_ppm"], 1000, delta=20)
-        for line, cue in zip(lines, cues):
+        for line, cue in zip(lines, cues, strict=False):
             self.assertAlmostEqual(line.start, cue.start + 2.5 + 0.001 * cue.start, delta=0.01)
 
     def test_lines_follow_a_jump(self):
         cues, words = film(offset=0.0, drift=0.0, jump_at=1200, jump=3.0)
         lines, _ = sync.align(cues, words)
-        late = [(ln, c) for ln, c in zip(lines, cues) if c.start > 1300]
+        late = [(ln, c) for ln, c in zip(lines, cues, strict=False) if c.start > 1300]
         self.assertTrue(all(abs(ln.start - (c.start + 3.0)) < 0.01 for ln, c in late))
 
     def test_ocr_slips_take_the_heard_word(self):
@@ -236,7 +236,7 @@ class LabelTest(unittest.TestCase):
         ]
         a = ("plain", *sync.align(plain, words))
         b = ("labelled", *sync.align(labelled, words))
-        name, lines, report, _ = sync.choose([a, b])
+        _name, lines, report, _ = sync.choose([a, b])
         self.assertEqual([ln.speaker for ln in lines], ["HAL", "BOWMAN"])
         self.assertEqual(report["labels_transferred"], 2)
 
@@ -456,6 +456,7 @@ class VerbatimTest(unittest.TestCase):
 class InputTest(unittest.TestCase):
     def test_films_and_subtitles_found_in_a_folder(self):
         import tempfile
+
         from voicebuild.__main__ import films_in
 
         with tempfile.TemporaryDirectory() as d:

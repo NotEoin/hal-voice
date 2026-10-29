@@ -45,3 +45,35 @@ voicetest = ["script.txt", "tools.toml"]
 testpaths = ["tests"]
 markers = ["integration: builds and installs a wheel; slow, run on request (-m integration)"]
 addopts = "-m 'not integration'"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["gptsovits/GPT-SoVITS", "voice-data/raw"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "BLE", "S", "T20", "RUF", "PLC2401"]
+# S603 and S607 flag every subprocess call; argv-only calls with a timeout are the design.
+ignore = [
+  "S603",
+  "S607",
+  "E501",  # the formatter wraps code; prose strings and comments are left as written
+  "RUF001", "RUF002", "RUF003",  # scripts/ascii-check.sh gates non-ASCII text for every file type
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "S108"]  # pytest asserts; fixtures hold dummy secrets and paths
+# Command-line programs print their results for the person at the terminal.
+"halvoice/cli.py" = ["T201"]  # entry point
+"halvoice/connect.py" = ["T201"]  # `hal-voice connection`
+"halvoice/devices.py" = ["T201"]  # `hal-voice devices`
+"halvoice/doctor.py" = ["T201"]  # `hal-voice doctor`
+"halvoice/tools.py" = ["T201"]  # one-shot worker: JSON result on stdout
+"halvoice/config.py" = ["T201"]  # `python -m halvoice.config` dumps the resolved config
+"halvoice/stt.py" = ["T201"]  # `python -m halvoice.stt` prints transcripts
+"halvoice/tts.py" = ["T201"]  # `python -m halvoice.tts` usage message
+"halvoice/claude_client.py" = ["T201"]  # `python -m halvoice.claude_client` manual test
+"voicebuild/**" = ["T201"]  # `make-hal-voice` progress output
+"voicetest/**" = ["T201"]  # `hal-voice voicetest` reports
+"gptsovits/**" = ["T201"]  # training and tuning scripts run by hand
+"voice-data/**" = ["T201"]  # dataset scripts run by hand

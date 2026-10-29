@@ -18,11 +18,12 @@ This module yields *text deltas*; the loop reassembles them into sentences for T
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import subprocess
 import threading
-from typing import Iterator
+from collections.abc import Iterator
 
 from . import config, connect
 from .util import get_logger
@@ -81,7 +82,7 @@ class ClaudeSession:
 
     def ask(self, prompt: str) -> Iterator[str]:
         """Send one user turn; yield assistant *text deltas* as they arrive."""
-        cmd = self._base_cmd() + [prompt]
+        cmd = [*self._base_cmd(), prompt]
         log.debug("claude cmd: %s", " ".join(cmd[:-1]) + " <prompt>")
         proc = subprocess.Popen(
             cmd, cwd=self.cwd, env=self._env,
@@ -135,10 +136,8 @@ class ClaudeSession:
                         self.session_id = evt["session_id"]
                     break
         finally:
-            try:
+            with contextlib.suppress(OSError, ValueError):  # the pipe may already be closed
                 proc.stdout.close()  # type: ignore[union-attr]
-            except Exception:  # noqa: BLE001
-                pass
             proc.wait(timeout=10)
 
 
