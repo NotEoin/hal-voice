@@ -95,7 +95,7 @@ class _WakeWord:
         try:
             oww = Model(**kwargs)
         except Exception as e:  # noqa: BLE001
-            log.error("wake word model failed to load (%s) — disabling wake word.", e)
+            log.error("wake word model failed to load (%s) - disabling wake word.", e)
             return
         # openWakeWord expects 16 kHz int16 frames of 1280 samples (80 ms).
         chunk = 1280
@@ -103,7 +103,7 @@ class _WakeWord:
             samplerate=self.sr, channels=1, dtype="int16", blocksize=chunk, device=self.device
         ) as stream:
             log.info(
-                "wake word listening ('%s', threshold %.2f)…",
+                "wake word listening ('%s', threshold %.2f)...",
                 self.custom or self.model_name,
                 self.threshold,
             )

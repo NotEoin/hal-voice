@@ -1,15 +1,15 @@
-"""The "HAL effect" — the DSP chain applied to GPT-SoVITS output.
+"""The "HAL effect" -- the DSP chain applied to GPT-SoVITS output.
 
 A clean clone gets the timbre right but still sounds like a person in a room. HAL speaks
 from inside a machine, in the dry cabin of Discovery One. The chain applies, in order:
 
-  1. pitch flattening  — ships at 0.0. The Hilbert reconstruction it uses is only valid
+  1. pitch flattening  -- ships at 0.0. The Hilbert reconstruction it uses is only valid
                          for narrowband signals and adds artifacts to broadband speech.
-  2. pitch shift       — ships at 0.0. Sounded artificial; depth comes from EQ instead.
-  3. EQ                — warm the low-mids, ease presence/sibilance, roll off air.
-  4. subtle saturation — drive for "speaker cone" colouration. Also ships at 0.0.
-  5. small-room reverb — the damped cabin tail, not a hall.
-  6. loudness norm     — so every reply sits at the same level.
+  2. pitch shift       -- ships at 0.0. Sounded artificial; depth comes from EQ instead.
+  3. EQ                -- warm the low-mids, ease presence/sibilance, roll off air.
+  4. subtle saturation -- drive for "speaker cone" colouration. Also ships at 0.0.
+  5. small-room reverb -- the damped cabin tail, not a hall.
+  6. loudness norm     -- so every reply sits at the same level.
 
 Stages 1, 2 and 4 are kept for experimentation but are off by default; VOICE-TUNING.md
 records why. All parameters live under tts.fx in config.yaml. Everything degrades
@@ -33,7 +33,7 @@ def _flatten_pitch(audio: np.ndarray, sr: int, amount: float) -> np.ndarray:
     Reconstructs the signal from a moving-median de-trend of the analytic signal's
     instantaneous frequency. That reconstruction assumes a narrowband signal, and
     speech is broadband, so it introduces audible artifacts at any strength. Kept as
-    the record of an approach that was tried and rejected — see VOICE-TUNING.md.
+    the record of an approach that was tried and rejected -- see VOICE-TUNING.md.
     """
     if amount <= 0:
         return audio

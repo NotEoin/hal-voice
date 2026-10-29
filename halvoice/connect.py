@@ -4,7 +4,7 @@ hal-voice never runs a model of its own. It records you, hands the transcript to
 Claude Code, and speaks whatever comes back. So the only question this module answers
 is: *which* Claude Code, running *where*?
 
-Out of the box the answer is "plain Claude Code, in the current directory" — clone the
+Out of the box the answer is "plain Claude Code, in the current directory" -- clone the
 repo, run it, and it talks to whatever Claude Code you already have logged in. Everything
 below is about pointing it somewhere else without editing code.
 
@@ -21,7 +21,7 @@ Two independent things get resolved:
 
 Resolution order, lowest priority first:
 
-  1. config.yaml            the `claude:` block — the standalone defaults
+  1. config.yaml            the `claude:` block -- the standalone defaults
   2. hal.conf               if claude.hal_root points at (or auto-finds) a Hal checkout
   3. env_file               any KEY=VALUE file named by claude.env_file
   4. process environment    ANTHROPIC_* already exported in your shell
@@ -64,7 +64,7 @@ class Connection:
         """True when we are not redirecting Claude Code ourselves.
 
         Note this says nothing about where Claude Code then goes: if you have your own
-        ANTHROPIC_BASE_URL exported, it still applies — we simply aren't the one setting it.
+        ANTHROPIC_BASE_URL exported, it still applies -- we simply aren't the one setting it.
         """
         return not self.base_url and not self.model
 
@@ -134,12 +134,12 @@ def _from_hal_conf(hal_root: Path) -> tuple[dict[str, str], str | None]:
     """Translate a Hal profile into our settings. Returns (values, vault_dir)."""
     conf = hal_root / "hal.conf"
     if not conf.exists():
-        log.warning("hal_root %s has no hal.conf — run Hal's ./setup.sh there first", hal_root)
+        log.warning("hal_root %s has no hal.conf - run Hal's ./setup.sh there first", hal_root)
         return {}, None
     raw = _parse_kv_file(conf)
     values: dict[str, str] = {}
     # An empty HAL_MODEL means Hal itself is on the cloud profile, so we must NOT
-    # redirect Claude Code either — inheriting a base_url with no model would break it.
+    # redirect Claude Code either -- inheriting a base_url with no model would break it.
     if raw.get("HAL_MODEL"):
         values["model"] = raw["HAL_MODEL"]
         values["small_fast_model"] = raw.get("HAL_FAST_MODEL", "")
@@ -181,9 +181,9 @@ def resolve() -> Connection:
     if hal_root:
         values, vault = _from_hal_conf(hal_root)
         if (hal_root / "hal.conf").exists():
-            # Say so even when it contributed nothing — "Hal is on the cloud profile too"
+            # Say so even when it contributed nothing -- "Hal is on the cloud profile too"
             # is a useful thing to see, and silence here looks like the import failed.
-            note = "" if values else " — cloud profile, nothing to redirect"
+            note = "" if values else " - cloud profile, nothing to redirect"
             sources.append(f"hal.conf ({hal_root}){note}")
         settings.update(values)
         if vault and not project_dir:
@@ -273,8 +273,8 @@ def explain() -> None:
         for k, v in sorted(conn.env.items()):
             print(f"      {k}={_mask(k, v)}")
     else:
-        print("  we set       : (nothing — Claude Code's own configuration applies)")
-    # Only what we do NOT override — anything we set above wins over the ambient value.
+        print("  we set       : (nothing - Claude Code's own configuration applies)")
+    # Only what we do NOT override -- anything we set above wins over the ambient value.
     still_applies = {k: v for k, v in conn.inherited.items() if k not in conn.env}
     if still_applies:
         print("  inherited    :")

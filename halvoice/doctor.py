@@ -1,4 +1,4 @@
-"""`hal-voice doctor` — check that everything voice-related is wired up and reachable.
+"""`hal-voice doctor` -- check that everything voice-related is wired up and reachable.
 
 Verifies: python deps, audio I/O, the STT model, the direct brain (core hal, Ollama,
 hal-hub), the GPT-SoVITS server + HAL weights, the reference clip, and Claude Code on
@@ -13,19 +13,19 @@ from pathlib import Path
 
 from . import config
 
-OK, WARN, BAD = "✓", "!", "✗"
+OK, WARN, BAD = "[x]", "!", "[ ]"
 
 
 def _check(label, fn):
     try:
         detail = fn()
-        print(f"  {OK} {label}{(' — ' + detail) if detail else ''}")
+        print(f"  {OK} {label}{(' - ' + detail) if detail else ''}")
         return True
     except _Warn as w:
-        print(f"  {WARN} {label} — {w}")
+        print(f"  {WARN} {label} - {w}")
         return True
     except Exception as e:  # noqa: BLE001
-        print(f"  {BAD} {label} — {e}")
+        print(f"  {BAD} {label} - {e}")
         return False
 
 
@@ -43,14 +43,14 @@ def _imports():
         except Exception:  # noqa: BLE001
             mods.append(m)
     if mods:
-        raise _Warn("modules missing: " + ", ".join(mods) + " — re-run ./setup-voice.sh")
+        raise _Warn("modules missing: " + ", ".join(mods) + " - re-run ./setup-voice.sh")
     # Wake word is an opt-in extra (the `wake` extra), so its absence is normal
     # and should not read as a broken install.
     try:
         __import__("openwakeword")
         return "all deps import, including wake word"
     except Exception:  # noqa: BLE001
-        return "all deps import (wake word not installed — optional, push-to-talk unaffected)"
+        return "all deps import (wake word not installed - optional, push-to-talk unaffected)"
 
 
 def _audio():
@@ -90,7 +90,7 @@ def _weights():
             missing.append(f"{key}={p}")
     if missing:
         raise _Warn(
-            "fine-tuned weights not found yet (train them — gptsovits/train-hal.md): "
+            "fine-tuned weights not found yet (train them - gptsovits/train-hal.md): "
             + "; ".join(missing)
         )
     return "HAL fine-tuned checkpoints present"
@@ -142,7 +142,7 @@ def _brain():
 
 def _claude():
     if not shutil.which(str(config.load().get("claude.command", "claude"))):
-        msg = "Claude Code ('claude') not on PATH — install it from https://claude.com/claude-code"
+        msg = "Claude Code ('claude') not on PATH - install it from https://claude.com/claude-code"
         if _direct():
             raise _Warn(msg + " (direct mode needs it only for long background jobs)")
         raise Exception(msg)
@@ -160,7 +160,7 @@ def _connection():
 
 
 def _voice_profile():
-    """The VRAM profile chosen by setup-voice.sh — separate from the Claude connection."""
+    """The VRAM profile chosen by setup-voice.sh -- separate from the Claude connection."""
     import os
 
     profile = os.environ.get("HALVOICE_PROFILE")
@@ -169,8 +169,8 @@ def _voice_profile():
     tts_dev = os.environ.get("HALVOICE_TTS_DEVICE", "cuda")
     detail = f"speech recognition on {stt_dev}, voice on {tts_dev}"
     if not profile:
-        raise _Warn(f"no voice.conf yet (run ./setup-voice.sh) — defaults: {detail}")
-    return f"{profile} — {detail}"
+        raise _Warn(f"no voice.conf yet (run ./setup-voice.sh) - defaults: {detail}")
+    return f"{profile} - {detail}"
 
 
 def main() -> None:
@@ -191,7 +191,7 @@ def main() -> None:
     if all(results):
         print("All essential checks passed. Run:  ./hal-voice")
         sys.exit(0)
-    print("Some essential checks failed (see ✗ above). Fix those, then re-run doctor.")
+    print("Some essential checks failed (see [ ] above). Fix those, then re-run doctor.")
     sys.exit(1)
 
 

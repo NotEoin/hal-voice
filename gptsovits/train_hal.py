@@ -7,7 +7,7 @@ Replicates exactly what the GPT-SoVITS WebUI does for:
   1C  semantic-token extraction         (3-get-semantic.py)
   then SoVITS training (s2_train.py) and GPT training (s1_train.py).
 
-Run with the gptsovits conda python, from anywhere — it cd's into the GPT-SoVITS dir.
+Run with the gptsovits conda python, from anywhere -- it cd's into the GPT-SoVITS dir.
 """
 
 import glob
@@ -35,7 +35,7 @@ PY = sys.executable
 os.environ["PYTHONPATH"] = f"{GSV}:{GSV / 'GPT_SoVITS'}:" + os.environ.get("PYTHONPATH", "")
 
 # torch >= 2.6 defaults torch.load(weights_only=True), which rejects the pretrained
-# GPT checkpoint (it pickles a pathlib.PosixPath). These are trusted local files —
+# GPT checkpoint (it pickles a pathlib.PosixPath). These are trusted local files --
 # force the legacy full-unpickle behaviour so loading succeeds.
 os.environ["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
 
@@ -65,7 +65,7 @@ SOVITS_DIR = f"SoVITS_weights_{VERSION}"
 GPT_DIR = f"GPT_weights_{VERSION}"
 
 # Single-speaker character voice. train-hal.md: SoVITS ~8 epochs, GPT ~15 epochs.
-# GPT lowered to 12 — fewer epochs = smoother/legato (more epochs → stiff, robotic).
+# GPT lowered to 12 -- fewer epochs = smoother/legato (more epochs -> stiff, robotic).
 SOVITS_EPOCHS = int(os.environ.get("HAL_SOVITS_EPOCHS", 8))
 SOVITS_SAVE_EVERY = 4
 SOVITS_BATCH = 4

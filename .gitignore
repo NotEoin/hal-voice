@@ -1,4 +1,4 @@
-# hal-voice — keep heavy/sensitive artifacts out of git
+# hal-voice -- keep heavy/sensitive artifacts out of git
 .venv/
 __pycache__/
 *.pyc
@@ -9,11 +9,11 @@ voice.conf
 # GPT-SoVITS clone + its big pretrained models
 gptsovits/GPT-SoVITS
 
-# Trained HAL voice (sensitive — do NOT distribute; see voice-data/README.md)
+# Trained HAL voice (sensitive -- do NOT distribute; see voice-data/README.md)
 gptsovits/weights
 
 # ---------------------------------------------------------------------------
-# HAL voice audio — NEVER commit. This is Douglas Rain's performance from the
+# HAL voice audio -- NEVER commit. This is Douglas Rain's performance from the
 # film (copyright Warner Bros. / the Kubrick & Clarke estates). It is restored
 # locally by `voice-data/fetch-voice-lines.py` from a source YOU supply.
 # ---------------------------------------------------------------------------

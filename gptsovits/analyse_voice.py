@@ -270,7 +270,7 @@ def compare(name: str, y: np.ndarray, fp: dict, film_fr: dict) -> dict:
         gaps.append(
             (
                 abs(z),
-                f"{NAMES.get(k, k)}: {v[k]:.1f} {UNITS.get(k, '')} vs film {mean:.1f}±{sd:.1f} (z={z:+.1f})",
+                f"{NAMES.get(k, k)}: {v[k]:.1f} {UNITS.get(k, '')} vs film {mean:.1f}+/-{sd:.1f} (z={z:+.1f})",
             )
         )
     film_ltas, film_sd = np.array(fp["ltas_db"][0]), np.array(fp["ltas_db"][1])

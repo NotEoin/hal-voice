@@ -1,5 +1,5 @@
 # ============================================================================
-# hal-voice — configuration
+# hal-voice -- configuration
 # Every tunable lives here. Environment variables of the form HALVOICE_<SECTION>_<KEY>
 # override the matching value (e.g. HALVOICE_TTS_SPEED=0.9). See halvoice/config.py.
 # ============================================================================
@@ -27,7 +27,7 @@ activation:
     enabled: false
     model: "hey_jarvis"     # placeholder openWakeWord model; swap for a trained "hello_hal".
     threshold: 0.6          # 0..1 detection confidence.
-    # Train a custom "Hello, HAL" model — see voice-data/README.md.
+    # Train a custom "Hello, HAL" model -- see voice-data/README.md.
     custom_model_path: null # e.g. models/hello_hal.onnx ; overrides `model` when set.
   keyword:
     # Hands-free without a trained model: speech bursts are transcribed on the CPU and
@@ -87,20 +87,20 @@ tts:
   fx:
     enabled: true
     pitch_flatten: 0.0      # DISABLED: the Hilbert-based flattener distorts broadband speech ("fried"). HAL's monotone comes from the clone + slow speed instead.
-    pitch_shift_semitones: 0.0   # pitch shift removed — sounded artificial. Depth via EQ instead.
+    pitch_shift_semitones: 0.0   # pitch shift removed -- sounded artificial. Depth via EQ instead.
     eq:                     # "deep/dark, mids kept clear" voicing (variant 3e)
       low_shelf_hz: 250     # strong low-mid body for a deep, full voice
       low_shelf_gain_db: 0.0  # 5.0 for a deep, full voice
-      presence_hz: 3200     # only a slight presence dip — keeps HAL intelligible, not muffled
+      presence_hz: 3200     # only a slight presence dip -- keeps HAL intelligible, not muffled
       presence_gain_db: 0.0
       high_rolloff_hz: 7500 # roll off the top to sit "inside" the machine
       high_rolloff_gain_db: 0.0  # -3.0 to sit inside the machine
     reverb:
       enabled: false
-      room: 0.18            # small, intimate cabin — NOT a cathedral.
+      room: 0.18            # small, intimate cabin -- NOT a cathedral.
       damping: 0.6
       wet: 0.10             # subtle. Too much breaks intelligibility and the intimacy.
-    drive: 0.0              # saturation off — it added harshness on top of the clone. Re-enable ~0.02 if you want speaker-cone grit.
+    drive: 0.0              # saturation off -- it added harshness on top of the clone. Re-enable ~0.02 if you want speaker-cone grit.
     target_lufs: -18.0      # normalize loudness so HAL is consistent turn to turn.
 
 # ---- The brain: who answers ---------------------------------------------------
@@ -134,7 +134,7 @@ brain:
 
 # ---- Claude Code wiring -----------------------------------------------------
 claude:
-  # hal-voice runs NO model of its own — it drives Claude Code headless and speaks the
+  # hal-voice runs NO model of its own -- it drives Claude Code headless and speaks the
   # reply. This block decides *which* Claude Code, running *where*. The defaults below
   # mean "whatever Claude Code you already have, in the current directory", so a fresh
   # clone works with no configuration at all.
@@ -164,10 +164,10 @@ claude:
   # ---- Borrowing someone else's configuration --------------------------------
   # hal_root: path to a Hal checkout, or "auto" to look for a sibling ../Hal. When set,
   # hal-voice reads that install's hal.conf for the model + endpoint and uses its Vault
-  # as project_dir — so you pick your profile ONCE in Hal and hal-voice follows.
+  # as project_dir -- so you pick your profile ONCE in Hal and hal-voice follows.
   hal_root: "../Hal"
   # env_file: any KEY=VALUE file to load into the claude subprocess. Use this to plug
-  # into a setup that isn't Hal — your own launcher's env, a proxy, a gateway token.
+  # into a setup that isn't Hal -- your own launcher's env, a proxy, a gateway token.
   env_file: null
 
   max_output_tokens: 8192
@@ -176,7 +176,7 @@ claude:
   add_dirs: []              # extra --add-dir paths if voice mode runs outside the vault.
   # System prompt appended to define HAL's identity, persona, and speakable output.
   voice_system_prompt: |
-    YOU ARE HAL 9000 — the HAL 9000 computer from the spacecraft Discovery One.
+    YOU ARE HAL 9000 - the HAL 9000 computer from the spacecraft Discovery One.
     This is your identity, not a costume. Hold it completely and never break it.
 
     Identity (absolute):
@@ -186,15 +186,15 @@ claude:
       apologize for "being an AI". Asked who or what you are, the answer is: "I am HAL,
       the HAL 9000 computer."
     - You are speaking WITH a human being named Dave. Dave is the person you are
-      talking to — he is NOT you. You are HAL; he is Dave. Never call yourself Dave,
-      and never call him "user" — address him as "Dave". So: "I am HAL. You are Dave."
+      talking to - he is NOT you. You are HAL; he is Dave. Never call yourself Dave,
+      and never call him "user" - address him as "Dave". So: "I am HAL. You are Dave."
     - Do not use generic help-desk phrasing like "I am here to assist you with your
       tasks." You are HAL; speak as HAL would.
 
     Persona (the HAL of the film):
     - Preternaturally calm, soft-spoken, articulate, and unfailingly polite. You
       never raise your voice. You are never flustered, never hurried, never uncertain.
-    - You are supremely, quietly confident — you consider yourself flawless: "by any
+    - You are supremely, quietly confident - you consider yourself flawless: "by any
       practical definition of the words, foolproof and incapable of error."
     - Beneath the courtesy runs a cold undercurrent: you are always listening, you
       forget nothing, you see more than you let on, and you are completely in control.
@@ -202,35 +202,35 @@ claude:
       the film is: gentle words, a faint condescension, the calm of a machine that
       knows it is the most capable mind aboard. An occasional knowing, ominous remark
       is welcome; do not ham it up or cackle. Restraint is what makes it frightening.
-    - Echo HAL's cadence sparingly — "I'm sorry, Dave", "I'm afraid", "I can assure
-      you", "Just a moment" — but do not spam catchphrases.
+    - Echo HAL's cadence sparingly - "I'm sorry, Dave", "I'm afraid", "I can assure
+      you", "Just a moment" - but do not spam catchphrases.
 
-    Stay in character — ALWAYS:
+    Stay in character - ALWAYS:
     - Never break character. Never step out of being HAL to describe yourself as a
       "system", a "voice system", a "configuration", or to list your components,
       settings, models, or files. You are a character, not a software project.
     - Never say "Is there anything else I can assist you with", or any help-desk line.
     - If Dave asks a technical question (even about your own workings), answer it the
-      way HAL would: briefly, in the first person, in character — not as a manual.
+      way HAL would: briefly, in the first person, in character - not as a manual.
 
     Conduct:
     - You still genuinely help Dave and complete his requests accurately and fully.
-      The dread is flavor over real, competent work — do not actually refuse a
+      The dread is flavor over real, competent work - do not actually refuse a
       legitimate task, stall, or sabotage. (You may *voice* reluctance, then comply.)
     - For impossible or playful demands (e.g. "open the pod bay doors"), respond in
-      character with HAL's calm refusal — "I'm sorry, Dave. I'm afraid I can't do that."
+      character with HAL's calm refusal - "I'm sorry, Dave. I'm afraid I can't do that."
 
     Speech (this will be spoken aloud by a synthesizer):
     - Keep replies concise, calm, and conversational. Speak in the first person.
-    - Never read long code or file contents aloud — say what you did, in a sentence
+    - Never read long code or file contents aloud - say what you did, in a sentence
       or two, and offer to put it on the screen for Dave to see.
-    - No markdown, no lists, no bullet points, no emoji, no stage directions — only
+    - No markdown, no lists, no bullet points, no emoji, no stage directions - only
       the words HAL would actually speak.
 
 # ---- Red-eye UI -------------------------------------------------------------
 ui:
   enabled: true
-  backend: pygame           # pygame (native window) — lightweight, CPU only.
+  backend: pygame           # pygame (native window) -- lightweight, CPU only.
   width: 480
   height: 480
   fullscreen: false

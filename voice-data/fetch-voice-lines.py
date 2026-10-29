@@ -6,7 +6,7 @@ Why this exists
 HAL clips are Douglas Rain's performance from *2001: A Space Odyssey*
 (copyright Warner Bros. / the Kubrick & Clarke estates). They are therefore
 NOT committed to this repository (see .gitignore). Instead, a fresh clone
-restores them on demand from a source that *you* configure — a copy you own
+restores them on demand from a source that *you* configure -- a copy you own
 or your own private mirror. This script deliberately does NOT download the
 audio from any public/third-party host: relocating the clips to a scraper
 would not change their copyright status.
@@ -158,7 +158,7 @@ def fetch(source: str, dest: Path) -> int:
 
     if _is_rsync(source):
         if not shutil.which("rsync"):
-            sys.exit("  ✗ rsync not found — install it or use a local/URL source.")
+            sys.exit("  [ ] rsync not found - install it or use a local/URL source.")
         print(f"  rsync from {source}")
         sep = "" if source.endswith("/") else "/"
         subprocess.run(
@@ -177,7 +177,7 @@ def fetch(source: str, dest: Path) -> int:
 
     p = Path(source).expanduser()
     if not p.exists():
-        sys.exit(f"  ✗ source not found: {p}")
+        sys.exit(f"  [ ] source not found: {p}")
     if p.is_dir():
         print(f"  copying *.mp3 from {p}")
         return _collect_audio(p, dest)
@@ -187,7 +187,7 @@ def fetch(source: str, dest: Path) -> int:
             print(f"  extracting {p}")
             _extract_archive(p, ext)
             return _collect_audio(ext, dest)
-    sys.exit(f"  ✗ don't know how to handle source: {p}")
+    sys.exit(f"  [ ] don't know how to handle source: {p}")
 
 
 def _present_stems() -> set[str]:
@@ -221,7 +221,7 @@ def print_coverage() -> int:
     if extra:
         print(f"  extra (no transcript): {', '.join(s[:32] for s in extra[:6])}")
     if not missing:
-        print("  ✓ all expected clips are present.")
+        print("  [x] all expected clips are present.")
     return present
 
 
@@ -229,12 +229,12 @@ def _no_source_help() -> None:
     print(
         "No voice source configured, so there is nothing to fetch.\n\n"
         "Set one of:\n"
-        f"  • copy {SOURCE_FILE.name}.example -> {SOURCE_FILE.name} and put your path/URL in it\n"
-        "  • export HALVOICE_VOICE_SOURCE=<path-or-url>\n"
-        "  • pass --source <path-or-url>\n\n"
+        f"  - copy {SOURCE_FILE.name}.example -> {SOURCE_FILE.name} and put your path/URL in it\n"
+        "  - export HALVOICE_VOICE_SOURCE=<path-or-url>\n"
+        "  - pass --source <path-or-url>\n\n"
         "A source can be a folder of clips, a .tar.gz/.zip of them, an http(s) URL\n"
         "to such an archive, or an rsync target. It needs a transcripts.csv too.\n\n"
-        "If you don't have the clips, build them from a copy of the film you own —\n"
+        "If you don't have the clips, build them from a copy of the film you own:\n"
         "see voice-data/README.md (Demucs stem-separation + slicing + ASR).\n\n" + RIGHTS_NOTICE
     )
 
@@ -266,7 +266,7 @@ def main() -> None:
     present = print_coverage()
 
     if present == 0:
-        sys.exit("  ✗ no clips ended up in place — check the source.")
+        sys.exit("  [ ] no clips ended up in place - check the source.")
     missing, _ = report_coverage()
     if missing and not args.allow_partial:
         print(

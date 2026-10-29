@@ -1,10 +1,10 @@
-"""The HAL-9000 red eye — a pygame window whose lens reacts to the interaction state.
+"""The HAL-9000 red eye -- a pygame window whose lens reacts to the interaction state.
 
 States (driven by StateBus from the loop):
-  idle      — slow, shallow "breathing" glow.
-  listening — bright, steady, fully open (HAL is attending to you).
-  thinking  — slow irregular flicker (HAL is… considering).
-  speaking  — the lens pulses with the audio envelope (level 0..1 from the player).
+  idle      -- slow, shallow "breathing" glow.
+  listening -- bright, steady, fully open (HAL is attending to you).
+  thinking  -- slow irregular flicker (HAL is... considering).
+  speaking  -- the lens pulses with the audio envelope (level 0..1 from the player).
 
 Pure cosmetic, CPU-only. If pygame or a display is unavailable, the loop runs headless.
 Run standalone to preview the animation:  python -m halvoice.ui_eye --demo

@@ -2,7 +2,7 @@
 
 Pipeline: capture 16 kHz mono frames -> webrtcvad trims to the spoken segment ->
 faster-whisper transcribes. Device and precision come from the profile chosen by
-setup-voice.sh — CPU on the `12gb` and `cloud` profiles, so the GPU stays free.
+setup-voice.sh -- CPU on the `12gb` and `cloud` profiles, so the GPU stays free.
 `record_utterance()` blocks until speech stops (trailing silence) or the
 max-utterance cap is reached.
 """
@@ -44,7 +44,7 @@ class Recorder:
 
         Two modes:
           * hold-to-talk (hold_check given): record ONLY while hold_check() is True
-            (the push-to-talk key is held). Stops the instant the key is released —
+            (the push-to-talk key is held). Stops the instant the key is released --
             no VAD-silence guessing, so HAL responds immediately on release.
           * VAD (hold_check None): wait for speech, stop after `silence_ms` of trailing
             silence (used by wake-word activation and the `listen` one-shot).
@@ -233,7 +233,7 @@ def listen_once(on_first_voice=None, max_utterance_s: float | None = None) -> st
 
 def main() -> None:
     once = "--once" in sys.argv
-    print("Listening… speak now." if once else "Listening (Ctrl-C to stop)…", file=sys.stderr)
+    print("Listening... speak now." if once else "Listening (Ctrl-C to stop)...", file=sys.stderr)
     while True:
         text = listen_once()
         print(text)

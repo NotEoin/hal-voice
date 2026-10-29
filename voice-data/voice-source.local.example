@@ -1,14 +1,14 @@
-# hal-voice — where to restore HAL's voice clips from.
+# hal-voice -- where to restore HAL's voice clips from.
 #
 # Copy this file to  voice-source.local  (that name is git-ignored) and put a
 # single source on one uncommented line. fetch-voice-lines.py reads the first
 # non-comment line. You can also set $HALVOICE_VOICE_SOURCE or pass --source.
 #
 # A source can be any ONE of:
-#   • a local folder of HAL *.mp3 clips        /home/you/hal-clips
-#   • a local archive of them                  /home/you/hal-clips.tar.gz
-#   • an http(s) URL to such an archive        https://my-private-bucket/hal-clips.tar.gz
-#   • an rsync target                          you@host:/srv/hal-clips/
+#   - a local folder of HAL *.mp3 clips        /home/you/hal-clips
+#   - a local archive of them                  /home/you/hal-clips.tar.gz
+#   - an http(s) URL to such an archive        https://my-private-bucket/hal-clips.tar.gz
+#   - an rsync target                          you@host:/srv/hal-clips/
 #
 # Use only audio you legally own / have the right to use. Keep it local; do not
 # redistribute the clips or any voice model trained from them.

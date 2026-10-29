@@ -23,7 +23,7 @@ if [ ! -d "$GPTSOVITS_DIR" ]; then
 fi
 
 # Voice profile (written by ../setup-voice.sh). Decides whether the engine runs on the
-# GPU or the CPU — GPT-SoVITS ships configured for CUDA and cannot start without it.
+# GPU or the CPU -- GPT-SoVITS ships configured for CUDA and cannot start without it.
 VOICE_CONF="${HALVOICE_CONF:-$HERE/../voice.conf}"
 if [ -f "$VOICE_CONF" ]; then
   # shellcheck disable=SC1090
@@ -35,7 +35,7 @@ TTS_HALF="${HALVOICE_TTS_HALF:-true}"
 cd "$GPTSOVITS_DIR" || exit 1
 
 # torch >= 2.6 defaults torch.load(weights_only=True); the checkpoints pickle a
-# pathlib.PosixPath. They are trusted local files — load them fully.
+# pathlib.PosixPath. They are trusted local files -- load them fully.
 export TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1
 
 # Prefer the repo's own venv/conda env if present; otherwise activate the conda
@@ -82,13 +82,13 @@ PYEOF
 ARGS=(api_v2.py -a "$HOST" -p "$PORT")
 
 # api_v2 reads device, precision AND its startup weights from the `custom:` block of
-# tts_infer.yaml, with no CLI flag for any of them — so apply them here before starting.
+# tts_infer.yaml, with no CLI flag for any of them -- so apply them here before starting.
 # Idempotent. The weight paths matter because that block stores ABSOLUTE paths: a
 # GPT-SoVITS checkout that has been copied or moved will otherwise load the weights of
 # whatever install wrote it last. (hal-voice hot-swaps the correct ones on first synth,
 # so this is about the server being self-consistent from the moment it starts.)
 TTS_DEVICE="$TTS_DEVICE" TTS_HALF="$TTS_HALF" GPT_W="$GPT_W" SOVITS_W="$SOVITS_W" \
-  "$PY" - <<'PYEOF' || echo "  ! could not update tts_infer.yaml — check it by hand"
+  "$PY" - <<'PYEOF' || echo "  ! could not update tts_infer.yaml - check it by hand"
 import os, pathlib
 try:
     import yaml
@@ -122,7 +122,7 @@ PYEOF
 
 echo "Starting GPT-SoVITS api_v2 on http://$HOST:$PORT"
 [ -f "$GPT_W" ] && echo "  GPT weights:    $GPT_W (hot-swapped by hal-voice on first synth)" \
-                || echo "  GPT weights:    (not trained yet — see gptsovits/train-hal.md)"
+                || echo "  GPT weights:    (not trained yet - see gptsovits/train-hal.md)"
 [ -f "$SOVITS_W" ] && echo "  SoVITS weights: $SOVITS_W (hot-swapped by hal-voice on first synth)" \
                    || echo "  SoVITS weights: (not trained yet)"
 exec "$PY" "${ARGS[@]}"

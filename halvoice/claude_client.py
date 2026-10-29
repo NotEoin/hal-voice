@@ -37,7 +37,7 @@ class ClaudeSession:
     def __init__(self, cwd: str | None = None) -> None:
         cfg = config.load()
         self.c = cfg.claude
-        # Which Claude Code, and where — see halvoice/connect.py for the full order.
+        # Which Claude Code, and where -- see halvoice/connect.py for the full order.
         self.conn = connect.resolve()
         self.cwd = cwd or self.conn.project_dir
         self.session_id: str | None = None
@@ -131,7 +131,7 @@ class ClaudeSession:
                             emitted = len(final_text)
                             yield new
 
-                # Final assembled assistant message — yield any tail we didn't stream.
+                # Final assembled assistant message -- yield any tail we didn't stream.
                 elif etype == "assistant":
                     msg = evt.get("message", {}) or {}
                     text = "".join(

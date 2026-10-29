@@ -8,7 +8,7 @@ Public API:
   synth(text) -> (audio, sr)   synthesize + FX, no playback (used by the MCP server).
   Player                        small playback helper with stop() for barge-in.
 
-The HAL pacing trick: long replies are split into sentences and streamed — we start
+The HAL pacing trick: long replies are split into sentences and streamed -- we start
 speaking sentence 1 while sentence 2 synthesizes, which hides CPU TTS latency.
 """
 
@@ -98,12 +98,12 @@ class GPTSoVITSClient:
         except Exception as e:  # noqa: BLE001
             # Not fatal: the server may already have them baked in via -g/-s flags.
             log.warning(
-                "could not hot-swap weights (%s) — assuming server already has HAL loaded", e
+                "could not hot-swap weights (%s) - assuming server already has HAL loaded", e
             )
             self._weights_set = True
 
     def synth_raw(self, text: str) -> tuple[np.ndarray, int]:
-        """POST one text chunk, return (mono float32 audio, sample_rate) — no FX."""
+        """POST one text chunk, return (mono float32 audio, sample_rate) -- no FX."""
         import requests
         import soundfile as sf
 
@@ -192,7 +192,7 @@ def set_speed(speed: float) -> None:
 
 
 def synth_stream(text: str) -> Iterator[tuple[np.ndarray, int]]:
-    """Yield (audio, sr) per sentence, FX applied — lets the loop start playback early."""
+    """Yield (audio, sr) per sentence, FX applied -- lets the loop start playback early."""
     client = _shared_client()
     for chunk in split_sentences(text):
         audio, sr = client.synth_raw(chunk)

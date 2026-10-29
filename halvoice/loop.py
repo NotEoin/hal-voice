@@ -99,14 +99,14 @@ class VoiceLoop:
         try:
             from .ui_eye import RedEye
         except Exception as e:  # noqa: BLE001
-            log.warning("red-eye UI unavailable (%s) — running headless", e)
+            log.warning("red-eye UI unavailable (%s) - running headless", e)
             return
 
         def run():
             try:
                 RedEye(self.bus).run()
             except Exception as e:  # noqa: BLE001
-                log.warning("red-eye UI crashed (%s) — continuing headless", e)
+                log.warning("red-eye UI crashed (%s) - continuing headless", e)
 
         self._ui_thread = threading.Thread(target=run, daemon=True)
         self._ui_thread.start()
@@ -210,7 +210,7 @@ class VoiceLoop:
         hold_check = None
         if trigger == "push_to_talk" and self.activator.ptt is not None:
             hold_check = self.activator.ptt.pressed.is_set
-            log.info("listening… (hold to talk; release to send)")
+            log.info("listening... (hold to talk; release to send)")
         audio = self.recorder.record_utterance(hold_check=hold_check)
         return self.transcriber.transcribe(audio)
 
@@ -251,7 +251,7 @@ class VoiceLoop:
                 if not self.ears:
                     time.sleep(0.02)
         except KeyboardInterrupt:
-            log.info("shutting down…")
+            log.info("shutting down...")
         finally:
             if self.ears:
                 self.ears.stop()

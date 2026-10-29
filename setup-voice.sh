@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# hal-voice — setup (Ubuntu / Linux)
+# hal-voice -- setup (Ubuntu / Linux)
 # Installs the system audio libs, a Python venv with hal-voice's deps, and (optionally)
 # GPT-SoVITS as a separate inference server. Safe to re-run (idempotent).
 #
@@ -27,9 +27,9 @@
 #
 # 2. WHO SPEAKS?  That is what --profile below controls, and it is about VRAM:
 #
-#      24gb   TTS on GPU (fp16) + Whisper on GPU     — fastest
-#      12gb   TTS on GPU (fp16) + Whisper on CPU     — leaves room for a local LLM
-#      cloud  everything on CPU                      — no NVIDIA GPU needed at all
+#      24gb   TTS on GPU (fp16) + Whisper on GPU     -- fastest
+#      12gb   TTS on GPU (fp16) + Whisper on CPU     -- leaves room for a local LLM
+#      cloud  everything on CPU                      -- no NVIDIA GPU needed at all
 #
 #    The 'cloud' profile is not cosmetic: GPT-SoVITS ships configured for CUDA and
 #    will fail on a machine without it, so this rewrites its device settings.
@@ -65,16 +65,16 @@ done
 
 c_blue=$'\033[1;36m'; c_yellow=$'\033[1;33m'; c_green=$'\033[1;32m'; c_red=$'\033[1;31m'; c_off=$'\033[0m'
 log()  { printf '\n%s==> %s%s\n' "$c_blue" "$*" "$c_off"; }
-ok()   { printf '%s  ✓ %s%s\n' "$c_green" "$*" "$c_off"; }
+ok()   { printf '%s  [x] %s%s\n' "$c_green" "$*" "$c_off"; }
 warn() { printf '%s  ! %s%s\n' "$c_yellow" "$*" "$c_off"; }
-err()  { printf '%s  ✗ %s%s\n' "$c_red" "$*" "$c_off"; }
+err()  { printf '%s  [ ] %s%s\n' "$c_red" "$*" "$c_off"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
 SUDO=""
 if [ "$(id -u)" -ne 0 ]; then have sudo && SUDO="sudo"; fi
 
 printf '%s\n' "============================================================"
-printf '   hal-voice — HAL 9000 voice for Claude Code\n'
+printf '   hal-voice - HAL 9000 voice for Claude Code\n'
 printf '   Root: %s\n' "$VOICE_ROOT"
 printf '%s\n' "============================================================"
 
@@ -107,9 +107,9 @@ else
   else                                 PROFILE="12gb"   # any CUDA card can host the ~2GB TTS
   fi
   if [ -n "$VRAM_MIB" ]; then
-    log "Detected $(( VRAM_MIB / 1024 ))GB of VRAM → suggesting the '$PROFILE' voice profile"
+    log "Detected $(( VRAM_MIB / 1024 ))GB of VRAM -> suggesting the '$PROFILE' voice profile"
   else
-    log "No NVIDIA GPU detected → suggesting the 'cloud' voice profile (everything on CPU)"
+    log "No NVIDIA GPU detected -> suggesting the 'cloud' voice profile (everything on CPU)"
   fi
   if [ "$ASSUME_YES" -ne 1 ]; then
     printf '\n  24gb   voice + speech recognition both on the GPU\n'
@@ -128,11 +128,11 @@ log "Installing system audio libraries (PortAudio, ffmpeg, libsndfile)"
 if have apt-get; then
   $SUDO apt-get update -y >/dev/null 2>&1
   $SUDO apt-get install -y portaudio19-dev libsndfile1 ffmpeg python3-venv python3-dev build-essential \
-    && ok "system audio deps installed" || warn "some system deps failed — install manually if audio errors appear"
+    && ok "system audio deps installed" || warn "some system deps failed - install manually if audio errors appear"
   # SDL bits so the pygame red-eye window can open
   $SUDO apt-get install -y libsdl2-2.0-0 libsdl2-image-2.0-0 >/dev/null 2>&1 && ok "SDL (pygame) libs present" || true
 else
-  warn "apt-get not found — install portaudio19-dev, libsndfile1, ffmpeg yourself"
+  warn "apt-get not found - install portaudio19-dev, libsndfile1, ffmpeg yourself"
 fi
 
 # --- 2. Python venv + deps ---------------------------------------------------
@@ -147,7 +147,7 @@ find_python() {
   for candidate in python3.12 python3.11; do
     if have "$candidate"; then echo "$candidate"; return; fi
   done
-  # Nothing suitable on PATH — is the system python itself in range?
+  # Nothing suitable on PATH -- is the system python itself in range?
   if have python3; then
     if python3 -c 'import sys; sys.exit(0 if (3,11) <= sys.version_info < (3,13) else 1)' 2>/dev/null; then
       echo "python3"; return
@@ -172,7 +172,7 @@ if [ -z "$PY_BIN" ]; then
   fi
 fi
 
-# Reuse an existing environment if it is still usable — re-running this script should be
+# Reuse an existing environment if it is still usable -- re-running this script should be
 # cheap and safe. (`conda create -p` errors out on an existing prefix, so this is not
 # merely an optimisation.)
 REUSED=0
@@ -181,7 +181,7 @@ if [ -x "$VENV/bin/python" ]; then
     ok "Reusing existing environment at $VENV ($("$VENV/bin/python" -V 2>&1))"
     REUSED=1
   else
-    warn "Existing environment is $("$VENV/bin/python" -V 2>&1), which is out of range — rebuilding"
+    warn "Existing environment is $("$VENV/bin/python" -V 2>&1), which is out of range - rebuilding"
     rm -rf "$VENV"
   fi
 fi
@@ -218,7 +218,7 @@ if [ "$DO_GPTSOVITS" -eq 1 ]; then
     git clone https://github.com/RVC-Boss/GPT-SoVITS "$GPTSOVITS_DIR" \
       && git -C "$GPTSOVITS_DIR" checkout --quiet "$GPTSOVITS_COMMIT" \
       && ok "cloned GPT-SoVITS at ${GPTSOVITS_COMMIT:0:7}" \
-      || warn "git clone failed — clone it manually into $GPTSOVITS_DIR"
+      || warn "git clone failed - clone it manually into $GPTSOVITS_DIR"
   elif [ "$(git -C "$GPTSOVITS_DIR" rev-parse HEAD 2>/dev/null)" = "$GPTSOVITS_COMMIT" ]; then
     ok "GPT-SoVITS already cloned at ${GPTSOVITS_COMMIT:0:7}"
   else
@@ -236,12 +236,12 @@ fi
 
 # --- 3b. Optionally wire this to an existing Claude Code setup ---------------
 # Writes claude.hal_root into config.yaml. From then on hal-voice reads that install's
-# hal.conf for its model + endpoint, and uses its Vault as the working directory — so
+# hal.conf for its model + endpoint, and uses its Vault as the working directory -- so
 # switching Hal between 24gb/12gb/cloud switches hal-voice too, with nothing to remember.
 if [ -n "$HAL_ROOT_ARG" ]; then
   log "Wiring hal-voice to the Hal checkout at '$HAL_ROOT_ARG'"
   if have python3; then
-    HAL_ROOT_ARG="$HAL_ROOT_ARG" python3 - "$VOICE_ROOT/config.yaml" <<'PY' && ok "config.yaml: claude.hal_root set" || warn "Could not update config.yaml — set claude.hal_root by hand"
+    HAL_ROOT_ARG="$HAL_ROOT_ARG" python3 - "$VOICE_ROOT/config.yaml" <<'PY' && ok "config.yaml: claude.hal_root set" || warn "Could not update config.yaml - set claude.hal_root by hand"
 import os, pathlib, re, sys
 p = pathlib.Path(sys.argv[1])
 text = p.read_text(encoding="utf-8")
@@ -253,14 +253,14 @@ if not n:
 p.write_text(new, encoding="utf-8")
 PY
   else
-    warn "python3 not found — set claude.hal_root in config.yaml by hand"
+    warn "python3 not found - set claude.hal_root in config.yaml by hand"
   fi
 fi
 
 # --- 3c. Write voice.conf (the profile the launcher and run-api.sh read) -----
 log "Writing $CONF_FILE"
 cat > "$CONF_FILE" <<EOF
-# hal-voice — resolved voice profile. Generated by setup-voice.sh on $(date -u +%Y-%m-%dT%H:%MZ).
+# hal-voice -- resolved voice profile. Generated by setup-voice.sh on $(date -u +%Y-%m-%dT%H:%MZ).
 # Safe to edit by hand; re-running setup-voice.sh overwrites it. Git-ignored: it records
 # what YOUR machine can do, not anything about the project.
 #
