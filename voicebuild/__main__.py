@@ -20,6 +20,9 @@ from pathlib import Path
 
 from . import build, media
 
+# The same text as the README section of that name; tests/test_disclaimer.py keeps them equal.
+DISCLAIMER = (Path(__file__).parent / "disclaimer.md").read_text(encoding="utf-8")
+
 DROP = build.ROOT / "voice-data" / "film"
 GPU_STAGES = {"find", "clean", "train", "select"}
 # Stopping Hal's units waits for their own stop timeouts (15 s each).
@@ -175,6 +178,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(
         prog="make-hal-voice",
         description=__doc__,
+        epilog=DISCLAIMER,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     ap.add_argument(

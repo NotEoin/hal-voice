@@ -1,5 +1,8 @@
 # Build HAL's voice from the film
 
+> Read [About the film voice pipeline](README.md#about-the-film-voice-pipeline) first: it says what
+> you may use this for and what you must not do with the result.
+
 `./make-hal-voice` turns your copy of *2001: A Space Odyssey* into HAL's voice for hal-voice. It
 finds every line HAL speaks clearly, cleans it, trains GPT-SoVITS on the result and installs the
 best checkpoint. This page covers what it needs, how to run it, and what each stage does.
