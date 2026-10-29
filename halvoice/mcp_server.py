@@ -18,21 +18,19 @@ Tools:
 
 from __future__ import annotations
 
-import os
-
 try:
-    from mcp.server.fastmcp import FastMCP
-except ModuleNotFoundError:
+    from mcp.server import MCPServer
+except ImportError:
     raise SystemExit(
-        "The 'mcp' package isn't installed in this environment. Install hal-voice's deps:\n"
+        "hal-voice needs the 'mcp' package, version 2.3 or later (MCPServer). Install it with:\n"
         "  ./setup-voice.sh   (or: pip install -e .)")
 
-from . import config, tts
+from . import tts
 from .stt import listen_once
 from .util import get_logger
 
 log = get_logger(__name__)
-mcp = FastMCP("hal-voice")
+mcp = MCPServer("hal-voice")
 
 
 @mcp.tool()
@@ -59,19 +57,10 @@ def listen(seconds: int = 30) -> str:
     stops talking (or `seconds` elapse), then returns the transcript. `seconds` caps the
     recording length.
     """
-    prev = os.environ.get("HALVOICE_AUDIO_MAX_UTTERANCE_S")
-    os.environ["HALVOICE_AUDIO_MAX_UTTERANCE_S"] = str(int(seconds))
-    config.load(force=True)
     try:
-        text = listen_once()
+        text = listen_once(max_utterance_s=int(seconds))
     except Exception as e:  # noqa: BLE001
         return f"Could not listen (is a microphone available?): {e}"
-    finally:
-        if prev is None:
-            os.environ.pop("HALVOICE_AUDIO_MAX_UTTERANCE_S", None)
-        else:
-            os.environ["HALVOICE_AUDIO_MAX_UTTERANCE_S"] = prev
-        config.load(force=True)
     return text or "(heard nothing)"
 
 
@@ -81,8 +70,7 @@ def set_voice_speed(speed: float) -> str:
     slower and more deliberate (0.85–0.95 is most HAL-like), higher is faster. Range 0.7–1.2.
     """
     speed = max(0.7, min(1.2, float(speed)))
-    os.environ["HALVOICE_TTS_SPEED"] = str(speed)
-    config.load(force=True)
+    tts.set_speed(speed)
     return f"HAL speaking rate set to {speed:.2f}."
 
 

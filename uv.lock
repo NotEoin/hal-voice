@@ -374,7 +374,7 @@ wake = [
 [package.metadata]
 requires-dist = [
     { name = "faster-whisper", specifier = ">=1.0,<2" },
-    { name = "mcp", specifier = ">=1.2.0" },
+    { name = "mcp", specifier = ">=2.3,<3" },
     { name = "numpy", specifier = ">=1.24,<2.0" },
     { name = "openwakeword", marker = "extra == 'wake'", specifier = ">=0.6.0" },
     { name = "pedalboard", specifier = ">=0.9.0" },

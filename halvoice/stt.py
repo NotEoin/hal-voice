@@ -28,13 +28,16 @@ MIN_LOGPROB = -1.0    # and so are segments it was very unsure of
 class Recorder:
     """Captures a single utterance, returning float32 mono audio at the STT sample rate."""
 
-    def __init__(self) -> None:
+    def __init__(self, max_utterance_s: float | None = None) -> None:
+        """`max_utterance_s` replaces the configured recording cap for this recorder only."""
         cfg = config.load()
         self.sr = int(cfg.get("audio.sample_rate", 16000))
         self.device = cfg.get("audio.input_device")
         self.vad_level = int(cfg.get("audio.vad_aggressiveness", 2))
         self.silence_ms = int(cfg.get("audio.silence_ms", 800))
-        self.max_s = float(cfg.get("audio.max_utterance_s", 30))
+        self.max_s = float(
+            max_utterance_s if max_utterance_s is not None else cfg.get("audio.max_utterance_s", 30)
+        )
 
     def record_utterance(self, on_first_voice=None, hold_check=None) -> np.ndarray:
         """Capture one utterance as float32 mono.
@@ -198,9 +201,12 @@ class Transcriber:
         return " ".join(kept).strip()
 
 
-def listen_once(on_first_voice=None) -> str:
-    """Record one utterance and return its transcript (used by the loop and `hal-voice listen`)."""
-    audio = Recorder().record_utterance(on_first_voice=on_first_voice)
+def listen_once(on_first_voice=None, max_utterance_s: float | None = None) -> str:
+    """Record one utterance and return its transcript (used by the loop and `hal-voice listen`).
+
+    `max_utterance_s` caps this recording without touching the configuration.
+    """
+    audio = Recorder(max_utterance_s).record_utterance(on_first_voice=on_first_voice)
     return Transcriber().transcribe(audio)
 
 

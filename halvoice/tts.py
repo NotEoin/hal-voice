@@ -180,6 +180,11 @@ def _shared_client() -> "GPTSoVITSClient":
     return _client
 
 
+def set_speed(speed: float) -> None:
+    """Sets the speaking rate of the shared client for later speech in this process."""
+    _shared_client().speed = float(speed)
+
+
 def synth_stream(text: str) -> Iterator[tuple[np.ndarray, int]]:
     """Yield (audio, sr) per sentence, FX applied — lets the loop start playback early."""
     client = _shared_client()
