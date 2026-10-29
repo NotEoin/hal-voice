@@ -45,7 +45,7 @@ def _imports():
     if mods:
         raise _Warn("modules missing: " + ", ".join(mods)
                     + " — re-run ./setup-voice.sh")
-    # Wake word is an opt-in extra (requirements-wake.txt), so its absence is normal
+    # Wake word is an opt-in extra (the `wake` extra), so its absence is normal
     # and should not read as a broken install.
     try:
         __import__("openwakeword")

@@ -94,7 +94,7 @@ class RedEye:
                            max(2, int(core_r * 0.10)))
 
 
-def _demo() -> None:
+def demo() -> None:
     """Cycle through the states so you can see the animation without the full loop."""
     bus = StateBus()
 
@@ -120,7 +120,7 @@ def _demo() -> None:
 
 def main() -> None:
     if "--demo" in sys.argv:
-        _demo()
+        demo()
     else:
         RedEye(StateBus()).run()
 

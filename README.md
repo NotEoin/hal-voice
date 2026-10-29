@@ -2,7 +2,7 @@
 
 ![licence](https://img.shields.io/badge/licence-MIT-blue?style=flat-square)
 ![platform](https://img.shields.io/badge/platform-Linux-lightgrey?style=flat-square)
-![python](https://img.shields.io/badge/python-3.10--3.12-blue?style=flat-square)
+![python](https://img.shields.io/badge/python-3.11--3.12-blue?style=flat-square)
 ![voice](https://img.shields.io/badge/voice-100%25%20local-success?style=flat-square)
 
 > *"I am completely operational, and all my circuits are functioning perfectly."*
@@ -165,7 +165,7 @@ It still runs on its own (`git clone https://github.com/NotEoin/hal-voice.git`, 
 | | |
 |---|---|
 | **OS** | Linux, with PulseAudio or PipeWire |
-| **Python** | 3.10–3.12, and 3.11 or later for `direct` mode. **Not 3.13+** — numpy 1.x has no wheels there, and parts of the audio stack still need it. `setup-voice.sh` finds a suitable interpreter, or falls back to conda |
+| **Python** | 3.11 or 3.12. **Not 3.13+**: numpy 1.x has no wheels there, and parts of the audio stack still need it. `setup-voice.sh` finds a suitable interpreter, or falls back to conda |
 | **System packages** | PortAudio and FFmpeg |
 | **GPU** | Optional — see the profiles below. Voice synthesis wants ~2GB of VRAM but will run on CPU |
 | **Hardware** | A working microphone and speakers |

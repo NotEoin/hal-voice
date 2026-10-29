@@ -13,7 +13,7 @@
 #   ./setup-voice.sh --hal ../Hal     # also wire it to a Hal checkout (see below)
 #   ./setup-voice.sh --hal auto       # ...or find a sibling Hal automatically
 #
-# Needs Python 3.10–3.12 (not 3.13+ — numpy 1.x has no wheels there). It looks for one
+# Needs Python 3.11 or 3.12 (not 3.13+, numpy 1.x has no wheels there). It looks for one
 # and falls back to conda; override with HALVOICE_PYTHON=/path/to/python3.11.
 #
 # TWO SEPARATE QUESTIONS, and it matters that they're separate:
@@ -136,7 +136,7 @@ else
 fi
 
 # --- 2. Python venv + deps ---------------------------------------------------
-# The stack needs Python 3.10–3.12. On 3.13+ the install fails deep inside pip with a
+# The stack needs Python 3.11 or 3.12. On 3.13+ the install fails deep inside pip with a
 # confusing wall of version constraints, because numpy 1.x publishes no wheels past
 # cp312 and several audio libraries here still require numpy 1.x. Many current distros
 # ship 3.13 as `python3`, so pick an interpreter deliberately rather than assuming.
@@ -144,12 +144,12 @@ find_python() {
   local candidate
   # An explicit choice always wins.
   if [ -n "${HALVOICE_PYTHON:-}" ]; then echo "$HALVOICE_PYTHON"; return; fi
-  for candidate in python3.12 python3.11 python3.10; do
+  for candidate in python3.12 python3.11; do
     if have "$candidate"; then echo "$candidate"; return; fi
   done
   # Nothing suitable on PATH — is the system python itself in range?
   if have python3; then
-    if python3 -c 'import sys; sys.exit(0 if (3,10) <= sys.version_info < (3,13) else 1)' 2>/dev/null; then
+    if python3 -c 'import sys; sys.exit(0 if (3,11) <= sys.version_info < (3,13) else 1)' 2>/dev/null; then
       echo "python3"; return
     fi
   fi
@@ -161,11 +161,11 @@ USE_CONDA=0
 if [ -z "$PY_BIN" ]; then
   # Fall back to conda, which can materialise a suitable interpreter on demand.
   if have conda; then
-    warn "No Python 3.10–3.12 found ($(python3 -V 2>&1) is too new for this stack)"
+    warn "No Python 3.11 or 3.12 found ($(python3 -V 2>&1) is too new for this stack)"
     log "Falling back to conda to create a Python 3.11 environment"
     USE_CONDA=1
   else
-    err "hal-voice needs Python 3.10, 3.11 or 3.12 — found $(python3 -V 2>&1)."
+    err "hal-voice needs Python 3.11 or 3.12, found $(python3 -V 2>&1)."
     err "Install one (e.g. 'sudo apt install python3.12 python3.12-venv'), or install"
     err "conda and re-run. To force a specific interpreter: HALVOICE_PYTHON=/path/to/python3.11 ./setup-voice.sh"
     exit 1
@@ -177,7 +177,7 @@ fi
 # merely an optimisation.)
 REUSED=0
 if [ -x "$VENV/bin/python" ]; then
-  if "$VENV/bin/python" -c 'import sys; sys.exit(0 if (3,10) <= sys.version_info < (3,13) else 1)' 2>/dev/null; then
+  if "$VENV/bin/python" -c 'import sys; sys.exit(0 if (3,11) <= sys.version_info < (3,13) else 1)' 2>/dev/null; then
     ok "Reusing existing environment at $VENV ($("$VENV/bin/python" -V 2>&1))"
     REUSED=1
   else
@@ -200,14 +200,14 @@ fi
 VENV_PY="$VENV/bin/python"
 "$VENV_PY" -m pip install --upgrade pip >/dev/null 2>&1
 log "Installing hal-voice Python dependencies"
-"$VENV_PY" -m pip install -r "$VOICE_ROOT/requirements.txt" \
+"$VENV_PY" -m pip install -e "$VOICE_ROOT[ui]" \
   && ok "Python deps installed" || { err "pip install failed"; exit 1; }
 
 if [ "$DO_WAKE" -eq 1 ]; then
   log "Installing optional wake-word dependencies"
-  "$VENV_PY" -m pip install -r "$VOICE_ROOT/requirements-wake.txt" \
+  "$VENV_PY" -m pip install -e "$VOICE_ROOT[wake]" \
     && ok "wake-word deps installed" \
-    || warn "wake-word deps failed (tflite-runtime has limited platform support) — push-to-talk still works"
+    || warn "wake-word deps failed (tflite-runtime has limited platform support) - push-to-talk still works"
 fi
 
 # --- 3. GPT-SoVITS inference server (separate stack) ------------------------

@@ -250,9 +250,10 @@ def resolve() -> Connection:
                       inherited=inherited, **settings)
 
 
-if __name__ == "__main__":  # `python -m halvoice.connect` explains what it resolved
+def explain() -> None:
+    """Prints which Claude Code setup hal-voice resolved, and where each setting came from."""
     conn = resolve()
-    print("hal-voice → Claude Code connection")
+    print("hal-voice -> Claude Code connection")
     print("----------------------------------")
     print(f"  target       : {conn.describe()}")
     print(f"  project dir  : {conn.project_dir}")
@@ -273,3 +274,7 @@ if __name__ == "__main__":  # `python -m halvoice.connect` explains what it reso
         print("  inherited    :")
         for k, v in sorted(still_applies.items()):
             print(f"      {k}={_mask(k, v)}")
+
+
+if __name__ == "__main__":
+    explain()

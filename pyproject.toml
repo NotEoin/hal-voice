@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hal-voice"
+version = "0.1.0"
+description = "A HAL 9000 voice interface: speak to it, it answers aloud"
+readme = "README.md"
+license = { file = "LICENSE" }
+# numpy 1.x wheels stop at cp312, and several audio libraries still need numpy 1.x
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "PyYAML>=6.0,<7",
+  "numpy>=1.24,<2.0",
+  "sounddevice>=0.4.6",
+  "soundfile>=0.12.1",
+  # the -wheels fork ships prebuilt binaries; plain webrtcvad needs a C compiler
+  "webrtcvad-wheels>=2.0.14",
+  "faster-whisper>=1.0,<2",
+  "pynput>=1.7.6",
+  "scipy>=1.10",
+  "pyloudnorm>=0.1.1",
+  "pedalboard>=0.9.0",
+  "mcp>=1.2.0",
+  "requests>=2.31,<3",
+]
+
+[project.optional-dependencies]
+# tflite-runtime is the least portable dependency here, so wake word stays opt-in
+wake = ["openwakeword>=0.6.0"]
+ui = ["pygame>=2.5.0"]
+test = ["pytest>=8.3,<10"]
+
+[project.scripts]
+hal-voice = "halvoice.cli:main"
+
+[tool.setuptools]
+packages = ["halvoice", "voicebuild", "voicetest"]
+
+[tool.setuptools.package-data]
+voicetest = ["script.txt", "tools.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: builds and installs a wheel; slow, run on request (-m integration)"]
+addopts = "-m 'not integration'"

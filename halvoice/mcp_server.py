@@ -25,7 +25,7 @@ try:
 except ModuleNotFoundError:
     raise SystemExit(
         "The 'mcp' package isn't installed in this environment. Install hal-voice's deps:\n"
-        "  ./setup-voice.sh   (or: pip install -r requirements.txt)")
+        "  ./setup-voice.sh   (or: pip install -e .)")
 
 from . import config, tts
 from .stt import listen_once
@@ -86,5 +86,10 @@ def set_voice_speed(speed: float) -> str:
     return f"HAL speaking rate set to {speed:.2f}."
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Runs the MCP server on stdio."""
     mcp.run()
+
+
+if __name__ == "__main__":
+    main()
