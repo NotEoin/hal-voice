@@ -235,25 +235,26 @@ else
 fi
 
 # --- 3b. Optionally wire this to an existing Claude Code setup ---------------
-# Writes claude.hal_root into config.yaml. From then on hal-voice reads that install's
+# Writes claude.hal_root into the user config file (~/.config/hal-voice/config.yaml). From then on hal-voice reads that install's
 # hal.conf for its model + endpoint, and uses its Vault as the working directory -- so
 # switching Hal between 24gb/12gb/cloud switches hal-voice too, with nothing to remember.
 if [ -n "$HAL_ROOT_ARG" ]; then
   log "Wiring hal-voice to the Hal checkout at '$HAL_ROOT_ARG'"
-  if have python3; then
-    HAL_ROOT_ARG="$HAL_ROOT_ARG" python3 - "$VOICE_ROOT/halvoice/config.yaml" <<'PY' && ok "config.yaml: claude.hal_root set" || warn "Could not update config.yaml - set claude.hal_root by hand"
-import os, pathlib, re, sys
+  USER_CONFIG="${HALVOICE_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/hal-voice/config.yaml}"
+  # The venv's Python has PyYAML. Rewriting the file drops its comments, so only this one
+  # key is touched and the rest of the user's settings keep their values.
+  if [ -x "$VENV/bin/python" ]; then
+    HAL_ROOT_ARG="$HAL_ROOT_ARG" "$VENV/bin/python" - "$USER_CONFIG" <<'PY' && ok "$USER_CONFIG: claude.hal_root set" || warn "Could not update $USER_CONFIG - set claude.hal_root by hand"
+import os, pathlib, sys
+import yaml
 p = pathlib.Path(sys.argv[1])
-text = p.read_text(encoding="utf-8")
-value = os.environ["HAL_ROOT_ARG"]
-new, n = re.subn(r'^(\s*)hal_root:.*$', lambda m: f'{m.group(1)}hal_root: "{value}"',
-                 text, count=1, flags=re.M)
-if not n:
-    sys.exit("no hal_root key found in config.yaml")
-p.write_text(new, encoding="utf-8")
+data = (yaml.safe_load(p.read_text(encoding="utf-8")) if p.exists() else None) or {}
+data.setdefault("claude", {})["hal_root"] = os.environ["HAL_ROOT_ARG"]
+p.parent.mkdir(parents=True, exist_ok=True)
+p.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
 PY
   else
-    warn "python3 not found - set claude.hal_root in config.yaml by hand"
+    warn "no hal-voice environment - set claude.hal_root in $USER_CONFIG by hand"
   fi
 fi
 

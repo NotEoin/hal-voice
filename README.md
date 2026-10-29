@@ -66,7 +66,8 @@ In `claude` mode, Claude Code is launched *inside a directory*, and picks up tha
 ./hal-voice connection                    # show what it resolved, and why
 ```
 
-Set it permanently as `claude.project_dir` in [`config.yaml`](halvoice/config.yaml).
+Set it permanently as `claude.project_dir` in `~/.config/hal-voice/config.yaml` (see
+[Configuration](#configuration)).
 
 ### Choosing a brain
 
@@ -77,7 +78,7 @@ Set it permanently as `claude.project_dir` in [`config.yaml`](halvoice/config.ya
   through hal-hub, so first words arrive in about a second. Tasks with many steps go to Claude Code
   through a `deep_work` tool, and HAL tells you when they finish. The model and the other brain
   settings come from `[brain]` in `~/.config/hal/config.toml`, shared with Hal's chat and Telegram;
-  `brain.*` in `config.yaml` overrides them for voice only, and keeps HAL's persona.
+  `brain.*` in your hal-voice config overrides them for voice only, and keeps HAL's persona.
 - `claude` runs Claude Code for every turn, so HAL has that project's full toolset and memory, at the
   cost of a few seconds' start-up per turn.
 
@@ -114,11 +115,31 @@ Hold **space** to talk, release to send. Speaking again while it's replying inte
 
 ### Configuration
 
-Everything lives in [`config.yaml`](halvoice/config.yaml) - audio devices, activation, model choices, voice
-tuning, the effects chain and the eye. Any value can be overridden with an environment variable:
+Every setting and its default is in [`halvoice/config.yaml`](halvoice/config.yaml) - audio devices,
+activation, model choices, voice tuning, the effects chain and the eye. Leave that file alone and
+put only the keys you change in your own file, with the same layout:
+
+```yaml
+# ~/.config/hal-voice/config.yaml
+audio:
+  input_device: 3
+stt:
+  model: small.en
+```
+
+Settings load in this order, later wins:
+
+1. `halvoice/config.yaml`, the packaged defaults;
+2. `~/.config/hal-voice/built.yaml`, written by the voice build (`make-hal-voice`);
+3. `~/.config/hal-voice/config.yaml`, or the file `HALVOICE_CONFIG` names;
+4. environment variables `HALVOICE_<SECTION>_<KEY>`.
+
+`~/.config` stands for `$XDG_CONFIG_HOME` when that is set. A key in either file that the defaults
+do not have stops hal-voice with an error naming the file and the key, so a typo cannot be silently
+ignored. `python -m halvoice.config` prints the merged result and the files it read.
 
 ```bash
-HALVOICE_TTS_SPEED=0.9 ./hal-voice        # slow it down
+HALVOICE_TTS_SPEED=0.9 ./hal-voice        # slow it down, for this run only
 HALVOICE_STT_MODEL=medium.en ./hal-voice  # more accurate transcription
 ```
 

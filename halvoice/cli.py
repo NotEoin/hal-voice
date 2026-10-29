@@ -32,6 +32,7 @@ Global option:  --project DIR   run Claude Code in DIR (claude mode; default: [h
 """
 
 PROJECT_ENV = "HALVOICE_CLAUDE_PROJECT_DIR"
+CONFIG_ERROR_EXIT = 2  # a usage error: the user's settings, not hal-voice, need fixing
 
 
 def _split_global_options(argv: list[str]) -> list[str]:
@@ -160,10 +161,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Unknown command: {command}\n", file=sys.stderr)
         print(USAGE, end="", file=sys.stderr)
         return 1
-    from . import util  # not at the top: `help` must run without the dependencies installed
+    from . import config, util  # not at the top: `help` must run without the dependencies
 
     util.ca_bundle()
-    return handler(args[1:])
+    try:
+        return handler(args[1:])
+    except config.ConfigError as e:
+        print(f"hal-voice: settings error: {e}", file=sys.stderr)
+        return CONFIG_ERROR_EXIT
 
 
 if __name__ == "__main__":

@@ -21,7 +21,7 @@ Two independent things get resolved:
 
 Resolution order, lowest priority first:
 
-  1. config.yaml            the `claude:` block -- the standalone defaults
+  1. hal-voice settings     the `claude:` block (halvoice/config.py layers)
   2. hal.conf               if claude.hal_root points at (or auto-finds) a Hal checkout
   3. env_file               any KEY=VALUE file named by claude.env_file
   4. process environment    ANTHROPIC_* already exported in your shell
@@ -167,14 +167,14 @@ def resolve() -> Connection:
     cfg = config.load()
     c = cfg.claude if "claude" in cfg else config.Cfg({})
 
-    # --- 1. config.yaml defaults ---------------------------------------------
+    # --- 1. hal-voice settings -----------------------------------------------
     settings = {
         "model": str(c.get("model", "") or ""),
         "small_fast_model": str(c.get("small_fast_model", "") or ""),
         "base_url": str(c.get("base_url", "") or ""),
     }
     project_dir = c.get("project_dir") or None
-    sources = ["config.yaml"]
+    sources = ["hal-voice settings"]
 
     # --- 2. hal.conf, if we were pointed at a Hal checkout --------------------
     hal_root = _find_hal_root(c.get("hal_root"))

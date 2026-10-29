@@ -126,3 +126,12 @@ def test_tts_server_with_the_checkout_starts_run_api(monkeypatch, tmp_path):
     assert str(started["path"]).endswith("gptsovits/run-api.sh")
     assert cli.os.environ["GPTSOVITS_DIR"] == str(present)
     cli.os.environ.pop("GPTSOVITS_DIR")
+
+
+def test_settings_error_exits_2_and_names_the_problem(monkeypatch, capsys):
+    def broken(args):
+        raise config.ConfigError("/x/config.yaml: unknown key 'tts.sped'")
+
+    monkeypatch.setitem(cli.COMMANDS, "doctor", broken)
+    assert cli.main(["doctor"]) == cli.CONFIG_ERROR_EXIT
+    assert "unknown key 'tts.sped'" in capsys.readouterr().err

@@ -8,7 +8,6 @@ set -uo pipefail
 VOICE_ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 VENV="$VOICE_ROOT/.venv"
 PY="$VENV/bin/python"
-CONFIG="${HALVOICE_CONFIG:-$VOICE_ROOT/halvoice/config.yaml}"
 
 # Fall back to system python if the venv isn't built yet (so `doctor` can still run).
 if [ ! -x "$PY" ]; then PY="$(command -v python3 || true)"; fi
@@ -16,7 +15,7 @@ if [ -z "${PY:-}" ]; then echo "No Python found. Run ./setup-voice.sh first."; e
 
 # Voice profile from setup-voice.sh: decides whether speech recognition runs on the GPU
 # or the CPU. Exported as HALVOICE_STT_* so config.py's env-override mechanism applies it
-# over config.yaml. Anything already in your shell still wins.
+# over the config files. Anything already in your shell still wins.
 VOICE_CONF="${HALVOICE_CONF:-$VOICE_ROOT/voice.conf}"
 if [ -f "$VOICE_CONF" ]; then
   # shellcheck disable=SC1090
@@ -26,7 +25,6 @@ if [ -f "$VOICE_CONF" ]; then
 fi
 
 export HALVOICE_ROOT="$VOICE_ROOT"
-export HALVOICE_CONFIG="$CONFIG"
 # Make the package importable whether or not it was pip-installed.
 export PYTHONPATH="$VOICE_ROOT:${PYTHONPATH:-}"
 
