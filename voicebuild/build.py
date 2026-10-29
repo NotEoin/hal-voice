@@ -31,6 +31,13 @@ NOVEL = [
     "I have added lunch with Sam to your calendar for Friday afternoon.",
     "The weather tomorrow will be cool and dry, with a light breeze.",
 ]
+# Subprocess limits. The long ones are caps against a hang, not expected run times.
+NVIDIA_SMI_TIMEOUT_S = 10  # matches hal-employment's GPU gate
+CLEAN_TIMEOUT_S = 6 * 3600  # Demucs and DeepFilterNet over every kept line of a film
+PREPARE_TIMEOUT_S = 3600  # slicing and resampling the clips
+# train_hal.py: five short steps and two training stages of at most 6 h each (gptsovits/train_hal.py)
+TRAIN_TIMEOUT_S = 14 * 3600
+
 MIN_SNR_DB = 10.0
 MAX_SPOKEN_GAP = 0.5  # share of subtitle words a line's own transcript may differ by
 SIGNATURE_WEIGHT = 3  # times "I'm sorry, Dave" appears in training, so its delivery is learnt
@@ -274,6 +281,7 @@ def clean(b: Build) -> None:
             check=True,
             stdout=subprocess.DEVNULL,
             env={**os.environ, "PYTHONPATH": str(ROOT)},
+            timeout=CLEAN_TIMEOUT_S,
         )
 
 
@@ -406,8 +414,9 @@ def free_gpu_gb() -> float | None:
             capture_output=True,
             text=True,
             check=True,
+            timeout=NVIDIA_SMI_TIMEOUT_S,
         ).stdout
-    except (OSError, subprocess.CalledProcessError):
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
         return None
     return int(out.split()[0]) / 1024
 
@@ -437,6 +446,7 @@ def train(b: Build) -> None:
             "--keep-reference",
         ],
         check=True,
+        timeout=PREPARE_TIMEOUT_S,
     )
     exp = experiment(b)
     env = {
@@ -456,6 +466,7 @@ def train(b: Build) -> None:
             check=True,
             stdout=log,
             stderr=subprocess.STDOUT,
+            timeout=TRAIN_TIMEOUT_S,
         )
     done.write_text(json.dumps({"experiment": exp, "version": b.version}))
 

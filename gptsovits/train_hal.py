@@ -81,12 +81,25 @@ os.makedirs(GPT_DIR, exist_ok=True)
 WEIGHTS_OUT.mkdir(parents=True, exist_ok=True)
 
 
+# One stage of the pipeline. Observed training runs are under 2 h on a 3090 (unverified: measure).
+STAGE_TIMEOUT_S = 6 * 3600
+
+
+def run_stage(cmd, env=None):
+    """Runs one stage, ending the run with a message if it fails or exceeds `STAGE_TIMEOUT_S`."""
+    try:
+        r = subprocess.run(cmd, env=env, check=False, timeout=STAGE_TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        sys.exit(f"TIMED OUT after {STAGE_TIMEOUT_S} s: {' '.join(map(str, cmd))}")
+    return r
+
+
 def run_step(script, extra_env, shim=False):
     env = os.environ.copy()
     env.update({k: str(v) for k, v in extra_env.items()})
     print(f"\n=== RUN {script} ===", flush=True)
     cmd = [PY, "-s", str(HERE / "sf_shim.py"), script] if shim else [PY, "-s", script]
-    r = subprocess.run(cmd, env=env)
+    r = run_stage(cmd, env)
     if r.returncode != 0:
         sys.exit(f"FAILED: {script} (exit {r.returncode})")
 
@@ -180,7 +193,7 @@ tmp_s2 = "TEMP/tmp_s2.json"
 with open(tmp_s2, "w") as f:
     json.dump(s2, f)
 print("\n=== TRAIN SoVITS (s2) ===", flush=True)
-r = subprocess.run([PY, "-s", "GPT_SoVITS/s2_train.py", "--config", tmp_s2])
+r = run_stage([PY, "-s", "GPT_SoVITS/s2_train.py", "--config", tmp_s2])
 if r.returncode != 0:
     sys.exit(f"SoVITS training failed (exit {r.returncode})")
 
@@ -208,7 +221,7 @@ tmp_s1 = "TEMP/tmp_s1.yaml"
 with open(tmp_s1, "w") as f:
     yaml.dump(s1, f, default_flow_style=False)
 print("\n=== TRAIN GPT (s1) ===", flush=True)
-r = subprocess.run([PY, "-s", "GPT_SoVITS/s1_train.py", "--config_file", tmp_s1])
+r = run_stage([PY, "-s", "GPT_SoVITS/s1_train.py", "--config_file", tmp_s1])
 if r.returncode != 0:
     sys.exit(f"GPT training failed (exit {r.returncode})")
 

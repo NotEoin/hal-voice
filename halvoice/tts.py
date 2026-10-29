@@ -54,6 +54,11 @@ def split_sentences(text: str) -> list[str]:
     return chunks
 
 
+# (connect, read) seconds for the TTS server. A group is at most GROUP_CHARS characters, so a
+# read that stays silent for 60 s means the server is stuck, not slow.
+TTS_TIMEOUT_S = (3, 60)
+
+
 class GPTSoVITSClient:
     """Thin HTTP client for GPT-SoVITS api_v2 /tts (and weight hot-swap endpoints)."""
 
@@ -89,7 +94,7 @@ class GPTSoVITSClient:
                 if not path:
                     continue
                 reply = requests.get(
-                    f"{self.url}/{endpoint}", params={"weights_path": path}, timeout=60
+                    f"{self.url}/{endpoint}", params={"weights_path": path}, timeout=TTS_TIMEOUT_S
                 )
                 if reply.status_code != 200:
                     raise RuntimeError(f"{endpoint} answered {reply.status_code}")
@@ -122,7 +127,7 @@ class GPTSoVITSClient:
             "temperature": self.temperature,
             "speed_factor": self.speed,
         }
-        r = requests.post(f"{self.url}/tts", json=payload, timeout=300)
+        r = requests.post(f"{self.url}/tts", json=payload, timeout=TTS_TIMEOUT_S)
         if r.status_code != 200:
             raise RuntimeError(f"GPT-SoVITS /tts failed ({r.status_code}): {r.text[:200]}")
         audio, sr = sf.read(io.BytesIO(r.content), dtype="float32")

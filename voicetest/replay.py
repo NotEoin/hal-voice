@@ -160,7 +160,7 @@ def run_sim(
         res.heard.append(text)
         ears.decide(text.strip(), overlapped)
         while not ears.requests.empty():
-            h = ears.requests.get()
+            h = ears.requests.get_nowait()
             res.events.append(
                 (round(now[0] - t0 - speech_end, 3), "turn" if h.text else "wake", h.text)
             )

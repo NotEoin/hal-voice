@@ -46,6 +46,9 @@ def read_text(path: Path) -> str:
     return raw.decode("cp1252", errors="replace")
 
 
+# One cropped subtitle image; tesseract takes about a second, so a minute means it is stuck.
+OCR_IMAGE_TIMEOUT_S = 60
+
 _TIME = re.compile(r"(?:(\d+):)?(\d{1,2}):(\d{1,2})[.,:](\d{1,3})")
 
 
@@ -127,6 +130,7 @@ def read_embedded(
         ["ffmpeg", "-v", "error", "-i", str(video), "-map", f"0:{s.index}", "-f", "srt", "-"],
         capture_output=True,
         check=True,
+        timeout=media.PROBE_TIMEOUT_S,
     ).stdout.decode("utf-8", errors="replace")
     return parse_srt(srt)
 
@@ -175,6 +179,7 @@ def _ocr(index, ink: tuple[int, ...] | None, lang: str) -> tuple[str, float]:
         input=buf.getvalue(),
         capture_output=True,
         check=False,
+        timeout=OCR_IMAGE_TIMEOUT_S,
     ).stdout.decode("utf-8", "replace")
     lines: dict[tuple, list[str]] = {}
     confs = []

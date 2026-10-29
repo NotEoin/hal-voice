@@ -82,6 +82,8 @@ RIGHTS_NOTICE = (
     "  and do not redistribute the clips or any voice model trained from them.\n"
 )
 
+DOWNLOAD_TIMEOUT_S = 60  # socket timeout: no data for this long ends the download
+RSYNC_TIMEOUT_S = 3600  # a few hundred short clips; this only catches a hang
 ARCHIVE_SUFFIXES = (".tar.gz", ".tgz", ".tar", ".zip")
 
 
@@ -150,7 +152,11 @@ def fetch(source: str, dest: Path) -> int:
                 fname += ".tar.gz"
             dl = tmp / fname
             print(f"  downloading {source}")
-            urllib.request.urlretrieve(source, dl)  # noqa: S310 - the URL is the source the user configured
+            with (
+                urllib.request.urlopen(source, timeout=DOWNLOAD_TIMEOUT_S) as reply,  # noqa: S310 - the user's own source
+                open(dl, "wb") as out,
+            ):
+                shutil.copyfileobj(reply, out)
             ext = tmp / "extracted"
             ext.mkdir()
             _extract_archive(dl, ext)
@@ -172,6 +178,7 @@ def fetch(source: str, dest: Path) -> int:
                 f"{dest}/",
             ],
             check=True,
+            timeout=RSYNC_TIMEOUT_S,
         )
         return len(list(dest.glob("*.mp3")))
 

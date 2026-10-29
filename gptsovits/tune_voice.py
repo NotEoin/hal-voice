@@ -38,6 +38,11 @@ import numpy as np
 import requests
 import soundfile as sf
 
+# prepare_dataset.py slices and resamples the clips; train_hal.py runs five short steps and two
+# training stages of at most 6 h each (see train_hal.STAGE_TIMEOUT_S).
+PREPARE_TIMEOUT_S = 3600
+TRAIN_TIMEOUT_S = 14 * 3600
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 GSV = Path(os.environ.get("GPTSOVITS_DIR", HERE / "GPT-SoVITS")).resolve()
@@ -280,6 +285,7 @@ def train(name: str, version: str, sovits_epochs: int, gpt_epochs: int, source: 
             "--keep-reference",
         ],
         check=True,
+        timeout=PREPARE_TIMEOUT_S,
     )
     env = {
         **os.environ,
@@ -288,7 +294,9 @@ def train(name: str, version: str, sovits_epochs: int, gpt_epochs: int, source: 
         "HAL_SOVITS_EPOCHS": str(sovits_epochs),
         "HAL_GPT_EPOCHS": str(gpt_epochs),
     }
-    subprocess.run([sys.executable, str(HERE / "train_hal.py")], check=True, env=env)
+    subprocess.run(
+        [sys.executable, str(HERE / "train_hal.py")], check=True, env=env, timeout=TRAIN_TIMEOUT_S
+    )
 
 
 def report() -> None:

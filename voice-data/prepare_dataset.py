@@ -24,6 +24,7 @@ TRANSCRIPTS_FILE = SRC / "transcripts.csv"
 
 # Speaker label in the .list file. GPT-SoVITS only uses it to group items.
 SPEAKER = "HAL"
+FFMPEG_TIMEOUT_S = 600  # one clip is seconds long; this only catches a hang
 
 AUDIO_SUFFIXES = (".wav", ".mp3", ".flac", ".m4a", ".ogg")
 
@@ -106,6 +107,7 @@ def to_wav(src: Path, dst: Path) -> None:
         check=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
+        timeout=FFMPEG_TIMEOUT_S,
     )
 
 

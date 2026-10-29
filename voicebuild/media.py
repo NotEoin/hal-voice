@@ -12,6 +12,10 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+# A two-hour film on a spinning disk: probing reads the container index, extraction decodes it all.
+PROBE_TIMEOUT_S = 600
+EXTRACT_TIMEOUT_S = 3600
+
 VIDEO_SUFFIXES = {
     ".mkv",
     ".mp4",
@@ -62,6 +66,7 @@ def probe(path: Path) -> list[Stream]:
         capture_output=True,
         text=True,
         check=True,
+        timeout=PROBE_TIMEOUT_S,
     ).stdout
     streams = []
     for s in json.loads(out).get("streams", []):
@@ -181,6 +186,7 @@ def extract_audio(video: Path, s: Stream, out: Path, rate: int) -> Path:
             str(out),
         ],
         check=True,
+        timeout=EXTRACT_TIMEOUT_S,
     )
     return out
 
@@ -191,5 +197,6 @@ def duration(path: Path) -> float:
         capture_output=True,
         text=True,
         check=True,
+        timeout=PROBE_TIMEOUT_S,
     ).stdout
     return float(out.strip() or 0)

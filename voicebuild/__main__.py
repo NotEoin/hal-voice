@@ -22,6 +22,10 @@ from . import build, media
 
 DROP = build.ROOT / "voice-data" / "film"
 GPU_STAGES = {"find", "clean", "train", "select"}
+# Stopping Hal's units waits for their own stop timeouts (15 s each).
+HAL_STATUS_TIMEOUT_S = 10
+HAL_SWITCH_TIMEOUT_S = 60
+DENOISE_PROBE_TIMEOUT_S = 120  # importing torch-based packages can be slow on a cold disk
 
 
 def films_in(args: list[Path]) -> tuple[list[Path], list[Path]]:
@@ -58,9 +62,15 @@ def denoise_python(given: str | None) -> str:
     candidates.append(str(build.ROOT / ".venv-denoise" / "bin" / "python"))
     for c in candidates:
         if c and Path(c).exists():
-            ok = subprocess.run(
-                [c, "-c", "import demucs, df, librosa, soundfile"], capture_output=True
-            )
+            try:
+                ok = subprocess.run(
+                    [c, "-c", "import demucs, df, librosa, soundfile"],
+                    capture_output=True,
+                    check=False,
+                    timeout=DENOISE_PROBE_TIMEOUT_S,
+                )
+            except subprocess.TimeoutExpired:
+                continue
             if ok.returncode == 0:
                 return c
     raise SystemExit(
@@ -72,8 +82,26 @@ def denoise_python(given: str | None) -> str:
 def hal_is_on() -> bool:
     if not shutil.which("hal"):
         return False
-    out = subprocess.run(["hal", "status"], capture_output=True, text=True).stdout
+    try:
+        out = subprocess.run(
+            ["hal", "status"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=HAL_STATUS_TIMEOUT_S,
+        ).stdout
+    except subprocess.TimeoutExpired:
+        print("`hal status` did not answer; leaving Hal as it is.", file=sys.stderr)
+        return False
     return "Hal is on" in out and not out.startswith("Hal is on: 0 of")
+
+
+def hal_switch(state: str) -> None:
+    """Runs `hal on` or `hal off`; a timeout is reported, not raised, so the build carries on."""
+    try:
+        subprocess.run(["hal", state, "--quiet"], check=False, timeout=HAL_SWITCH_TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        print(f"`hal {state}` timed out after {HAL_SWITCH_TIMEOUT_S} s.", file=sys.stderr)
 
 
 def report(b: build.Build) -> Path:
@@ -225,14 +253,14 @@ def main() -> int:
     restore = GPU_STAGES & set(stages) and hal_is_on()
     if restore:
         b.say("turning Hal off to free the GPU; it comes back on at the end")
-        subprocess.run(["hal", "off", "--quiet"], check=False)
+        hal_switch("off")
     try:
         for stage in stages:
             getattr(build, stage)(b)
     finally:
         path = report(b)
         if restore:
-            subprocess.run(["hal", "on", "--quiet"], check=False)
+            hal_switch("on")
         print(f"Report: {path}")
     return 0
 
