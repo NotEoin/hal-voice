@@ -26,10 +26,10 @@ whatever [Claude Code](https://claude.ai/code) you already have.
   computer, lights and more), with first words in about a second. Long jobs go to Claude Code in the
   background.
 - **Interrupt it whenever you like**: say his name while he talks and he stops to listen.
-- **A red eye that reacts** — idle, listening, thinking, speaking.
+- **A red eye that reacts** - idle, listening, thinking, speaking.
 - **Your voice never leaves the machine.** Speech recognition and synthesis are both local. What
   Claude Code does with the transcript is between you and your existing setup.
-- **Works with the Claude Code you already have.** No model to install, nothing to configure —
+- **Works with the Claude Code you already have.** No model to install, nothing to configure -
   clone it and talk. Point it at a local model later if you want to.
 - **Drop it into a normal session.** Run it as an MCP server and get speak/listen as tools inside a
   regular Claude Code session, without the full voice loop.
@@ -39,9 +39,9 @@ whatever [Claude Code](https://claude.ai/code) you already have.
 ## ℹ️ Overview
 
 ```
-"Hal, ..."  →  faster-whisper  →  core Hal's brain + hal-hub tools (or Claude Code)
-                                              ↓
-                     speakers  ←  FX chain  ←  GPT-SoVITS
+"Hal, ..."  ->  faster-whisper  ->  core Hal's brain + hal-hub tools (or Claude Code)
+                                              v
+                     speakers  <-  FX chain  <-  GPT-SoVITS
 ```
 
 You say HAL's name (or hold a key), ask a question, and it answers aloud. Underneath, speech is
@@ -114,7 +114,7 @@ Hold **space** to talk, release to send. Speaking again while it's replying inte
 
 ### Configuration
 
-Everything lives in [`config.yaml`](config.yaml) — audio devices, activation, model choices, voice
+Everything lives in [`config.yaml`](config.yaml) - audio devices, activation, model choices, voice
 tuning, the effects chain and the eye. Any value can be overridden with an environment variable:
 
 ```bash
@@ -167,12 +167,12 @@ It still runs on its own (`git clone https://github.com/NotEoin/hal-voice.git`, 
 | **OS** | Linux, with PulseAudio or PipeWire |
 | **Python** | 3.11 or 3.12. **Not 3.13+**: numpy 1.x has no wheels there, and parts of the audio stack still need it. `setup-voice.sh` finds a suitable interpreter, or falls back to conda |
 | **System packages** | PortAudio and FFmpeg |
-| **GPU** | Optional — see the profiles below. Voice synthesis wants ~2GB of VRAM but will run on CPU |
+| **GPU** | Optional - see the profiles below. Voice synthesis wants ~2GB of VRAM but will run on CPU |
 | **Hardware** | A working microphone and speakers |
 | **Also needed** | A [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS) checkout with its pretrained models |
 
 `setup-voice.sh` reads your GPU and proposes a profile; `--profile <name>` overrides it. This is
-about **VRAM only** — it does not change which model does the thinking.
+about **VRAM only** - it does not change which model does the thinking.
 
 | Profile | Speech recognition | Voice synthesis | |
 |---|---|---|---|
@@ -203,19 +203,19 @@ It finds every line HAL speaks clearly, cleans and trains on them, and installs 
 To train on clips you already have instead:
 
 1. Put your clips and a `transcripts.csv` somewhere, and point `voice-source.local` at it.
-2. `python voice-data/fetch-voice-lines.py` — imports them.
-3. `python voice-data/prepare_dataset.py` — slices, cleans and labels them.
-4. Fine-tune — see **[gptsovits/train-hal.md](gptsovits/train-hal.md)**.
+2. `python voice-data/fetch-voice-lines.py` - imports them.
+3. `python voice-data/prepare_dataset.py` - slices, cleans and labels them.
+4. Fine-tune - see **[gptsovits/train-hal.md](gptsovits/train-hal.md)**.
 
 Around forty clean, well-transcribed clips is enough for a recognisable result. Consistency matters
-more than quantity — same microphone, same room, same delivery.
+more than quantity - same microphone, same room, same delivery.
 
-**→ Full guide: [voice-data/README.md](voice-data/README.md)**
+**-> Full guide: [voice-data/README.md](voice-data/README.md)**
 
 ### ⚖️ Please use this responsibly
 
 HAL was performed by the late Douglas Rain. This repository ships the *pipeline*, never the
-performance — no audio, no transcripts and no trained models are included, and the import script
+performance - no audio, no transcripts and no trained models are included, and the import script
 will not download audio from public sources.
 
 Use voice data you recorded yourself or have clear permission to use. Keep anything you train
@@ -234,7 +234,7 @@ don't have rights to is not okay.
 - **The direct brain needs a model that calls tools reliably.** Smaller models tend to say they did
   something instead of doing it; the brain holds back such replies and retries once, but a 20B-class
   model with good tool use (mistral-small3.2 measured best here) is the practical minimum.
-- **It's not instant.** Streaming hides a lot of the delay, but synthesis still has to happen —
+- **It's not instant.** Streaming hides a lot of the delay, but synthesis still has to happen -
   and on the `cloud` (CPU) profile it runs slower than real time, so HAL pauses before answering.
 - **The voice effects are tuned to one voice.** Treat the defaults as a starting point.
 - Interrupting can clip the first syllable of your next sentence.
@@ -242,7 +242,7 @@ don't have rights to is not okay.
 
 ## 🔗 Related projects
 
-- **[Hal](https://github.com/NotEoin/Hal)** — a local assistant with an Obsidian vault as its memory.
+- **[Hal](https://github.com/NotEoin/Hal)** - a local assistant with an Obsidian vault as its memory.
   Its brain answers in `direct` mode, and hal-hub gives it the tools of the other Hal extensions.
 
 ## 💭 Feedback and contributing
@@ -253,4 +253,4 @@ Got it working with a different TTS backend, or trained a wake word that actuall
 
 ## 📄 Licence
 
-MIT — see [LICENSE](LICENSE). This covers the code only, not any voice data you bring to it.
+MIT - see [LICENSE](LICENSE). This covers the code only, not any voice data you bring to it.
