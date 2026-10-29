@@ -9,7 +9,7 @@ Why headless instead of the interactive TUI: it gives us the assistant's text
 *deterministically* and *incrementally*, so HAL can start speaking sentence 1 while the
 model is still generating sentence 2.
 
-In claude mode Claude Code is the brain (direct mode uses core Hal's; see brain.py). Which
+In claude mode Claude Code is the brain (direct mode uses core Hal's; see ../brain.py). Which
 Claude Code, in which directory, and against which model is decided by halvoice/connect.py;
 by default that is "whatever Claude Code you already have, in the current directory".
 
@@ -25,8 +25,8 @@ import subprocess
 import threading
 from collections.abc import Iterator
 
-from . import config, connect
-from .util import get_logger
+from .. import config, connect
+from ..util import get_logger
 
 log = get_logger(__name__)
 
@@ -152,7 +152,7 @@ class ClaudeSession:
             proc.wait(timeout=10)
 
 
-if __name__ == "__main__":  # quick manual test: python -m halvoice.claude_client "hello"
+if __name__ == "__main__":  # quick manual test: python -m halvoice.brains.claude "hello"
     import sys
 
     s = ClaudeSession()

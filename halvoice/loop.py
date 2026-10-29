@@ -60,7 +60,7 @@ def make_brain():
             return DirectBrain()
         except CoreNotFound as e:
             log.error("%s. Falling back to claude mode.", e)
-    from .claude_client import ClaudeSession
+    from .brains.claude import ClaudeSession
 
     return ClaudeSession()
 
