@@ -26,6 +26,8 @@ All notable changes to hal-voice are listed here. The format follows
 
 ### Changed
 
+- Docs are split into `docs/user`, `docs/howto` and `docs/dev` with an index in `docs/README.md`;
+  `VOICE-BUILD.md` and `VOICE-TUNING.md` moved there.
 - The voice build stops with `GpuBusy` when the GPU stays busy for 30 minutes; it used to carry
   on and run out of memory.
 - A missing core Hal no longer starts Claude Code silently; `brain.mode: claude` is the only way.

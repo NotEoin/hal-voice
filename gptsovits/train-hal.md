@@ -59,7 +59,7 @@ Timbre comes from the fine-tune. The flat, unhurried delivery comes from these:
   choice rather than slowing so far it sounds drugged.
 - The remaining character comes from **hal-voice's FX chain** (`tts.fx`):
   low-shelf body, presence de-emphasis and the cabin reverb. Tune those *after* the clone
-  sounds right on its own - see [VOICE-TUNING.md](../VOICE-TUNING.md).
+  sounds right on its own - see [docs/dev/voice-tuning.md](../docs/dev/voice-tuning.md).
 
 ## 3. Install the weights
 

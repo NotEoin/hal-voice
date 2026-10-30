@@ -331,7 +331,7 @@ Remaining one-time steps (the voice itself):
   1) Build HAL's voice from your copy of the film (needs --with-training):
        put the film, and any .srt, in voice-data/film/, then run
        ./make-hal-voice
-     (VOICE-BUILD.md explains each step; voice-data/README.md and
+     (docs/howto/build-the-voice.md explains each step; voice-data/README.md and
      gptsovits/train-hal.md cover doing it by hand.)
 
   2) Start the GPT-SoVITS API server (keep it running):

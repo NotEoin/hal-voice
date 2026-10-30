@@ -1,4 +1,4 @@
-"""Tests for the film pipeline disclaimer: README, VOICE-BUILD.md and `make-hal-voice --help`."""
+"""Tests for the film pipeline disclaimer: README, docs/howto/build-the-voice.md and `make-hal-voice --help`."""
 
 import re
 from pathlib import Path
@@ -22,7 +22,11 @@ def test_readme_and_build_help_carry_disclaimer(monkeypatch, capsys):
 
 
 def test_build_guide_links_to_the_disclaimer_at_the_top():
-    top = (ROOT / "VOICE-BUILD.md").read_text(encoding="utf-8").split("\n## ", 1)[0]
+    top = (
+        (ROOT / "docs" / "howto" / "build-the-voice.md")
+        .read_text(encoding="utf-8")
+        .split("\n## ", 1)[0]
+    )
     assert "README.md#about-the-film-voice-pipeline" in top
 
 

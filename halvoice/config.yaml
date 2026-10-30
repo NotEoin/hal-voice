@@ -79,7 +79,7 @@ tts:
     weights_dir: "gptsovits/weights"   # mounted read-only at /weights in container mode
   text_lang: en
   prompt_lang: en
-  # The voice. ./make-hal-voice builds it from the film (see VOICE-BUILD.md) and writes these
+  # The voice. ./make-hal-voice builds it from the film (see docs/howto/build-the-voice.md) and writes these
   # keys, and the sampling and pace below, to ~/.config/hal-voice/built.yaml; they are empty
   # here because no voice ships with hal-voice. Relative paths resolve against the checkout.
   # GPT-SoVITS copies the reference clip's delivery into every line, so the build's reference

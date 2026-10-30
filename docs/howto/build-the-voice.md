@@ -1,6 +1,6 @@
 # Build HAL's voice from the film
 
-> Read [About the film voice pipeline](README.md#about-the-film-voice-pipeline) first: it says what
+> Read [About the film voice pipeline](../../README.md#about-the-film-voice-pipeline) first: it says what
 > you may use this for and what you must not do with the result.
 
 `./make-hal-voice` turns your copy of *2001: A Space Odyssey* into HAL's voice for hal-voice. It
@@ -127,3 +127,13 @@ A voice installed by an older hal-voice lives in the checkout's old `config.yaml
 
 The film, the clips cut from it and the weights trained on them stay on your machine. The build
 folders are ignored by git, and nothing from the film is part of this repository.
+
+## If something goes wrong
+
+| Symptom | Fix |
+| --- | --- |
+| The build stops with `GpuBusy` | Free the GPU, or start the gpu-light daemon, then resume with `--from STAGE` |
+| A stage failed part way | Run `./make-hal-voice --from STAGE`; finished stages are kept in `voice-data/build/` |
+| A line you do not want was used | Re-run with `--exclude PHRASE`, then `--from dataset` |
+| The film's subtitles are images | Add `--ocr` |
+| The new voice should not replace the old one yet | Use `--no-install`, then compare the checkpoint by hand |

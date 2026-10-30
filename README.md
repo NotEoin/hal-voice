@@ -255,7 +255,7 @@ files) in `voice-data/film/` and run:
 ```
 
 It finds every line HAL speaks clearly, cleans and trains on them, and installs the result.
-**-> How it works and what it accepts: [VOICE-BUILD.md](VOICE-BUILD.md)**
+**-> How it works and what it accepts: [docs/howto/build-the-voice.md](docs/howto/build-the-voice.md)**
 
 To train on clips you already have instead:
 

@@ -1,7 +1,7 @@
 # HAL Voice -- Tuning Notes
 
 A log of how the HAL voice was dialled in, and why each setting ended up where it did.
-All settings and their defaults are in [`halvoice/config.yaml`](halvoice/config.yaml) under `tts:` (sampling +
+All settings and their defaults are in [`halvoice/config.yaml`](../../halvoice/config.yaml) under `tts:` (sampling +
 `fx:` chain) and `claude.voice_system_prompt` (persona); change them in `~/.config/hal-voice/config.yaml`. The voice = **GPT-SoVITS clone -> FX chain (client-side)**.
 
 ## Current settings

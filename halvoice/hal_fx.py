@@ -11,7 +11,7 @@ from inside a machine, in the dry cabin of Discovery One. The chain applies, in 
   5. small-room reverb -- the damped cabin tail, not a hall.
   6. loudness norm     -- so every reply sits at the same level.
 
-Stages 1, 2 and 4 are kept for experimentation but are off by default; VOICE-TUNING.md
+Stages 1, 2 and 4 are kept for experimentation but are off by default; docs/dev/voice-tuning.md
 records why. All parameters live under tts.fx in config.yaml. Everything degrades
 gracefully: a missing optional library skips its stage with a warning rather than
 crashing.
@@ -33,7 +33,7 @@ def _flatten_pitch(audio: np.ndarray, sr: int, amount: float) -> np.ndarray:
     Reconstructs the signal from a moving-median de-trend of the analytic signal's
     instantaneous frequency. That reconstruction assumes a narrowband signal, and
     speech is broadband, so it introduces audible artifacts at any strength. Kept as
-    the record of an approach that was tried and rejected -- see VOICE-TUNING.md.
+    the record of an approach that was tried and rejected -- see docs/dev/voice-tuning.md.
     """
     if amount <= 0:
         return audio
