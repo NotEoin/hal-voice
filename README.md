@@ -1,4 +1,4 @@
-# 🔴 hal-voice
+# hal-voice
 
 ![licence](https://img.shields.io/badge/licence-MIT-blue?style=flat-square)
 ![platform](https://img.shields.io/badge/platform-Linux-lightgrey?style=flat-square)
@@ -14,7 +14,7 @@ whatever [Claude Code](https://claude.ai/code) you already have.
 
 ![The eye reacting to what it's doing](./media/eye.gif)
 
-## 🌟 Highlights
+## Highlights
 
 - **It starts speaking before it's finished thinking.** Replies are synthesised sentence by sentence
   as they're generated, so you hear the first words in about a second rather than waiting for the
@@ -35,7 +35,7 @@ whatever [Claude Code](https://claude.ai/code) you already have.
 - **Bring your own voice.** Train it on any voice data you have the rights to.
 - **One config file**, with environment variable overrides for everything in it.
 
-## ℹ️ Overview
+## Overview
 
 ```
 "Hal, ..."  ->  faster-whisper  ->  core Hal's brain + hal-hub tools (or Claude Code)
@@ -50,7 +50,7 @@ GPT-SoVITS and a small effects chain that gives it the right weight and room.
 hal-voice runs **no language model of its own**. It is a voice on the front of a brain: Hal's
 boxed agent in `hal` mode, or a headless Claude Code session in `claude` mode.
 
-### ✍️ Author
+### Author
 
 Built by [@NotEoin](https://github.com/NotEoin).
 
@@ -112,7 +112,7 @@ In `claude` mode it can also follow a [Hal](https://github.com/NotEoin/Hal) inst
 `claude.hal_root` at a checkout with a `hal.conf` (or run `./setup-voice.sh --hal auto`). To plug into
 a setup that isn't Hal, set `claude.env_file` to any `KEY=VALUE` file of `ANTHROPIC_*` settings.
 
-## 🚀 Usage
+## Usage
 
 ```bash
 ./hal-voice doctor       # check your audio devices, models and TTS server
@@ -181,7 +181,7 @@ Record on the microphone HAL uses, with HAL turned off, saying "Marker one" and 
 take one") first. `--simulate` adds louder fans and a quieter voice, made from your recording,
 until you have recorded those takes. The clips are your voice, so they stay out of git.
 
-## ⬇️ Installation
+## Installation
 
 hal-voice is a Hal ecosystem extension: it lives in `extensions/hal-voice` and is installed by the
 ecosystem installer, which also renders its systemd units:
@@ -244,7 +244,7 @@ to pause before speaking.
 
 Developed on an RTX 4070 (12GB); originally built on an RTX 3090.
 
-## 🎙️ Giving it a voice
+## Giving it a voice
 
 **No audio ships with this repository.** You supply the voice data.
 
@@ -297,7 +297,7 @@ before you use them.
   and likeness rights differ between countries and change over time. If you are unsure whether
   your use is lawful where you live, ask a lawyer.
 
-## 🧭 Limitations
+## Limitations
 
 - **The trained wake word is unreliable.** openWakeWord detection is disabled by default, and its
   dependencies aren't installed; run `./setup-voice.sh --with-wake` to experiment. For hands-free
@@ -313,17 +313,17 @@ before you use them.
 - Interrupting can clip the first syllable of your next sentence.
 - Linux only.
 
-## 🔗 Related projects
+## Related projects
 
 - **[Hal](https://github.com/NotEoin/Hal)** - a local assistant with an Obsidian vault as its memory.
   Its agent answers in `hal` mode, with the tools of the other Hal packs through the broker.
 
-## 💭 Feedback and contributing
+## Feedback and contributing
 
 Got it working with a different TTS backend, or trained a wake word that actually fires? Open an
 [issue](https://github.com/NotEoin/hal-voice/issues) or start a
 [discussion](https://github.com/NotEoin/hal-voice/discussions).
 
-## 📄 Licence
+## Licence
 
 MIT - see [LICENSE](LICENSE). This covers the code only, not any voice data you bring to it.
