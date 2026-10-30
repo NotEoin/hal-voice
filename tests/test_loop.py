@@ -4,6 +4,7 @@ import pytest
 
 from halvoice import loop
 from halvoice.brains import BrainUnavailable, TurnTimeout
+from halvoice.gpu import VoiceClaims
 
 
 def test_turn_timeout_is_spoken_instead_of_silence():
@@ -59,6 +60,8 @@ def bare_loop(brain, finished):
     voice = loop.VoiceLoop.__new__(loop.VoiceLoop)
     voice.brain = brain
     voice.ears = None
+    voice.cfg = {}
+    voice.claims = VoiceClaims(0, 0, 0)
     voice.bus = loop.StateBus()
     voice.speak_stream = lambda sentences: (list(sentences), finished)[1]
     return voice

@@ -21,6 +21,7 @@ import time
 
 from . import config, tts
 from .brains import BrainUnavailable, TurnTimeout, make_brain
+from .gpu import VoiceClaims
 from .stt import Recorder, Transcriber
 from .util import StateBus, get_logger
 from .wake import Activator
@@ -69,6 +70,11 @@ class VoiceLoop:
         self.cfg = config.load()
         self.bus = StateBus()
         self.transcriber = Transcriber()
+        self.claims = VoiceClaims(
+            resident_mib=int(self.cfg.get("gpu.resident_mib", 3584)),
+            brain_mib=int(self.cfg.get("gpu.brain_mib", 14000)),
+            linger_s=float(self.cfg.get("gpu.linger_s", 30)),
+        )
         self.brain = make_brain()
         self.player = tts.Player()
         self._ui_thread = None
@@ -78,6 +84,7 @@ class VoiceLoop:
             from .handsfree import Ears
 
             self.ears = Ears(self.transcriber.transcribe)
+            self.ears.on_request = self.claims.turn_started
         if self.cfg.get("activation.mode", "both") in ("push_to_talk", "both") or not self.ears:
             self.activator = Activator(keyword=False)
             self.recorder = Recorder()
@@ -189,6 +196,8 @@ class VoiceLoop:
             return
         log.info("you: %s", text)
         self.bus.set("thinking")
+        self.claims.turn_started()  # a no-op when push-to-talk or the ears already started it
+        self.claims.wait_for_turn(float(self.cfg.get("gpu.turn_wait_s", 3)))
         started = time.time()
         first = {"t": None}
 
@@ -208,6 +217,7 @@ class VoiceLoop:
         if first["t"] is not None:
             log.info("first words after %.2fs", first["t"])
         self.bus.set("idle")
+        self.claims.turn_ended()
         if finished and self.ears:
             self.ears.follow_up()
 
@@ -222,6 +232,7 @@ class VoiceLoop:
     # -- main ------------------------------------------------------------------
     def run(self) -> None:
         self._start_ui()
+        self.claims.start_service()
         self.transcriber._load()
         if hasattr(self.brain, "warm"):
             threading.Thread(target=self.brain.warm, daemon=True).start()
@@ -246,6 +257,7 @@ class VoiceLoop:
                         continue
                 if self.activator and self.activator.ptt and self.activator.ptt.pressed.is_set():
                     self.bus.set("listening")
+                    self.claims.turn_started()
                     self._handle_turn(self._record("push_to_talk"))
                     continue
                 if self.activator and self.activator.wake and self.activator.wake.detected.is_set():
@@ -262,6 +274,7 @@ class VoiceLoop:
                 self.ears.stop()
             if self.activator:
                 self.activator.stop()
+            self.claims.close()
 
 
 def _say_unavailable() -> None:

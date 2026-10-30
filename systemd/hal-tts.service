@@ -4,6 +4,7 @@ PartOf=hal.target
 X-HalGPU=yes
 
 [Service]
+Environment=GPU_LIGHT_CLAIM=hal-voice
 WorkingDirectory=@ROOT@
 ExecStart=@ROOT@/hal-voice tts-server
 Restart=on-failure

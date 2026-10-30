@@ -198,6 +198,7 @@ class Ears:
         self._quiet_since = 0.0  # when HAL last stopped speaking
         self._said: collections.deque = collections.deque(maxlen=12)  # HAL's recent sentences
         self._pending_name_at = 0.0  # when a bare "Hal" was heard
+        self.on_request = None  # called when a request is accepted, before it is queued
         self._stop = threading.Event()
         self._audio: queue.Queue[np.ndarray] = queue.Queue()
         self.clock = time.time  # the replay test runs on the recording's own clock
@@ -288,6 +289,11 @@ class Ears:
             # does not hear him in the room's noise alone.
             self.decide(self.transcribe(audio).strip(), overlapped)
 
+    def _accepted(self) -> None:
+        """Tells the loop a request is coming, so the GPU claim starts before the brain call."""
+        if self.on_request is not None:
+            self.on_request()
+
     def decide(self, text: str, overlapped: bool = False) -> None:
         """Queues a transcript as a request, a bare "Hal", an interruption, or nothing."""
         if not text or re.fullmatch(r"\W*(you|thank you|thanks for watching)?\W*", text, re.I):
@@ -302,6 +308,7 @@ class Ears:
                 log.info("heard HAL's name while speaking: interrupting")
                 self.interrupt.set()
                 if request:
+                    self._accepted()
                     self.requests.put(Heard(request, True, text))
                 else:
                     self._pending_name_at = now
@@ -316,6 +323,7 @@ class Ears:
             self._pending_name_at = 0.0
             self.disarm()
             log.info("you: %s  (heard %r)", request, text)
+            self._accepted()
             self.requests.put(Heard(request, named, text))
         else:
             log.debug("ignored (no name): %r", text)

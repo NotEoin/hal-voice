@@ -44,6 +44,13 @@ activation:
     command_window_s: 6     # after a bare "Hal", the next utterance is the request for this long.
   followup_s: 8             # after HAL speaks, carry on talking without his name for this long.
 
+# ---- GPU sharing (gpu-light; optional, the loop runs unchanged without it) -----
+gpu:
+  resident_mib: 3584        # VRAM claimed for the models hal-voice keeps loaded (gpu-light's unmeasured default).
+  brain_mib: 14000          # VRAM the turn claim asks for while the brain answers.
+  turn_wait_s: 3            # longest wait for the turn claim before the brain call; then go ahead.
+  linger_s: 30              # the turn claim is released this long after the reply; a new turn renews it.
+
 # ---- Speech-to-text ---------------------------------------------------------
 stt:
   backend: faster-whisper

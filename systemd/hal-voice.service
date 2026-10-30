@@ -12,6 +12,7 @@ Environment=HALVOICE_ACTIVATION_MODE=wake_word
 Environment=HALVOICE_ACTIVATION_KEYWORD_ENABLED=true
 # The brain is core hal's; its model comes from [brain].model in ~/.config/hal/config.toml.
 Environment=HAL_CORE=@CORE@
+Environment=GPU_LIGHT_CLAIM=hal-voice
 # Whisper on the GPU joins the voice service's gpu-light claim.
 Environment=GPU_LIGHT_CLAIM=hal-voice
 # Claude Code runs in [hal].vault from the shared config, so no --project is needed.
