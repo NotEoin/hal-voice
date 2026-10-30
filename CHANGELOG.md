@@ -7,6 +7,9 @@ All notable changes to hal-voice are listed here. The format follows
 
 ### Added
 
+- Host-mode TTS (`tts.server.isolation: host`) is pinned: `hal-voice tts-pins record|verify` hash the
+  checkpoints, `tts-server` refuses to start on a mismatch, and `run-api.sh` no longer sets
+  `TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD`.
 - TTS container mode (`tts.server.isolation: container`, the default): `hal-voice tts-server` runs
   GPT-SoVITS in a GPU container with no network and bridges its socket to `127.0.0.1:9880`;
   `hal-voice tts-image build` makes the image. Docker tests: `pytest -m docker`.

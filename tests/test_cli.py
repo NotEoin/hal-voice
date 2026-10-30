@@ -122,6 +122,7 @@ def test_tts_server_with_the_checkout_starts_run_api(monkeypatch, tmp_path):
     present.mkdir()
     fake_config(monkeypatch, str(present))
     monkeypatch.delenv("GPTSOVITS_DIR", raising=False)
+    monkeypatch.setattr("halvoice.ttspins.verify", lambda *a, **k: None)
     started = {}
     monkeypatch.setattr(cli.os, "execv", lambda path, argv: started.update(path=path, argv=argv))
     cli.main(["tts-server"])

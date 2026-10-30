@@ -34,9 +34,9 @@ TTS_HALF="${HALVOICE_TTS_HALF:-true}"
 
 cd "$GPTSOVITS_DIR" || exit 1
 
-# torch >= 2.6 defaults torch.load(weights_only=True); the checkpoints pickle a
-# pathlib.PosixPath. They are trusted local files -- load them fully.
-export TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1
+# Keep torch.load(weights_only=True): `hal-voice tts-server` checks the checkpoints against
+# their pins first (tts-pins). Pickle loading is only for the container (tts.Dockerfile).
+unset TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD
 
 # Prefer the repo's own venv/conda env if present; otherwise activate the conda
 # env created by setup (install.sh), falling back to whatever 'python' is active.

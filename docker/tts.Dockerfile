@@ -14,6 +14,6 @@ RUN pip3 install --no-cache-dir -r /tmp/requirements.txt
 COPY tts_launcher.py /opt/tts_launcher.py
 
 WORKDIR /opt/gsv
-# the weights-only guard stays on in the host mode; here the box is the guard (no network, read-only mounts)
+# pickled checkpoints load here because the box is the guard (no network, read-only mounts)
 ENV TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1 PYTHONDONTWRITEBYTECODE=1
 ENTRYPOINT ["python3", "/opt/tts_launcher.py"]

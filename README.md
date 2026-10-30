@@ -205,6 +205,11 @@ By default (`tts.server.isolation: container`) the server runs in a GPU containe
 read-only mounts and no capabilities; build its image once with `hal-voice tts-image build`.
 Without docker or its `nvidia` runtime, `tts-server` exits 1 naming the missing piece and does not
 fall back to the host. A forwarder keeps the API on `127.0.0.1:9880`.
+
+Host mode (`tts.server.isolation: host`, set in your own `config.yaml`) needs pinned checkpoints:
+review them, run `hal-voice tts-pins record`, and `tts-server` then verifies them on every start.
+Unverified: that every GPT-SoVITS checkpoint loads with `weights_only=True`; one that does not
+stops the server, and container mode is then the way to run it.
 `hal-voice.service` sets no `PATH`, so a `claude` installed under npm's global prefix needs
 `claude.command` set to its absolute path. Python's CA bundle is found automatically
 (`halvoice.util.ca_bundle`).

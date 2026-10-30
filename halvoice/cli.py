@@ -25,6 +25,7 @@ hal-voice - a HAL-9000 voice: speak to it, it answers aloud.
                          print the transcript of an audio or video file
   hal-voice tts-server   run the GPT-SoVITS server the voice speaks through
   hal-voice tts-image build   build the TTS container image
+  hal-voice tts-pins record|verify   pin and check the checkpoints host-mode TTS loads
   hal-voice listen       one-shot: capture one utterance and print the transcript
   hal-voice devices      list audio input/output devices
   hal-voice eye          run the red-eye UI on its own (demo the animation states)
@@ -135,8 +136,18 @@ def _tts_server(args: list[str]) -> int:
     if isolation != "host":
         print(f"tts.server.isolation must be container or host, not {isolation!r}", file=sys.stderr)
         return 1
+    from . import ttspins
+
+    weights = config.resolve(str(cfg.get("tts.server.weights_dir", "")))
+    try:
+        ttspins.verify(Path(server_dir), Path(weights))
+    except ttspins.PinError as e:
+        print(f"hal-voice: refusing to start the host TTS server: {e}", file=sys.stderr)
+        return 1
     script = config.root_dir() / "gptsovits" / "run-api.sh"
     os.environ["GPTSOVITS_DIR"] = server_dir
+    # host mode keeps torch.load(weights_only=True); the pins above are what makes that enough
+    os.environ.pop("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", None)
     os.execv(script, [str(script), *args])  # noqa: S606 - our own script; the server keeps this pid
 
 
@@ -153,6 +164,29 @@ def _tts_container(cfg, server_dir: str) -> int:
     except ttsbox.TtsBoxError as e:
         print(f"hal-voice: {e}", file=sys.stderr)
         return 1
+
+
+def _tts_pins(args: list[str]) -> int:
+    """`hal-voice tts-pins record|verify`: pins the checkpoints host-mode TTS may load."""
+    from . import config, ttspins
+
+    if args not in (["record"], ["verify"]):
+        print("usage: hal-voice tts-pins record|verify", file=sys.stderr)
+        return 2
+    cfg = config.load()
+    gsv = Path(config.resolve(str(cfg.get("tts.server.gptsovits_dir", ""))) or "")
+    weights = Path(config.resolve(str(cfg.get("tts.server.weights_dir", ""))) or "")
+    try:
+        if args == ["record"]:
+            pins = ttspins.record(gsv, weights)
+            print(f"pinned {len(pins)} checkpoints in {ttspins.lock_path()}")
+        else:
+            ttspins.verify(gsv, weights)
+            print("all checkpoints match their pins")
+    except ttspins.PinError as e:
+        print(f"hal-voice: {e}", file=sys.stderr)
+        return 1
+    return 0
 
 
 def _tts_image(args: list[str]) -> int:
@@ -233,6 +267,7 @@ COMMANDS: dict[str, Callable[[list[str]], int]] = {
     "tts": _tts,
     "tts-server": _tts_server,
     "tts-image": _tts_image,
+    "tts-pins": _tts_pins,
     "transcribe-file": _transcribe_file,
     "listen": _listen,
     "devices": _devices,
