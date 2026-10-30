@@ -73,7 +73,13 @@ Set it permanently as `claude.project_dir` in `~/.config/hal-voice/config.yaml` 
 
 `brain.mode` decides who answers:
 
-- `direct` (the default) uses core Hal's brain (`halcore.brain`, in `core/hal` of the ecosystem). It
+- `hal` (the default) is an ACP client of `hal acp --channel voice --toolset assistant`: Hal's boxed
+  assistant agent answers, with the local model reached through the gateway and tools through the
+  broker. The command is `brain.hal_command`. When a tool call needs approval, HAL reads out the
+  host's summary and needs a spoken "yes" or "allow" (the whole reply) within 20 s; anything else,
+  or `brain.voice_approvals: false`, denies. If `hal` is missing or exits twice, hal-voice stops
+  with an error; it never falls back to another brain. Checked by `tests/test_acp_brain.py`.
+- `direct` uses core Hal's brain (`halcore.brain`, in `core/hal` of the ecosystem). It
   streams the reply from a local Ollama model and calls the tools of the extensions installed
   through hal-hub, so first words arrive in about a second. Tasks with many steps go to Claude Code
   through a `deep_work` tool, and HAL tells you when they finish. The model and the other brain

@@ -7,6 +7,8 @@ All notable changes to hal-voice are listed here. The format follows
 
 ### Added
 
+- `brain.mode: hal` (the new default): the voice loop is an ACP client of `hal acp --channel voice
+  --toolset assistant`, with spoken approvals for broker requests (`brain.voice_approvals`).
 - Host-mode TTS (`tts.server.isolation: host`) is pinned: `hal-voice tts-pins record|verify` hash the
   checkpoints, `tts-server` refuses to start on a mismatch, and `run-api.sh` no longer sets
   `TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD`.

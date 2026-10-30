@@ -24,7 +24,7 @@ def test_openai_mode_without_base_url_stops_with_the_key_named():
 
 
 def test_unknown_mode_names_the_mode_and_the_choices():
-    with pytest.raises(BrainUnavailable, match="'telepathy' is not one of: direct, openai"):
+    with pytest.raises(BrainUnavailable, match="'telepathy' is not one of: hal, direct, openai"):
         make_brain(cfg_with(mode="telepathy"))
 
 

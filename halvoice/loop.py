@@ -53,6 +53,9 @@ def _accumulate_sentences(delta_iter):
 
 
 TOO_LONG = "That took too long."
+APPROVAL_LISTEN_S = 20.0  # REQ-VOICE-05: a spoken approval waits at most this long
+APPROVAL_SETTLE_S = 0.3  # lets the request text reach the speaker before checking it finished
+APPROVAL_SPEECH_WAIT_S = 60.0  # longest wait for the request to be read out
 UNAVAILABLE = "My brain is not available."
 
 
@@ -76,6 +79,8 @@ class VoiceLoop:
             linger_s=float(self.cfg.get("gpu.linger_s", 30)),
         )
         self.brain = make_brain()
+        if hasattr(self.brain, "listen"):
+            self.brain.listen = self._listen_for_approval  # spoken approvals (REQ-VOICE-05)
         self.player = tts.Player()
         self._ui_thread = None
         self.ears = None
@@ -97,6 +102,7 @@ class VoiceLoop:
                 target=hub.call, args=("rgb_state", {"state": state}), daemon=True
             ).start()
         self._speak_lock = threading.Lock()
+        self._pending_audio = 0  # segments queued or playing; read by `_speaking_now`
 
     # -- UI --------------------------------------------------------------------
     def _start_ui(self) -> None:
@@ -147,6 +153,7 @@ class VoiceLoop:
                     if self.ears:
                         self.ears.spoke(sentence)
                     for seg in tts.synth_stream(sentence):
+                        self._pending_audio += 1
                         audio_q.put(seg)
             except Exception as e:  # noqa: BLE001 - a failed reply is logged, the loop carries on
                 log.error("reply failed: %s", e)
@@ -168,9 +175,12 @@ class VoiceLoop:
                         break
                     audio, sr = item
                     self.bus.set("speaking")
-                    if not self.player.play(
+                    played = self.player.play(
                         audio, sr, on_level=lambda lv: self.bus.set("speaking", lv)
-                    ):
+                    )
+                    self._pending_audio = max(0, self._pending_audio - 1)
+                    if not played:
+                        self._pending_audio = 0
                         log.info("(barge-in: HAL stops)")
                         finished = False
                         cancel.set()
@@ -181,6 +191,26 @@ class VoiceLoop:
                 self.ears.stopped_speaking()
                 self.ears.speaking.clear()
         return finished
+
+    def _listen_for_approval(self) -> str:
+        """Waits for the spoken approval request to finish, then hears one reply (20 s at most)."""
+        time.sleep(APPROVAL_SETTLE_S)
+        deadline = time.monotonic() + APPROVAL_SPEECH_WAIT_S
+        while self._speaking_now() and time.monotonic() < deadline:
+            time.sleep(0.05)
+        heard: list[str] = []
+
+        def hear() -> None:
+            heard.append(self._record("approval"))
+
+        thread = threading.Thread(target=hear, name="approval-listen", daemon=True)
+        thread.start()
+        thread.join(APPROVAL_LISTEN_S)
+        return heard[0] if heard else ""
+
+    def _speaking_now(self) -> bool:
+        """True while synthesised audio is queued or playing."""
+        return self._pending_audio > 0
 
     def _deep_done(self, text: str) -> None:
         """Speaks the outcome of background work when it finishes."""

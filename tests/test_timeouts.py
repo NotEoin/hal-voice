@@ -36,6 +36,7 @@ FORBIDDEN = {"urllib.request.urlretrieve", "urlretrieve"}
 # Popen has no timeout argument. Each file below says why its process is bounded another way.
 POPEN_ALLOWED = {
     "halvoice/brains/claude.py": "its process group is killed after brain.turn_timeout_s",
+    "halvoice/brains/acp.py": "every wait on the child is bounded by brain.turn_timeout_s or the handshake timeout, and close() kills it",
     "haltranscribe/tools.py": "pw-record records until record_stop signals it; the pid is kept in recording.json",
     "halvoice/ttsbox.py": "the TTS container runs until SIGTERM, which terminates it",
     "voicebuild/build.py": "the TTS server runs until Server.stop() ends its process group",

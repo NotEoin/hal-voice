@@ -125,6 +125,9 @@ tts:
 
 # ---- The brain: who answers ---------------------------------------------------
 brain:
+  # hal:    Hal's boxed assistant agent over ACP (`hal acp --channel voice --toolset assistant`):
+  #         local model through the gateway, tools through the broker, nothing else out of the box.
+  #         Needs Hal installed with `hal` on PATH. The default.
   # direct: core Hal's brain (halcore) streams the reply from a local Ollama model and calls the
   #         tools of the extensions installed through hal-hub; first words in about a second.
   #         Long jobs go to Claude Code in the background. Needs core hal (see README).
@@ -132,7 +135,12 @@ brain:
   #         For use without Hal.
   # claude: every turn is a Claude Code run on the host (not private, not sandboxed). Chosen only by
   #         setting it here; a missing core Hal never falls back to it.
-  mode: direct
+  mode: hal
+  # hal mode: the command that starts the agent; `hal` is resolved on PATH.
+  hal_command: [hal, acp, --channel, voice, --toolset, assistant]
+  # hal mode: true = a tool call that needs approval is read out and needs a spoken "yes" within
+  # 20 s; false = approve only from other surfaces (Hal's voice channel profile allows `once` only).
+  voice_approvals: true
   # openai and claude modes: a reply still unfinished after this ends with "That took too long"
   # (claude mode kills the claude -p process and its children).
   turn_timeout_s: 300

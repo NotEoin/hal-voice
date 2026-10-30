@@ -131,7 +131,7 @@ def _gptsovits_server():
 
 
 def _mode() -> str:
-    return str(config.load().get("brain.mode", "direct"))
+    return str(config.load().get("brain.mode", "hal"))
 
 
 def _direct() -> bool:
@@ -147,9 +147,21 @@ def _openai_brain():
     return f"OpenAI-compatible server at {b.base_url}, model {b.model or '(server default)'}"
 
 
+def _hal_brain():
+    """The hal brain: `hal` on PATH (or the first word of `brain.hal_command`)."""
+    command = config.load().get("brain.hal_command") or []
+    if not command or not shutil.which(str(command[0])):
+        raise Exception(
+            f"{command[0] if command else 'brain.hal_command'} not found: install Hal and put "
+            "`hal` on PATH, or set brain.mode to openai or claude"
+        )
+    return f"hal acp via {shutil.which(str(command[0]))}"
+
+
 def _brain():
-    """The configured brain: the direct brain's core hal, Ollama model and hal-hub tools, or
-    the openai brain's server."""
+    """The configured brain: Hal's ACP agent, the direct brain's core hal, or the openai server."""
+    if _mode() == "hal":
+        return _hal_brain()
     if _mode() == "openai":
         return _openai_brain()
     if not _direct():

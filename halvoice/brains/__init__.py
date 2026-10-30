@@ -3,6 +3,7 @@
 A brain takes the transcript of one turn and streams the reply text back; the loop turns
 the stream into sentences for the voice. Modes:
 
+- `hal`: Hal's boxed assistant agent over ACP (`halvoice/brains/acp.py`);
 - `direct`: core Hal's brain (`halcore.brain.Brain`, see `halvoice/brain.py`);
 - `openai`: any OpenAI-compatible server at `brain.base_url`, for use without Hal
   (`halvoice/brains/openai.py`);
@@ -23,7 +24,7 @@ from ..util import get_logger
 
 log = get_logger(__name__)
 
-MODES = ("direct", "openai", "claude")
+MODES = ("hal", "direct", "openai", "claude")
 
 
 class BrainError(RuntimeError):
@@ -61,7 +62,11 @@ class Brain(Protocol):
 def make_brain(cfg: config.Cfg | None = None) -> Brain:
     """Returns the brain `brain.mode` names; raises `BrainUnavailable` when it cannot start."""
     cfg = cfg if cfg is not None else config.load()
-    mode = str(cfg.get("brain.mode", "direct"))
+    mode = str(cfg.get("brain.mode", "hal"))
+    if mode == "hal":
+        from .acp import AcpBrain
+
+        return AcpBrain(cfg)
     if mode == "openai":
         from .openai import OpenAIBrain
 
