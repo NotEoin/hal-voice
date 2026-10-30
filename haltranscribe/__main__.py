@@ -12,7 +12,7 @@ from pathlib import Path
 
 from . import tools
 
-MANIFEST = Path(__file__).resolve().parents[1] / "hal-module.toml"
+MANIFEST = Path(__file__).resolve().parent / "hal-module.toml"
 
 
 def _coerce(value: str, kind: str):

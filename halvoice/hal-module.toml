@@ -1,0 +1,28 @@
+schema = 2
+
+[module]
+name = "voice"
+summary = "Speak text aloud with the Hal voice"
+pack = "voice"
+# {root} is this manifest's directory; its parent is the checkout with the .venv
+exec = ["{root}/../.venv/bin/python", "-m", "halvoice.hubtool"]
+protocol = "oneshot"
+# `hal ext add voice` runs this: the venv, the speech models and GPT-SoVITS (several GB).
+install = ["{root}/../setup-voice.sh", "--yes", "--with-wake"]
+
+[[tools]]
+name = "voice_say"
+function = "say"
+description = "Say a line aloud in HAL's voice through the speakers. Does nothing if the voice server is not running."
+keywords = "say speak aloud out loud voice announce read"
+timeout = 120
+tier = "act"
+network = false
+untrusted_output = false
+reviewable = true
+reversible = true
+[tools.params.text]
+type = "string"
+description = "what to say"
+required = true
+max_length = 500

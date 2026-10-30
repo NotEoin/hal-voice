@@ -7,6 +7,8 @@ All notable changes to hal-voice are listed here. The format follows
 
 ### Added
 
+- Schema 2 `exec` manifests for the voice and transcribe tools (`halvoice/hal-module.toml`,
+  `haltranscribe/hal-module.toml`), run by the one-shot worker `python -m halvoice.hubtool`.
 - `hal-voice transcribe-file PATH [--json]` and `hal-voice tts --out FILE.wav TEXT`.
 - `haltranscribe`, the hal-transcribe package, merged with its history. Settings are now the
   `transcribe:` section of hal-voice's config; a `[transcribe]` table in

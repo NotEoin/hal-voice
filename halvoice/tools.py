@@ -1,12 +1,6 @@
-"""hal-voice's hal-hub tools, run as a subprocess with the voice virtualenv.
-
-python -m halvoice.tools --stdin say    JSON arguments on stdin, JSON result on stdout
-"""
+"""hal-voice's hal-hub tool functions; `halvoice.hubtool` runs them one call at a time."""
 
 from __future__ import annotations
-
-import json
-import sys
 
 from . import config
 
@@ -34,20 +28,3 @@ def say(text: str) -> dict:
 
     tts.speak(text)
     return {"spoken": True}
-
-
-def main(argv: list[str] | None = None) -> int:
-    argv = list(sys.argv[1:] if argv is None else argv)
-    if argv[:1] != ["--stdin"] or len(argv) < 2:
-        print(__doc__, file=sys.stderr)
-        return 2
-    fn = {"say": say}.get(argv[1])
-    if fn is None:
-        print(f"no function {argv[1]}", file=sys.stderr)
-        return 2
-    print(json.dumps(fn(**json.loads(sys.stdin.read() or "{}")), default=str))
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

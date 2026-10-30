@@ -1,8 +1,12 @@
+schema = 2
+
 [module]
 name = "transcribe"
 summary = "Transcribe audio and video files, record meetings from the microphone, and save summarised notes"
-# faster-whisper lives in its own environment; bin/run finds one that has it.
-exec = ["{root}/bin/run", "--stdin"]
+pack = "voice"
+# {root} is this manifest's directory; its parent is the checkout with the .venv
+exec = ["{root}/../.venv/bin/python", "-m", "halvoice.hubtool"]
+protocol = "oneshot"
 
 [[tools]]
 name = "transcribe_file"
@@ -10,8 +14,17 @@ function = "transcribe"
 description = "Transcribe an audio or video file to text."
 keywords = "transcribe audio recording voice memo podcast video text"
 timeout = 3600
+tier = "read"
+network = false
+untrusted_output = true
+reviewable = true
+reversible = true
 [tools.params.path]
+type = "string"
+format = "path"
+access = "read"
 required = true
+max_length = 4096
 [tools.params.timestamps]
 type = "boolean"
 
@@ -20,7 +33,14 @@ name = "transcribe_record_start"
 function = "record_start"
 description = "Start recording the microphone, for a meeting, lecture or voice memo."
 keywords = "record meeting start recording lecture memo"
+tier = "act"
+network = false
+untrusted_output = false
+reviewable = false
+reversible = true
 [tools.params.title]
+type = "string"
+max_length = 200
 
 [[tools]]
 name = "transcribe_record_stop"
@@ -28,6 +48,11 @@ function = "record_stop"
 description = "Stop the recording, transcribe it and save a summarised note with decisions and actions in the vault."
 keywords = "stop recording transcribe meeting notes"
 timeout = 3600
+tier = "write"
+network = false
+untrusted_output = false
+reviewable = true
+reversible = true
 [tools.params.save]
 type = "boolean"
 
@@ -36,11 +61,25 @@ name = "transcribe_status"
 function = "recording"
 description = "Whether a recording is running and for how long."
 
+tier = "read"
+network = false
+untrusted_output = false
+reviewable = false
+reversible = true
 [[tools]]
 name = "transcribe_save_note"
 function = "save_note"
 description = "Save a transcript as a summarised note in the vault."
 timeout = 600
+tier = "write"
+network = false
+untrusted_output = false
+reviewable = false
+reversible = true
 [tools.params.text]
+type = "string"
+content = true
 required = true
 [tools.params.title]
+type = "string"
+max_length = 200

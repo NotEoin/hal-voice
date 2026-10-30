@@ -25,7 +25,7 @@ python3 -m venv .venv && .venv/bin/pip install faster-whisper
 
 ## Use
 
-Through hal-hub as `hal-hub transcribe_<tool>`, or `bin/run` from the module folder:
+Through hal-hub as `hal-hub transcribe_<tool>`, or `python -m halvoice.hubtool FUNCTION` (JSON arguments on stdin):
 
 ```bash
 hal-hub transcribe_file path=~/Downloads/voice-memo.m4a
