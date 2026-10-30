@@ -21,10 +21,9 @@ whatever [Claude Code](https://claude.ai/code) you already have.
   whole answer.
 - **Talk at a normal pace.** Say "Hal" at the start or end of a sentence and the request is heard in
   the same breath; after he answers, carry on for a few seconds without his name.
-- **A fast local brain with tools.** In `direct` mode (the default) core Hal's brain answers with a
-  local model and calls the tools of the extensions installed through hal-hub (calendar, memory,
-  computer, lights and more), with first words in about a second. Long jobs go to Claude Code in the
-  background.
+- **A boxed local brain with tools.** In `hal` mode (the default) Hal's sandboxed assistant agent
+  answers with a local model and calls tools only through Hal's broker. Claude Code is never called
+  unless you set `brain.mode: claude`.
 - **Interrupt it whenever you like**: say his name while he talks and he stops to listen.
 - **A red eye that reacts** - idle, listening, thinking, speaking.
 - **Your voice never leaves the machine.** Speech recognition and synthesis are both local. What
@@ -48,8 +47,8 @@ You say HAL's name (or hold a key), ask a question, and it answers aloud. Undern
 transcribed with faster-whisper, handed to the brain, and the reply is streamed back out through
 GPT-SoVITS and a small effects chain that gives it the right weight and room.
 
-hal-voice runs **no language model of its own**. It is a voice on the front of a brain: core Hal's
-agent loop in `direct` mode, or a headless Claude Code session in `claude` mode.
+hal-voice runs **no language model of its own**. It is a voice on the front of a brain: Hal's
+boxed agent in `hal` mode, or a headless Claude Code session in `claude` mode.
 
 ### ✍️ Author
 
@@ -79,12 +78,6 @@ Set it permanently as `claude.project_dir` in `~/.config/hal-voice/config.yaml` 
   host's summary and needs a spoken "yes" or "allow" (the whole reply) within 20 s; anything else,
   or `brain.voice_approvals: false`, denies. If `hal` is missing or exits twice, hal-voice stops
   with an error; it never falls back to another brain. Checked by `tests/test_acp_brain.py`.
-- `direct` uses core Hal's brain (`halcore.brain`, in `core/hal` of the ecosystem). It
-  streams the reply from a local Ollama model and calls the tools of the extensions installed
-  through hal-hub, so first words arrive in about a second. Tasks with many steps go to Claude Code
-  through a `deep_work` tool, and HAL tells you when they finish. The model and the other brain
-  settings come from `[brain]` in `~/.config/hal/config.toml`, shared with Hal's chat and Telegram;
-  `brain.*` in your hal-voice config overrides them for voice only, and keeps HAL's persona.
 - `openai` streams the reply from any OpenAI-compatible server (llama-server, Ollama's `/v1`, vLLM, a
   hosted API) at `brain.base_url`, with no tools. It is for running hal-voice without Hal. There is
   no default URL: with `base_url` empty, hal-voice stops and says which key to set. A bearer token,
@@ -110,8 +103,10 @@ HALVOICE_BRAIN_MODEL=mistral-small3.2:24b ./hal-voice   # another model, for thi
 HALVOICE_BRAIN_MODE=claude ./hal-voice                  # Claude Code for every turn
 ```
 
-Core Hal is found at `HAL_CORE`, else at `core/hal` in the ecosystem folder, else at `[hal].core` in
-the shared config. Without it, `direct` mode logs why and falls back to `claude` mode.
+The `direct` mode and the `brain.fallback` idea are gone: a brain that cannot start stops
+hal-voice with an error naming the mode and the fix. The keys `brain.ollama_url`, `keep_alive`,
+`max_tool_rounds`, `tools_per_turn`, `num_ctx`, `temperature`, `hub_path` and `ui.rgb_follow` were
+removed with it; the model and its limits are Hal's settings now.
 
 In `claude` mode it can also follow a [Hal](https://github.com/NotEoin/Hal) install's profile: point
 `claude.hal_root` at a checkout with a `hal.conf` (or run `./setup-voice.sh --hal auto`). To plug into
@@ -310,9 +305,8 @@ before you use them.
   each transcribed once (on the GPU with `stt.device: auto`), and a turn starts when one begins or
   ends with "Hal", greeting first or not ("Good morning, Hal"). It costs some GPU or CPU time
   whenever someone is speaking nearby, and "Hey Al" still sounds like "Hey Hal" to it.
-- **The direct brain needs a model that calls tools reliably.** Smaller models tend to say they did
-  something instead of doing it; the brain holds back such replies and retries once, but a 20B-class
-  model with good tool use (mistral-small3.2 measured best here) is the practical minimum.
+- **The brain needs a model that calls tools reliably.** Smaller models tend to say they did
+  something instead of doing it; a 20B-class model with good tool use is the practical minimum.
 - **It's not instant.** Streaming hides a lot of the delay, but synthesis still has to happen -
   and on the `cloud` (CPU) profile it runs slower than real time, so HAL pauses before answering.
 - **The voice effects are tuned to one voice.** Treat the defaults as a starting point.
@@ -322,7 +316,7 @@ before you use them.
 ## 🔗 Related projects
 
 - **[Hal](https://github.com/NotEoin/Hal)** - a local assistant with an Obsidian vault as its memory.
-  Its brain answers in `direct` mode, and hal-hub gives it the tools of the other Hal extensions.
+  Its agent answers in `hal` mode, with the tools of the other Hal packs through the broker.
 
 ## 💭 Feedback and contributing
 

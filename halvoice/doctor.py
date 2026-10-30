@@ -1,7 +1,7 @@
 """`hal-voice doctor` -- check that everything voice-related is wired up and reachable.
 
-Verifies: python deps, audio I/O, the STT model, the brain (core hal, Ollama and hal-hub in
-direct mode; the server in openai mode), the GPT-SoVITS server + HAL weights, the reference
+Verifies: python deps, audio I/O, the STT model, the brain (`hal` on PATH in hal
+mode; the server in openai mode), the GPT-SoVITS server + HAL weights, the reference
 clip, and Claude Code on PATH. Prints a tidy pass/fail report; exits non-zero if anything
 essential is missing.
 """
@@ -134,10 +134,6 @@ def _mode() -> str:
     return str(config.load().get("brain.mode", "hal"))
 
 
-def _direct() -> bool:
-    return _mode() == "direct"
-
-
 def _openai_brain():
     """The openai brain: `brain.base_url` set, and its `/models` answering."""
     from .brains.openai import OpenAIBrain
@@ -159,36 +155,19 @@ def _hal_brain():
 
 
 def _brain():
-    """The configured brain: Hal's ACP agent, the direct brain's core hal, or the openai server."""
+    """The configured brain: Hal's ACP agent, or the openai server."""
     if _mode() == "hal":
         return _hal_brain()
     if _mode() == "openai":
         return _openai_brain()
-    if not _direct():
-        raise _Warn("brain.mode is claude: every turn is a Claude Code run")
-    import json
-    import urllib.request
-
-    from . import brain
-
-    core = brain.find_core()
-    b = brain.direct_brain()
-    try:
-        with urllib.request.urlopen(f"{b.url}/api/tags", timeout=3) as r:  # noqa: S310 - a configured local http URL
-            names = {m["name"] for m in json.loads(r.read()).get("models", [])}
-    except OSError as e:
-        raise Exception(f"Ollama not reachable at {b.url}: {e}") from e
-    if b.model not in names and f"{b.model}:latest" not in names:
-        raise Exception(f"model {b.model} is not in Ollama (ollama pull {b.model})")
-    tools = f"{len(b.hub.all_tools())} tools" if b.hub else "no tools (hal-hub not found)"
-    return f"core hal at {core}; {b.model} via {b.url}; {tools}"
+    raise _Warn(
+        "brain.mode is claude: every turn is a Claude Code run (not private, not sandboxed)"
+    )
 
 
 def _claude():
     if not shutil.which(str(config.load().get("claude.command", "claude"))):
         msg = "Claude Code ('claude') not on PATH - install it from https://claude.com/claude-code"
-        if _direct():
-            raise _Warn(msg + " (direct mode needs it only for long background jobs)")
         if _mode() != "claude":
             raise _Warn(msg + f" ({_mode()} mode does not use it)")
         raise Exception(msg)

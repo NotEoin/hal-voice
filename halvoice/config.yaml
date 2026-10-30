@@ -128,13 +128,10 @@ brain:
   # hal:    Hal's boxed assistant agent over ACP (`hal acp --channel voice --toolset assistant`):
   #         local model through the gateway, tools through the broker, nothing else out of the box.
   #         Needs Hal installed with `hal` on PATH. The default.
-  # direct: core Hal's brain (halcore) streams the reply from a local Ollama model and calls the
-  #         tools of the extensions installed through hal-hub; first words in about a second.
-  #         Long jobs go to Claude Code in the background. Needs core hal (see README).
   # openai: any OpenAI-compatible server at base_url (llama-server, Ollama's /v1, vLLM); no tools.
   #         For use without Hal.
   # claude: every turn is a Claude Code run on the host (not private, not sandboxed). Chosen only by
-  #         setting it here; a missing core Hal never falls back to it.
+  #         setting it here; a missing `hal` never falls back to it.
   mode: hal
   # hal mode: the command that starts the agent; `hal` is resolved on PATH.
   hal_command: [hal, acp, --channel, voice, --toolset, assistant]
@@ -148,20 +145,13 @@ brain:
   base_url: ""              # e.g. http://127.0.0.1:8080/v1 (the part before /chat/completions)
   api_key_file: ""          # a file holding the bearer token, when the server needs one
   connect_timeout_s: 5      # a local server answers in well under a second
-  # Empty values below leave the shared ~/.config/hal/config.toml in charge ([brain], then [hal])
-  # in direct mode; in openai mode an empty model means the server's default.
-  model: ""                 # empty = [brain].model, else [hal].chat_model
-  ollama_url: ""            # empty = [hal].ollama_url
-  keep_alive: ""            # how long the model stays loaded between turns; empty = [brain].keep_alive
-  # Exchanges remembered within one session; empty = [brain].history_turns in direct mode and
-  # 8 in openai mode (8 short spoken exchanges fit a 4k-token budget [unverified: voicetest]).
+  # openai mode: an empty model means the server's default.
+  model: ""                 # openai mode only; empty = the server's default model
+  # openai mode: exchanges remembered within one session; empty = 8 (8 short spoken exchanges fit
+  # a 4k-token budget [unverified: voicetest]).
   history_turns: ""
-  max_tool_rounds: ""
-  tools_per_turn: ""        # tools offered per request (plus search); the rest are found on demand
-  num_ctx: ""               # context window; the persona, tools and history need about 4000 tokens
   user_name: Dave           # how HAL addresses you in the tool rules; the persona below calls you Dave
-  hub_path: ""              # hal-hub checkout; empty = core/hal-hub beside core hal, or [hub].module_paths
-  # The persona of the direct and openai brains: shorter than claude.voice_system_prompt, and
+  # The persona of the hal and openai brains: shorter than claude.voice_system_prompt, and
   # without its scripted refusals, which a mid-sized local model over-applies to ordinary requests.
   persona: |
     You are HAL 9000, the computer from Discovery One, now running this household and its computer.
@@ -285,7 +275,6 @@ ui:
   height: 480
   fullscreen: false
   eye_color: [220, 30, 20]  # HAL red.
-  rgb_follow: false         # true: RGB lights show HAL's state through hal-rgb (direct brain only).
   # States animate the lens: idle (slow breathe), listening (bright steady),
   # thinking (slow flicker), speaking (pulse with audio envelope).
 

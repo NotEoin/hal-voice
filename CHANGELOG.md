@@ -5,6 +5,13 @@ All notable changes to hal-voice are listed here. The format follows
 
 ## [Unreleased]
 
+### Removed
+
+- The `direct` brain mode, `halvoice/brain.py` and the keys `brain.ollama_url`, `keep_alive`,
+  `max_tool_rounds`, `tools_per_turn`, `num_ctx`, `temperature`, `hub_path` and `ui.rgb_follow`.
+  A config that still sets one stops with an error naming the replacement. A missing `hal` never
+  falls back to Claude Code.
+
 ### Added
 
 - `brain.mode: hal` (the new default): the voice loop is an ACP client of `hal acp --channel voice

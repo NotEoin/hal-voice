@@ -3,7 +3,7 @@
 | Package | Responsibility |
 | --- | --- |
 | `halvoice` | The voice loop, speech in and out, settings (`config.yaml`), brains, the TTS launchers |
-| `halvoice.brains` | The brain interface; modes are `direct`, `openai` and `claude`, and a missing brain raises `BrainUnavailable` |
+| `halvoice.brains` | The brain interface; modes are `hal` (ACP client, `brains/acp.py`), `openai` and `claude`, and a missing brain raises `BrainUnavailable` |
 | `halvoice.ttsbox`, `halvoice.ttspins` | Container mode and checkpoint pins for the TTS server |
 | `halvoice.hubtool` | One-shot worker that hal-hub's `exec` manifests call |
 | `haltranscribe` | Transcribe files and meetings; its own `hal-module.toml` |

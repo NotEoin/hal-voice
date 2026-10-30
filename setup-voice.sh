@@ -18,8 +18,8 @@
 #
 # TWO SEPARATE QUESTIONS, and it matters that they're separate:
 #
-# 1. WHO THINKS?  By default (brain.mode: direct) core Hal's brain answers: a local
-#    model that calls the tools of your extensions, set in ~/.config/hal/config.toml.
+# 1. WHO THINKS?  By default (brain.mode: hal) Hal's boxed agent answers over ACP: a local
+#    model that calls tools through Hal's broker, set in ~/.config/hal/config.toml.
 #    brain.mode: claude drives Claude Code instead; `--hal <path>` then reads that
 #    install's hal.conf so Claude Code uses the same local model, and claude.env_file
 #    in config.yaml takes any KEY=VALUE file of ANTHROPIC_* settings for other setups.

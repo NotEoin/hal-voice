@@ -24,17 +24,15 @@ def test_openai_mode_without_base_url_stops_with_the_key_named():
 
 
 def test_unknown_mode_names_the_mode_and_the_choices():
-    with pytest.raises(BrainUnavailable, match="'telepathy' is not one of: hal, direct, openai"):
+    with pytest.raises(BrainUnavailable, match="'telepathy' is not one of: hal, openai"):
         make_brain(cfg_with(mode="telepathy"))
 
 
-def test_missing_core_hal_does_not_fall_back_to_claude(monkeypatch):
-    """Regression: direct mode used to start Claude Code silently when core Hal was missing."""
-    from halvoice import brain
-
-    def missing():
-        raise brain.CoreNotFound("core Hal not found")
-
-    monkeypatch.setattr(brain, "DirectBrain", missing)
-    with pytest.raises(BrainUnavailable, match="core Hal not found"):
+def test_direct_mode_is_removed_and_names_the_fix():
+    """Regression: `direct` once ran core Hal in-process, and a missing core fell back to Claude."""
+    with pytest.raises(BrainUnavailable, match="direct brain was removed: use hal"):
         make_brain(cfg_with(mode="direct"))
+
+
+def test_default_brain_mode_is_hal():
+    assert config.load(force=True).get("brain.mode") == "hal"

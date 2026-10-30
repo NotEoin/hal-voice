@@ -186,10 +186,12 @@ class AcpBrain:
     def _send(self, msg: dict[str, Any]) -> None:
         if not self._alive():
             raise BrainError("hal acp is not running")
-        assert self._proc is not None and self._proc.stdin is not None  # noqa: S101
+        stdin = self._proc.stdin if self._proc is not None else None
+        if stdin is None:
+            raise BrainError("hal acp is not running")
         try:
-            self._proc.stdin.write(json.dumps(msg) + "\n")
-            self._proc.stdin.flush()
+            stdin.write(json.dumps(msg) + "\n")
+            stdin.flush()
         except (OSError, ValueError) as e:
             raise BrainError(f"cannot write to hal acp: {e}") from e
 

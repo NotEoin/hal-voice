@@ -41,6 +41,12 @@ def test_unknown_override_key_fails(isolated_config, name):
     assert "tts.sped" in str(err.value)
 
 
+def test_removed_direct_brain_key_says_it_was_removed(isolated_config):
+    write(isolated_config / "config.yaml", "brain:\n  ollama_url: http://127.0.0.1:11434\n")
+    with pytest.raises(config.ConfigError, match=r"brain\.ollama_url' was removed"):
+        config.load(force=True)
+
+
 def test_unknown_top_level_section_fails(isolated_config):
     write(isolated_config / "config.yaml", "voice:\n  speed: 1\n")
     with pytest.raises(config.ConfigError, match="'voice'"):

@@ -92,6 +92,22 @@ DEFAULTS_FILE = Path(__file__).resolve().parent / "config.yaml"
 OPEN_TABLES = frozenset({"claude.model_env"})
 
 
+# Keys of the removed direct brain, with what replaces them (V-15; the model and its limits are
+# now Hal's: the gateway preset or ~/.config/hal/config.toml).
+REMOVED_KEYS = {
+    f"brain.{k}": "set it in Hal's config; brain.mode hal reaches the model through the gateway"
+    for k in (
+        "ollama_url",
+        "keep_alive",
+        "max_tool_rounds",
+        "tools_per_turn",
+        "num_ctx",
+        "temperature",
+        "hub_path",
+    )
+} | {"ui.rgb_follow": "removed with the direct brain; hal-rgb follows Hal's own state"}
+
+
 class ConfigError(ValueError):
     """A settings file is unreadable, malformed, or sets a key hal-voice does not know."""
 
@@ -133,6 +149,8 @@ def _merge(base: dict, over: dict, source: Path, prefix: str = "") -> None:
     for key, value in over.items():
         dotted = f"{prefix}{key}"
         if key not in base:
+            if dotted in REMOVED_KEYS:
+                raise ConfigError(f"{source}: '{dotted}' was removed: {REMOVED_KEYS[dotted]}")
             raise ConfigError(f"{source}: unknown key '{dotted}'")
         current = base[key]
         if isinstance(current, dict) and dotted not in OPEN_TABLES:

@@ -11,7 +11,7 @@ details are on the repository page), not in a public issue. Include the version 
 - **Microphone.** Audio is captured only while the voice loop runs. Speech recognition runs
   on your machine (faster-whisper); no audio is sent anywhere by hal-voice itself.
 - **Brain modes.** The mode sets where your words go.
-  - `direct` (core Hal): stays on your machine; tools run through Hal's hub.
+  - `hal` (the default): Hal's boxed agent; stays on your machine, tools run through Hal's broker.
   - `openai`: your words go to the server at `brain.base_url`. Use a local one for privacy.
   - `claude`: runs Claude Code on the host. **Not private, not sandboxed.** It is chosen only
     by setting `brain.mode: claude`; hal-voice never falls back to it on its own.

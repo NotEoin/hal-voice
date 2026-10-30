@@ -4,14 +4,13 @@ A brain takes the transcript of one turn and streams the reply text back; the lo
 the stream into sentences for the voice. Modes:
 
 - `hal`: Hal's boxed assistant agent over ACP (`halvoice/brains/acp.py`);
-- `direct`: core Hal's brain (`halcore.brain.Brain`, see `halvoice/brain.py`);
 - `openai`: any OpenAI-compatible server at `brain.base_url`, for use without Hal
   (`halvoice/brains/openai.py`);
 - `claude`: Claude Code headless on the host (`halvoice/brains/claude.py`).
 
 `make_brain` raises `BrainUnavailable` when the configured brain cannot start, with a
-message that names the mode and the fix. The `direct` brain predates this interface: it
-has no `cancel` or `close`, so the loop calls those only when they exist.
+message that names the mode and the fix. The loop calls `cancel` and `close` only when a
+brain has them.
 """
 
 from __future__ import annotations
@@ -24,7 +23,7 @@ from ..util import get_logger
 
 log = get_logger(__name__)
 
-MODES = ("hal", "direct", "openai", "claude")
+MODES = ("hal", "openai", "claude")
 
 
 class BrainError(RuntimeError):
@@ -75,15 +74,5 @@ def make_brain(cfg: config.Cfg | None = None) -> Brain:
         from .claude import ClaudeSession
 
         return ClaudeSession()
-    if mode == "direct":
-        from ..brain import CoreNotFound, DirectBrain
-
-        try:
-            return DirectBrain()
-        except CoreNotFound as e:
-            # Claude Code runs only when the user sets brain.mode: claude (directive I4)
-            raise BrainUnavailable(
-                f"{e}. Install core Hal, or set brain.mode to openai (a local server) or claude "
-                "(Claude Code on the host: not private, not sandboxed)."
-            ) from e
-    raise BrainUnavailable(f"brain.mode '{mode}' is not one of: {', '.join(MODES)}")
+    hint = " (the direct brain was removed: use hal)" if mode == "direct" else ""
+    raise BrainUnavailable(f"brain.mode '{mode}' is not one of: {', '.join(MODES)}{hint}")

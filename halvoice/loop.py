@@ -2,7 +2,7 @@
 
     activate (HAL's name, the wake word, or push-to-talk)
         -> transcribe (STT)
-            -> the brain streams a reply (halvoice/brains: direct, openai or claude)
+            -> the brain streams a reply (halvoice/brains: hal, openai or claude)
                 -> each sentence is synthesised while the previous one plays (TTS)
                     -> barge-in: HAL's name while he is speaking stops him
                         -> follow-up: for a few seconds after, talk without the name
@@ -93,14 +93,6 @@ class VoiceLoop:
         if self.cfg.get("activation.mode", "both") in ("push_to_talk", "both") or not self.ears:
             self.activator = Activator(keyword=False)
             self.recorder = Recorder()
-        if hasattr(self.brain, "on_deep_done"):
-            self.brain.on_deep_done = self._deep_done
-        if self.cfg.get("ui.rgb_follow", False) and getattr(self.brain, "hub", None):
-            hub = self.brain.hub
-            # The lights show HAL's state through hal-rgb; a slow or missing light never holds up speech.
-            self.bus.on_change = lambda state: threading.Thread(
-                target=hub.call, args=("rgb_state", {"state": state}), daemon=True
-            ).start()
         self._speak_lock = threading.Lock()
         self._pending_audio = 0  # segments queued or playing; read by `_speaking_now`
 
@@ -212,13 +204,6 @@ class VoiceLoop:
         """True while synthesised audio is queued or playing."""
         return self._pending_audio > 0
 
-    def _deep_done(self, text: str) -> None:
-        """Speaks the outcome of background work when it finishes."""
-        summary = " ".join(text.split()[:60])
-        log.info("background task finished")
-        self.speak_stream(iter([f"Dave, the task you gave me is finished. {summary}"]))
-        self.bus.set("idle")
-
     # -- one full turn ---------------------------------------------------------
     def _handle_turn(self, text: str) -> None:
         if not text:
@@ -240,7 +225,7 @@ class VoiceLoop:
         deltas = _with_timeout_notice(timed(self.brain.ask(text)))
         finished = self.speak_stream(_accumulate_sentences(deltas))
         if not finished:
-            # The direct brain has no cancel; its reply simply stops being spoken.
+            # Barge-in: the brain stops its turn.
             cancel = getattr(self.brain, "cancel", None)
             if cancel is not None:
                 cancel()
