@@ -2,6 +2,7 @@
 
 The shared [hal] table supplies the vault path and the local model settings.
 """
+
 import os
 import tomllib
 from pathlib import Path

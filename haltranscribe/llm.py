@@ -3,6 +3,7 @@
 Model work waits while another program (a training run, a llama.cpp server)
 holds the GPU. Stdlib only.
 """
+
 import json
 import subprocess
 import urllib.request
@@ -21,8 +22,12 @@ OWN = ("ollama", "GPT-SoVITS", "api_v2.py", "hal-voice", "halvoice", "faster_whi
 def gpu_busy() -> str | None:
     """Returns the name of a program other than Hal's own that is using the GPU, or None."""
     try:
-        out = subprocess.run(["nvidia-smi", "--query-compute-apps=pid,process_name", "--format=csv,noheader"],
-                             capture_output=True, text=True, timeout=10).stdout
+        out = subprocess.run(
+            ["nvidia-smi", "--query-compute-apps=pid,process_name", "--format=csv,noheader"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        ).stdout
     except (OSError, subprocess.SubprocessError):
         return None
     ignore = OWN + tuple(shared().get("gpu_ignore", []))
@@ -30,7 +35,12 @@ def gpu_busy() -> str | None:
     for line in out.splitlines():
         pid, _, name = line.partition(",")
         try:
-            cmd = open(f"/proc/{pid.strip()}/cmdline", "rb").read().replace(b"\0", b" ").decode(errors="ignore")
+            cmd = (
+                open(f"/proc/{pid.strip()}/cmdline", "rb")
+                .read()
+                .replace(b"\0", b" ")
+                .decode(errors="ignore")
+            )
         except OSError:
             cmd = name
         if not any(i in cmd or i in name for i in ignore):
@@ -40,22 +50,35 @@ def gpu_busy() -> str | None:
 
 def _post(path: str, payload: dict, timeout: float) -> dict:
     url = shared()["ollama_url"].rstrip("/") + path
-    req = urllib.request.Request(url, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
+    req = urllib.request.Request(  # noqa: S310 - the URL is the configured Ollama server
+        url, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"}
+    )
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
+        with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310 - same configured URL
             return json.loads(r.read())
     except OSError as e:
         raise Unavailable(f"Ollama: {e}") from e
 
 
-def chat(system: str, user: str, *, model: str | None = None, json_out: bool = False,
-         images: list[str] | None = None, timeout: float = 300) -> str:
+def chat(
+    system: str,
+    user: str,
+    *,
+    model: str | None = None,
+    json_out: bool = False,
+    images: list[str] | None = None,
+    timeout: float = 300,
+) -> str:
     """Returns the model's reply to one prompt."""
     msg = {"role": "user", "content": user}
     if images:
         msg["images"] = images
-    payload = {"model": model or shared()["chat_model"], "stream": False, "think": False,
-               "messages": [{"role": "system", "content": system}, msg]}
+    payload = {
+        "model": model or shared()["chat_model"],
+        "stream": False,
+        "think": False,
+        "messages": [{"role": "system", "content": system}, msg],
+    }
     if json_out:
         payload["format"] = "json"
         payload["options"] = {"temperature": 0.1}
@@ -72,4 +95,6 @@ def chat_json(system: str, user: str, **kw) -> dict:
 
 def embed(texts: list[str], timeout: float = 120) -> list[list[float]]:
     """Returns one embedding per text."""
-    return _post("/api/embed", {"model": shared()["embed_model"], "input": texts}, timeout)["embeddings"]
+    return _post("/api/embed", {"model": shared()["embed_model"], "input": texts}, timeout)[
+        "embeddings"
+    ]

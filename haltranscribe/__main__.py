@@ -1,9 +1,10 @@
 """hal-transcribe command line, driven by hal-module.toml.
 
-    python -m haltranscribe                      list the tools
-    python -m haltranscribe TOOL [key=value ...] run one (the module prefix is optional)
-    python -m haltranscribe --stdin FUNCTION      run a function with JSON arguments on stdin
+python -m haltranscribe                      list the tools
+python -m haltranscribe TOOL [key=value ...] run one (the module prefix is optional)
+python -m haltranscribe --stdin FUNCTION      run a function with JSON arguments on stdin
 """
+
 import json
 import sys
 import tomllib

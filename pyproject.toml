@@ -36,7 +36,7 @@ test = ["pytest>=8.3,<10"]
 hal-voice = "halvoice.cli:main"
 
 [tool.setuptools]
-packages = ["halvoice", "halvoice.brains", "voicebuild", "voicetest"]
+packages = ["halvoice", "halvoice.brains", "haltranscribe", "voicebuild", "voicetest"]
 
 [tool.setuptools.package-data]
 voicetest = ["script.txt", "tools.toml"]
@@ -71,6 +71,7 @@ ignore = [
 "halvoice/connect.py" = ["T201"]  # `hal-voice connection`
 "halvoice/devices.py" = ["T201"]  # `hal-voice devices`
 "halvoice/doctor.py" = ["T201"]  # `hal-voice doctor`
+"haltranscribe/__main__.py" = ["T201"]  # `python -m haltranscribe` prints results
 "halvoice/tools.py" = ["T201"]  # one-shot worker: JSON result on stdout
 "halvoice/config.py" = ["T201"]  # `python -m halvoice.config` dumps the resolved config
 "halvoice/stt.py" = ["T201"]  # `python -m halvoice.stt` prints transcripts

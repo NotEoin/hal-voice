@@ -1,4 +1,5 @@
 """Tests for hal-transcribe that need no model."""
+
 import os
 import sys
 import tempfile
@@ -13,6 +14,7 @@ class TranscribeTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         os.environ["HAL_DATA"] = self.tmp.name
         from haltranscribe import tools
+
         self.t = tools
 
     def tearDown(self):
