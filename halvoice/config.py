@@ -222,6 +222,11 @@ def resolve(path_like: str | None) -> str | None:
 _CACHE: Cfg | None = None
 
 
+def defaults() -> dict:
+    """The packaged defaults alone, before any user layer."""
+    return _read_yaml(DEFAULTS_FILE)
+
+
 def load(force: bool = False) -> Cfg:
     """Returns the merged settings, cached after the first call unless `force` is set.
 

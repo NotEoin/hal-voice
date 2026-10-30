@@ -147,3 +147,36 @@ def test_config_import_built_writes_built_yaml(tmp_path, isolated_config, capsys
 def test_config_without_subcommand_is_a_usage_error(capsys):
     assert cli.main(["config"]) == 2
     assert "import-built" in capsys.readouterr().err
+
+
+def test_transcribe_file_prints_the_transcript(monkeypatch, capsys):
+    from haltranscribe import tools
+
+    monkeypatch.setattr(tools, "transcribe", lambda path: {"text": "hello there"})
+    assert cli.main(["transcribe-file", "memo.wav"]) == 0
+    assert capsys.readouterr().out.strip() == "hello there"
+
+
+def test_transcribe_file_json_and_missing_file(monkeypatch, capsys):
+    from haltranscribe import tools
+
+    monkeypatch.setattr(tools, "transcribe", lambda path: {"text": "hi"})
+    assert cli.main(["transcribe-file", "memo.wav", "--json"]) == 0
+    assert capsys.readouterr().out.strip() == '{"text": "hi"}'
+
+    def missing(path):
+        raise ValueError(f"{path} is not a file")
+
+    monkeypatch.setattr(tools, "transcribe", missing)
+    assert cli.main(["transcribe-file", "nope.wav"]) == 1
+
+
+def test_tts_out_writes_a_wav_file(monkeypatch, tmp_path, capsys):
+    import numpy as np
+
+    from halvoice import tts
+
+    monkeypatch.setattr(tts, "synth", lambda text: (np.zeros(160, dtype="float32"), 16000))
+    out = tmp_path / "line.wav"
+    assert cli.main(["tts", "--out", str(out), "Good", "morning"]) == 0
+    assert out.stat().st_size > 44

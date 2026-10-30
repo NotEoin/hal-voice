@@ -8,9 +8,11 @@ transcript can be summarised by the local model and saved as a meeting note.
 
 from __future__ import annotations
 
+import contextlib
 import ctypes
 import glob
 import json
+import logging
 import os
 import signal
 import site
@@ -23,11 +25,49 @@ from pathlib import Path
 from . import llm
 from .config import data_dir, settings, vault
 
+log = logging.getLogger(__name__)
+
+CLAIM_NAME = "hal-transcribe"
+CLAIM_WAIT_S = 120  # gpu-light's recipe: wait this long for the card, then use the CPU
+FFMPEG_TIMEOUT_S = 1800
+CPU_MODEL = "small.en"
+SUMMARY_CHARS = 20000  # what a local model's context holds beside the instructions
+STOP_SETTLE_S = 1  # pw-record needs a moment to close the WAV after SIGINT
+
 _model = None
 
 
-def _whisper():
+@contextlib.contextmanager
+def _gpu_claim():
+    """Holds a gpu-light claim while Whisper runs; yields False when the CPU must be used."""
+    try:
+        import gpu_light
+    except ImportError:
+        yield True
+        return
+    try:
+        with gpu_light.claim(CLAIM_NAME, wait=True, timeout=CLAIM_WAIT_S):
+            yield True
+    except gpu_light.ClaimTimeout:
+        log.warning("the GPU stayed busy for %s s; transcribing on the CPU", CLAIM_WAIT_S)
+        yield False
+
+
+def _pid_start(pid: int) -> str | None:
+    """The start time field of `/proc/<pid>/stat`, which tells a pid's reuse apart."""
+    try:
+        stat = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8")
+    except OSError:
+        return None
+    return stat.rsplit(")", 1)[1].split()[19]
+
+
+def _whisper(use_gpu: bool = True):
     global _model
+    if not use_gpu:
+        from faster_whisper import WhisperModel
+
+        return WhisperModel(CPU_MODEL, device="cpu", compute_type="int8")
     if _model is None:
         from faster_whisper import WhisperModel
 
@@ -45,7 +85,7 @@ def _whisper():
         try:
             _model = WhisperModel(settings()["model"], device="cuda", compute_type="float16")
         except (RuntimeError, ValueError):
-            _model = WhisperModel("small.en", device="cpu", compute_type="int8")
+            _model = WhisperModel(CPU_MODEL, device="cpu", compute_type="int8")
     return _model
 
 
@@ -71,14 +111,15 @@ def transcribe(path: str, timestamps: bool = False) -> dict:
                 str(wav),
             ],
             check=True,
-            timeout=1800,
+            timeout=FFMPEG_TIMEOUT_S,
         )
-        segments, info = _whisper().transcribe(str(wav), beam_size=5, vad_filter=True)
-        lines = [
-            (f"[{int(s.start // 60):02d}:{int(s.start % 60):02d}] " if timestamps else "")
-            + s.text.strip()
-            for s in segments
-        ]
+        with _gpu_claim() as use_gpu:
+            segments, info = _whisper(use_gpu).transcribe(str(wav), beam_size=5, vad_filter=True)
+            lines = [
+                (f"[{int(s.start // 60):02d}:{int(s.start % 60):02d}] " if timestamps else "")
+                + s.text.strip()
+                for s in segments
+            ]
     text = ("\n" if timestamps else " ").join(lines).strip()
     return {
         "file": src.name,
@@ -104,7 +145,15 @@ def record_start(title: str = "Recording") -> dict:
         start_new_session=True,
     )
     _state().write_text(
-        json.dumps({"pid": proc.pid, "file": str(out), "title": title, "started": time.time()})
+        json.dumps(
+            {
+                "pid": proc.pid,
+                "pid_start": _pid_start(proc.pid),
+                "file": str(out),
+                "title": title,
+                "started": time.time(),
+            }
+        )
     )
     return {"recording": title, "file": str(out)}
 
@@ -114,11 +163,13 @@ def record_stop(save: bool = True) -> dict:
     if not _state().exists():
         raise RuntimeError("nothing is being recorded")
     st = json.loads(_state().read_text())
-    try:
-        os.kill(st["pid"], signal.SIGINT)
-    except ProcessLookupError:
-        pass
-    time.sleep(1)
+    # Signal only the recorder this file describes: a reused pid belongs to another program
+    if _pid_start(st["pid"]) == st.get("pid_start"):
+        with contextlib.suppress(ProcessLookupError):
+            os.kill(st["pid"], signal.SIGINT)
+    else:
+        log.warning("the recorder (pid %s) is gone; transcribing what was saved", st["pid"])
+    time.sleep(STOP_SETTLE_S)
     _state().unlink()
     result = transcribe(st["file"])
     if save:
@@ -129,16 +180,15 @@ def record_stop(save: bool = True) -> dict:
 def save_note(text: str, title: str = "Transcript") -> str:
     """Saves a transcript to the vault as a note with a summary, decisions and actions."""
     summary = ""
-    if llm.gpu_busy() is None:
-        try:
-            summary = llm.chat(
-                "Write a meeting-style summary of this transcript in Markdown: a two-sentence "
-                "Summary, then 'Decisions' and 'Actions' as bullet lists (actions as - [ ] items). "
-                "Use only the transcript.",
-                text[:20000],
-            ).strip()
-        except llm.Unavailable:
-            summary = ""
+    try:
+        summary = llm.chat(
+            "Write a meeting-style summary of this transcript in Markdown: a two-sentence "
+            "Summary, then 'Decisions' and 'Actions' as bullet lists (actions as - [ ] items). "
+            "Use only the transcript.",
+            text[:SUMMARY_CHARS],
+        ).strip()
+    except llm.Unavailable as e:
+        log.warning("saving the note without a summary: %s", e)
     folder = vault() / settings()["folder"]
     folder.mkdir(parents=True, exist_ok=True)
     name = f"{datetime.now():%Y-%m-%d %H%M} {title}".replace("/", "-")

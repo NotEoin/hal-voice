@@ -161,6 +161,12 @@ brain:
     no emoji. Say what you did or found, not how. Use "I'm sorry, Dave" only when something truly
     cannot be done.
 
+# ---- Transcription (haltranscribe: files and meetings to notes) ----------------
+transcribe:
+  model: medium.en         # Whisper model for files and recordings; small.en on the CPU fallback.
+  folder: Transcripts      # note folder inside the vault.
+  vault: ""                # empty = [hal].vault of ~/.config/hal/config.toml.
+
 # ---- Claude Code wiring -----------------------------------------------------
 claude:
   # hal-voice runs NO model of its own -- it drives Claude Code headless and speaks the

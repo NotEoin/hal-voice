@@ -19,6 +19,10 @@ hal-voice - a HAL-9000 voice: speak to it, it answers aloud.
   hal-voice repl         alias for the default voice loop
   hal-voice mcp          run ONLY the MCP speak/listen server (for use inside another harness)
   hal-voice tts "text"   one-shot: synthesize and speak a line in HAL's voice
+  hal-voice tts --out FILE.wav "text"
+                         synthesize to a WAV file instead of speaking
+  hal-voice transcribe-file PATH [--json]
+                         print the transcript of an audio or video file
   hal-voice tts-server   run the GPT-SoVITS server the voice speaks through
   hal-voice listen       one-shot: capture one utterance and print the transcript
   hal-voice devices      list audio input/output devices
@@ -68,11 +72,44 @@ def _mcp(args: list[str]) -> int:
 def _tts(args: list[str]) -> int:
     from . import tts
 
+    out = None
+    if args[:1] == ["--out"]:
+        out, args = (args[1] if len(args) > 1 else None), args[2:]
+        if out is None:
+            print("hal-voice tts: --out needs a WAV path", file=sys.stderr)
+            return 2
     text = " ".join(args).strip()
     if not text:
-        print('usage: hal-voice tts "line to speak"', file=sys.stderr)
+        print('usage: hal-voice tts [--out FILE.wav] "line to speak"', file=sys.stderr)
         return 2
-    tts.speak(text)
+    if out is None:
+        tts.speak(text)
+        return 0
+    import soundfile
+
+    audio, rate = tts.synth(text)
+    soundfile.write(out, audio, rate)
+    print(out)
+    return 0
+
+
+def _transcribe_file(args: list[str]) -> int:
+    """`transcribe-file PATH [--json]`: prints the transcript of an audio or video file."""
+    import json
+
+    from haltranscribe import tools
+
+    as_json = "--json" in args
+    paths = [a for a in args if a != "--json"]
+    if len(paths) != 1:
+        print("usage: hal-voice transcribe-file PATH [--json]", file=sys.stderr)
+        return 2
+    try:
+        result = tools.transcribe(paths[0])
+    except (ValueError, OSError) as e:
+        print(f"hal-voice: {e}", file=sys.stderr)
+        return 1
+    print(json.dumps(result) if as_json else result["text"])
     return 0
 
 
@@ -157,6 +194,7 @@ COMMANDS: dict[str, Callable[[list[str]], int]] = {
     "mcp": _mcp,
     "tts": _tts,
     "tts-server": _tts_server,
+    "transcribe-file": _transcribe_file,
     "listen": _listen,
     "devices": _devices,
     "eye": _eye,
