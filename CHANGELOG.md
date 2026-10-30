@@ -7,6 +7,9 @@ All notable changes to hal-voice are listed here. The format follows
 
 ### Added
 
+- TTS container mode (`tts.server.isolation: container`, the default): `hal-voice tts-server` runs
+  GPT-SoVITS in a GPU container with no network and bridges its socket to `127.0.0.1:9880`;
+  `hal-voice tts-image build` makes the image. Docker tests: `pytest -m docker`.
 - Schema 2 `exec` manifests for the voice and transcribe tools (`halvoice/hal-module.toml`,
   `haltranscribe/hal-module.toml`), run by the one-shot worker `python -m halvoice.hubtool`.
 - `hal-voice transcribe-file PATH [--json]` and `hal-voice tts --out FILE.wav TEXT`.

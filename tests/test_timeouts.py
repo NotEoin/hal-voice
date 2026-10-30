@@ -37,6 +37,7 @@ FORBIDDEN = {"urllib.request.urlretrieve", "urlretrieve"}
 POPEN_ALLOWED = {
     "halvoice/brains/claude.py": "its process group is killed after brain.turn_timeout_s",
     "haltranscribe/tools.py": "pw-record records until record_stop signals it; the pid is kept in recording.json",
+    "halvoice/ttsbox.py": "the TTS container runs until SIGTERM, which terminates it",
     "voicebuild/build.py": "the TTS server runs until Server.stop() ends its process group",
 }
 

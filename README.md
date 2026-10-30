@@ -200,6 +200,11 @@ server and `hal-voice.service` the hands-free loop; both belong to `hal.target` 
 `tts.server.gptsovits_dir` when the GPT-SoVITS checkout is missing. If the checkout is on a drive
 that mounts late, make the unit wait for it with a drop-in
 (`systemctl --user edit hal-tts.service`, then add `RequiresMountsFor=/path/to/the/drive`).
+
+By default (`tts.server.isolation: container`) the server runs in a GPU container with no network,
+read-only mounts and no capabilities; build its image once with `hal-voice tts-image build`.
+Without docker or its `nvidia` runtime, `tts-server` exits 1 naming the missing piece and does not
+fall back to the host. A forwarder keeps the API on `127.0.0.1:9880`.
 `hal-voice.service` sets no `PATH`, so a `claude` installed under npm's global prefix needs
 `claude.command` set to its absolute path. Python's CA bundle is found automatically
 (`halvoice.util.ca_bundle`).

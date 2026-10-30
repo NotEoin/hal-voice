@@ -24,6 +24,7 @@ hal-voice - a HAL-9000 voice: speak to it, it answers aloud.
   hal-voice transcribe-file PATH [--json]
                          print the transcript of an audio or video file
   hal-voice tts-server   run the GPT-SoVITS server the voice speaks through
+  hal-voice tts-image build   build the TTS container image
   hal-voice listen       one-shot: capture one utterance and print the transcript
   hal-voice devices      list audio input/output devices
   hal-voice eye          run the red-eye UI on its own (demo the animation states)
@@ -117,7 +118,8 @@ def _tts_server(args: list[str]) -> int:
     """Starts the GPT-SoVITS server, or exits 1 naming the directory it could not find."""
     from . import config
 
-    server_dir = config.resolve(str(config.load().get("tts.server.gptsovits_dir", "")))
+    cfg = config.load()
+    server_dir = config.resolve(str(cfg.get("tts.server.gptsovits_dir", "")))
     if not server_dir or not Path(server_dir).is_dir():
         print(
             f"GPT-SoVITS not found at {server_dir or '(tts.server.gptsovits_dir is empty)'}.\n"
@@ -127,9 +129,45 @@ def _tts_server(args: list[str]) -> int:
             file=sys.stderr,
         )
         return 1
+    isolation = str(cfg.get("tts.server.isolation", "container"))
+    if isolation == "container":
+        return _tts_container(cfg, server_dir)
+    if isolation != "host":
+        print(f"tts.server.isolation must be container or host, not {isolation!r}", file=sys.stderr)
+        return 1
     script = config.root_dir() / "gptsovits" / "run-api.sh"
     os.environ["GPTSOVITS_DIR"] = server_dir
     os.execv(script, [str(script), *args])  # noqa: S606 - our own script; the server keeps this pid
+
+
+def _tts_container(cfg, server_dir: str) -> int:
+    """Runs the TTS server in its GPU container; exits 1 naming a missing docker piece."""
+    from urllib.parse import urlparse
+
+    from . import config, ttsbox
+
+    port = urlparse(str(cfg.get("tts.api_url", "http://127.0.0.1:9880"))).port or 9880
+    weights = config.resolve(str(cfg.get("tts.server.weights_dir", "")))
+    try:
+        return ttsbox.serve(server_dir, weights, port)
+    except ttsbox.TtsBoxError as e:
+        print(f"hal-voice: {e}", file=sys.stderr)
+        return 1
+
+
+def _tts_image(args: list[str]) -> int:
+    """`hal-voice tts-image build`: builds the TTS container image."""
+    from . import config, ttsbox
+
+    if args != ["build"]:
+        print("usage: hal-voice tts-image build", file=sys.stderr)
+        return 2
+    server_dir = config.resolve(str(config.load().get("tts.server.gptsovits_dir", "")))
+    try:
+        return ttsbox.build_image(server_dir, config.root_dir() / "docker")
+    except ttsbox.TtsBoxError as e:
+        print(f"hal-voice: {e}", file=sys.stderr)
+        return 1
 
 
 def _listen(args: list[str]) -> int:
@@ -194,6 +232,7 @@ COMMANDS: dict[str, Callable[[list[str]], int]] = {
     "mcp": _mcp,
     "tts": _tts,
     "tts-server": _tts_server,
+    "tts-image": _tts_image,
     "transcribe-file": _transcribe_file,
     "listen": _listen,
     "devices": _devices,

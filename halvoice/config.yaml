@@ -73,6 +73,10 @@ tts:
   server:
     # Where `hal-voice tts-server` expects the GPT-SoVITS checkout (relative to this repository).
     gptsovits_dir: "gptsovits/GPT-SoVITS"
+    # container (default): GPU container with no network, read-only mounts. host: run-api.sh on
+    # the host; allowed only when set in a user override file (see docs/howto/tts-isolation.md).
+    isolation: container
+    weights_dir: "gptsovits/weights"   # mounted read-only at /weights in container mode
   text_lang: en
   prompt_lang: en
   # The voice. ./make-hal-voice builds it from the film (see VOICE-BUILD.md) and writes these

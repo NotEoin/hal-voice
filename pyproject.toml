@@ -46,8 +46,11 @@ halvoice = ["config.yaml"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]  # the checkout imports without an install
-markers = ["integration: builds and installs a wheel; slow, run on request (-m integration)"]
-addopts = "-m 'not integration'"
+markers = [
+    "integration: builds and installs a wheel; slow, run on request (-m integration)",
+    "docker: starts a small CPU container; run on request (-m docker)",
+]
+addopts = "-m 'not integration and not docker'"
 
 [tool.ruff]
 line-length = 100

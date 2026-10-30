@@ -97,11 +97,13 @@ def test_wheel_installs_and_hal_voice_help_runs(tmp_path):
     assert "hal-voice mcp" in run.stdout
 
 
-def fake_config(monkeypatch, server_dir):
+def fake_config(monkeypatch, server_dir, isolation="host"):
     monkeypatch.setattr(
         config,
         "load",
-        lambda force=False: config.Cfg({"tts": {"server": {"gptsovits_dir": server_dir}}}),
+        lambda force=False: config.Cfg(
+            {"tts": {"server": {"gptsovits_dir": server_dir, "isolation": isolation}}}
+        ),
     )
 
 
