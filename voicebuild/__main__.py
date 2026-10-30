@@ -28,6 +28,7 @@ GPU_STAGES = {"find", "clean", "train", "select"}
 # Stopping Hal's units waits for their own stop timeouts (15 s each).
 HAL_STATUS_TIMEOUT_S = 10
 HAL_SWITCH_TIMEOUT_S = 60
+STAGE_TIMEOUT_S = 12 * 3600  # a queued stage waits for the GPU, then trains for under 6 h
 DENOISE_PROBE_TIMEOUT_S = 120  # importing torch-based packages can be slow on a cold disk
 
 
@@ -105,6 +106,27 @@ def hal_switch(state: str) -> None:
         subprocess.run(["hal", state, "--quiet"], check=False, timeout=HAL_SWITCH_TIMEOUT_S)
     except subprocess.TimeoutExpired:
         print(f"`hal {state}` timed out after {HAL_SWITCH_TIMEOUT_S} s.", file=sys.stderr)
+
+
+def stage_argv(stage: str, argv: list[str]) -> list[str]:
+    """The command line of this build, narrowed to one stage."""
+    kept: list[str] = []
+    skip = False
+    for arg in argv:
+        if skip:
+            skip = False
+        elif arg in ("--from", "--only"):
+            skip = True
+        elif not arg.startswith(("--from=", "--only=")):
+            kept.append(arg)
+    return [sys.executable, "-m", "voicebuild", *kept, "--only", stage]
+
+
+def run_under_gpu_light(stage: str) -> None:
+    """Runs one GPU stage as a `gpu-light run` batch job; a failed stage stops the build."""
+    argv = build.gpu_light_argv(stage_argv(stage, sys.argv[1:]))
+    env = {**os.environ, build.IN_GPU_RUN_ENV: "1"}
+    subprocess.run(argv, env=env, check=True, timeout=STAGE_TIMEOUT_S)
 
 
 def report(b: build.Build) -> Path:
@@ -254,13 +276,21 @@ def main() -> int:
         f"building from {', '.join(f.name for f in films)}; stages: {', '.join(stages)}; "
         f"work in {b.work}"
     )
-    restore = GPU_STAGES & set(stages) and hal_is_on()
+    use_scheduler = (
+        bool(GPU_STAGES & set(stages))
+        and not os.environ.get(build.IN_GPU_RUN_ENV)
+        and build.gpu_light_answers()
+    )
+    restore = not use_scheduler and GPU_STAGES & set(stages) and hal_is_on()
     if restore:
         b.say("turning Hal off to free the GPU; it comes back on at the end")
         hal_switch("off")
     try:
         for stage in stages:
-            getattr(build, stage)(b)
+            if use_scheduler and stage in GPU_STAGES:
+                run_under_gpu_light(stage)
+            else:
+                getattr(build, stage)(b)
     finally:
         path = report(b)
         if restore:

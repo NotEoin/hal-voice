@@ -40,7 +40,10 @@ To leave the film where it is, name the file or its folder instead:
 ```
 
 A full build takes about half an hour on a 24GB card. Hal is turned off while the build uses
-the GPU and back on at the end. Every stage saves its result in `voice-data/build/` (or
+the GPU and back on at the end. When the gpu-light daemon answers, each GPU stage instead runs
+as a `gpu-light run --class batch` job that waits its turn and Hal stays on. Without it, a GPU
+that stays busy for 30 minutes stops the build with `GpuBusy`; free it and resume with `--from`.
+Every stage saves its result in `voice-data/build/` (or
 `HALVOICE_BUILD_DIR`), so a run that stops picks up where it left off. The following options
 change what runs:
 

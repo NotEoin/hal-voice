@@ -406,6 +406,10 @@ def gpt_python() -> str:
 
 TRAIN_FREE_GB = 12.0  # GPU memory SoVITS training needs at batch size 4
 WAIT_FOR_GPU_S = 1800
+GPU_POLL_S = 30
+GPU_LIGHT_TIMEOUT_S = 10
+GPU_LIGHT_VRAM = "12G"  # same figure as TRAIN_FREE_GB
+IN_GPU_RUN_ENV = "HALVOICE_IN_GPU_RUN"  # set for a stage that `gpu-light run` started
 
 
 def free_gpu_gb() -> float | None:
@@ -423,13 +427,57 @@ def free_gpu_gb() -> float | None:
     return int(out.split()[0]) / 1024
 
 
+class GpuBusy(RuntimeError):
+    """The GPU did not free enough memory before the deadline."""
+
+
+def gpu_light_answers() -> bool:
+    """True when `gpu-light` is installed and its daemon answers `status`."""
+    if not shutil.which("gpu-light"):
+        return False
+    try:
+        done = subprocess.run(
+            ["gpu-light", "status"], capture_output=True, check=False, timeout=GPU_LIGHT_TIMEOUT_S
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return done.returncode == 0
+
+
+def gpu_light_argv(argv: list[str]) -> list[str]:
+    """Wraps `argv` as a preemptible batch job of the gpu-light scheduler (GL recipe step 5)."""
+    return [
+        "gpu-light",
+        "run",
+        "--class",
+        "batch",
+        "--vram",
+        GPU_LIGHT_VRAM,
+        "--preempt",
+        "cuda-checkpoint",
+        "--wait",
+        "--",
+        *argv,
+    ]
+
+
 def wait_for_gpu(b: Build) -> None:
-    """Waits until enough GPU memory is free; something else on the machine may be using it."""
+    """Waits until enough GPU memory is free; raises `GpuBusy` at the deadline.
+
+    A stage that already runs under `gpu-light run` skips the wait: the scheduler made the room.
+    """
+    if os.environ.get(IN_GPU_RUN_ENV):
+        return
     deadline = time.time() + WAIT_FOR_GPU_S
     free = free_gpu_gb()
-    while free is not None and free < TRAIN_FREE_GB and time.time() < deadline:
+    while free is not None and free < TRAIN_FREE_GB:
+        if time.time() >= deadline:
+            raise GpuBusy(
+                f"only {free:.1f} GB of GPU memory stayed free for {WAIT_FOR_GPU_S} s; "
+                f"training needs {TRAIN_FREE_GB:.0f} GB. Stop what uses the GPU and resume with --from."
+            )
         b.say(f"waiting for GPU memory: {free:.1f} GB free, training needs {TRAIN_FREE_GB:.0f} GB")
-        time.sleep(30)
+        time.sleep(GPU_POLL_S)
         free = free_gpu_gb()
 
 
