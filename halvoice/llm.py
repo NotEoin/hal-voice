@@ -89,42 +89,58 @@ def _post(url: str, headers: dict, body: bytes, timeout: float, sock: str | None
         raise Unavailable(f"{url}: reply is not JSON") from e
 
 
-def chat(system: str, user: str, *, model: str | None = None, timeout: float = 300) -> str:
-    """Returns the model's reply to one prompt; raises `Unavailable` when no server answers."""
+def _endpoint(model: str | None) -> tuple[str, dict, str | None, str]:
+    """Returns (url, headers, unix socket or None, model name) for the server to ask."""
     headers = {"Content-Type": "application/json"}
     gateway = _hal_config().get("gateway", {})
-    sock: str | None = None
     if gateway.get("url"):
-        url = gateway["url"].rstrip("/") + CHAT_PATH
         if gateway.get("token_file"):
             headers["Authorization"] = "Bearer " + _read_token(gateway["token_file"])
-        name = model or GATEWAY_ALIAS
-    elif gateway_socket().exists():
-        sock = str(gateway_socket())
-        url = "http://gateway/v1" + CHAT_PATH
-        name = model or GATEWAY_ALIAS
-    else:
-        cfg = config.load()
-        base = str(cfg.get("brain.base_url", "") or "")
-        if not base:
-            raise Unavailable(
-                "no model server: Hal's gateway is not running and brain.base_url is empty"
-            )
-        url = base.rstrip("/") + CHAT_PATH
-        key_file = str(cfg.get("brain.api_key_file", "") or "")
-        if key_file:
-            headers["Authorization"] = "Bearer " + _read_token(key_file)
-        name = model or str(cfg.get("brain.model", "") or "")
-    payload = {
-        "model": name,
-        "stream": False,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-    }
+        return gateway["url"].rstrip("/") + CHAT_PATH, headers, None, model or GATEWAY_ALIAS
+    if gateway_socket().exists():
+        return (
+            "http://gateway/v1" + CHAT_PATH,
+            headers,
+            str(gateway_socket()),
+            model or GATEWAY_ALIAS,
+        )
+    cfg = config.load()
+    base = str(cfg.get("brain.base_url", "") or "")
+    if not base:
+        raise Unavailable(
+            "no model server: Hal's gateway is not running and brain.base_url is empty"
+        )
+    key_file = str(cfg.get("brain.api_key_file", "") or "")
+    if key_file:
+        headers["Authorization"] = "Bearer " + _read_token(key_file)
+    return (
+        base.rstrip("/") + CHAT_PATH,
+        headers,
+        None,
+        model or str(cfg.get("brain.model", "") or ""),
+    )
+
+
+def complete(
+    messages: list[dict],
+    *,
+    tools: list[dict] | None = None,
+    model: str | None = None,
+    timeout: float = 300,
+) -> dict:
+    """Returns the reply message to a conversation; raises `Unavailable` when no server answers."""
+    url, headers, sock, name = _endpoint(model)
+    payload: dict = {"model": name, "stream": False, "messages": messages}
+    if tools:
+        payload["tools"] = tools
     reply = _post(url, headers, json.dumps(payload).encode(), timeout, sock)
     try:
-        return reply["choices"][0]["message"]["content"]
+        return reply["choices"][0]["message"]
     except (KeyError, IndexError, TypeError) as e:
         raise Unavailable(f"{url}: unexpected reply shape") from e
+
+
+def chat(system: str, user: str, *, model: str | None = None, timeout: float = 300) -> str:
+    """Returns the model's reply to one prompt; raises `Unavailable` when no server answers."""
+    messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
+    return complete(messages, model=model, timeout=timeout).get("content") or ""

@@ -4,7 +4,7 @@ and send the requests heard to HAL's brain.
     hal-voice voicetest split RECORDING [--take desk-1]
     hal-voice voicetest run [--live] [--take T] [--line N] [--set key=value] [--simulate]
     hal-voice voicetest compare LABEL [LABEL ...]
-    hal-voice voicetest brain [--label LABEL]
+    hal-voice voicetest brain [--label LABEL] [--manifest FILE ...]
 """
 
 from __future__ import annotations
@@ -109,7 +109,9 @@ def cmd_brain(args) -> int:
     from . import brain
 
     rows = json.loads((TESTS / "runs" / f"{args.label}.json").read_text())["rows"]
-    report = brain.run(rows, TESTS / "runs" / f"brain-{args.label}")
+    report = brain.run(
+        rows, TESTS / "runs" / f"brain-{args.label}", brain.manifest_paths(args.manifest)
+    )
     print(report)
     return 0
 
@@ -150,8 +152,11 @@ def main(argv: list[str] | None = None) -> int:
     rp.add_argument("-v", "--verbose", action="store_true", help="print every failure")
     cp = sub.add_parser("compare", help="compare runs side by side")
     cp.add_argument("labels", nargs="+")
-    bp = sub.add_parser("brain", help="send a run's requests to HAL's brain in the eval sandbox")
+    bp = sub.add_parser("brain", help="send a run's requests to a model and check the tool calls")
     bp.add_argument("--label", default="sim")
+    bp.add_argument(
+        "--manifest", action="append", help="hal-module.toml to take tools from (repeatable)"
+    )
     args = ap.parse_args(argv)
     return {"split": cmd_split, "run": cmd_run, "compare": cmd_compare, "brain": cmd_brain}[
         args.cmd

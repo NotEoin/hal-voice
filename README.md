@@ -173,7 +173,7 @@ voice or the brain, and reports what woke HAL, what reached him and how fast:
 ./hal-voice voicetest run --live               # replay at real-time pace through the threads
 ./hal-voice voicetest run --simulate --set activation.keyword.end_silence_ms=500 --label e500
 ./hal-voice voicetest compare sim e500         # two runs side by side
-./hal-voice voicetest brain --label sim        # send the commands heard to the brain, sandboxed
+./hal-voice voicetest brain --label sim        # send the commands heard to a model; tool calls are recorded, never run (see --manifest)
 ```
 
 Record on the microphone HAL uses, with HAL turned off, saying "Marker one" and the take ("Desk,
