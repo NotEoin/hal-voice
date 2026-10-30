@@ -76,8 +76,9 @@ def make_brain(cfg: config.Cfg | None = None) -> Brain:
         try:
             return DirectBrain()
         except CoreNotFound as e:
-            log.error("%s. Falling back to claude mode.", e)
-        from .claude import ClaudeSession
-
-        return ClaudeSession()
+            # Claude Code runs only when the user sets brain.mode: claude (directive I4)
+            raise BrainUnavailable(
+                f"{e}. Install core Hal, or set brain.mode to openai (a local server) or claude "
+                "(Claude Code on the host: not private, not sandboxed)."
+            ) from e
     raise BrainUnavailable(f"brain.mode '{mode}' is not one of: {', '.join(MODES)}")

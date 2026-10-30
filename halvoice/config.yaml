@@ -126,7 +126,8 @@ brain:
   #         Long jobs go to Claude Code in the background. Needs core hal (see README).
   # openai: any OpenAI-compatible server at base_url (llama-server, Ollama's /v1, vLLM); no tools.
   #         For use without Hal.
-  # claude: every turn is a Claude Code run on the host (the original behaviour; slower to start).
+  # claude: every turn is a Claude Code run on the host (not private, not sandboxed). Chosen only by
+  #         setting it here; a missing core Hal never falls back to it.
   mode: direct
   # openai and claude modes: a reply still unfinished after this ends with "That took too long"
   # (claude mode kills the claude -p process and its children).
