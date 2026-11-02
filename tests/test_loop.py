@@ -61,7 +61,7 @@ def bare_loop(brain, finished):
     voice.brain = brain
     voice.ears = None
     voice.cfg = {}
-    voice.claims = VoiceClaims(0, 0, 0)
+    voice.claims = VoiceClaims("off", 0, 0, 0)
     voice.bus = loop.StateBus()
     voice.speak_stream = lambda sentences: (list(sentences), finished)[1]
     return voice

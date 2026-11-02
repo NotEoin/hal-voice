@@ -35,6 +35,12 @@ All notable changes to hal-voice are listed here. The format follows
 
 ### Changed
 
+- GPU sharing talks to the gpu-light daemon with a small stdlib client; hal-voice no longer
+  imports `gpu_light` (which was never installed here, so every claim was a silent no-op).
+  `gpu.mode` picks the behaviour: `on_demand` (the default) holds no VRAM while idle and asks
+  the daemon for room when you start speaking, `resident` keeps the old service and turn
+  claims, `off` never contacts gpu-light. `gpu.turn_wait_s` is now 12 s (it was 3 s): parking
+  a 24 GB batch job takes about 9 s. A request that ends with no words now gives its room back.
 - Docs are split into `docs/user`, `docs/howto` and `docs/dev` with an index in `docs/README.md`;
   `VOICE-BUILD.md` and `VOICE-TUNING.md` moved there.
 - The voice build stops with `GpuBusy` when the GPU stays busy for 30 minutes; it used to carry

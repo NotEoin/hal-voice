@@ -73,11 +73,7 @@ class VoiceLoop:
         self.cfg = config.load()
         self.bus = StateBus()
         self.transcriber = Transcriber()
-        self.claims = VoiceClaims(
-            resident_mib=int(self.cfg.get("gpu.resident_mib", 3584)),
-            brain_mib=int(self.cfg.get("gpu.brain_mib", 14000)),
-            linger_s=float(self.cfg.get("gpu.linger_s", 30)),
-        )
+        self.claims = VoiceClaims.from_config(self.cfg)
         self.brain = make_brain()
         if hasattr(self.brain, "listen"):
             self.brain.listen = self._listen_for_approval  # spoken approvals (REQ-VOICE-05)
@@ -208,11 +204,12 @@ class VoiceLoop:
     def _handle_turn(self, text: str) -> None:
         if not text:
             self.bus.set("idle")
+            self.claims.turn_ended()  # the room asked for when speech began is not needed now
             return
         log.info("you: %s", text)
         self.bus.set("thinking")
         self.claims.turn_started()  # a no-op when push-to-talk or the ears already started it
-        self.claims.wait_for_turn(float(self.cfg.get("gpu.turn_wait_s", 3)))
+        self.claims.wait_for_turn(float(self.cfg.get("gpu.turn_wait_s", 12)))
         started = time.time()
         first = {"t": None}
 
@@ -278,6 +275,7 @@ class VoiceLoop:
                 if self.activator and self.activator.wake and self.activator.wake.detected.is_set():
                     self.activator.wake.detected.clear()
                     self.bus.set("listening")
+                    self.claims.turn_started()
                     self._handle_turn(self._record("wake_word"))
                     continue
                 if not self.ears:

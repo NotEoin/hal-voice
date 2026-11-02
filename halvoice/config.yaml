@@ -44,12 +44,24 @@ activation:
     command_window_s: 6     # after a bare "Hal", the next utterance is the request for this long.
   followup_s: 8             # after HAL speaks, carry on talking without his name for this long.
 
-# ---- GPU sharing (gpu-light; optional, the loop runs unchanged without it) -----
+# ---- GPU sharing (gpu-light daemon; the loop runs unchanged without it) -------
 gpu:
-  resident_mib: 3584        # VRAM claimed for the models hal-voice keeps loaded (gpu-light's unmeasured default).
-  brain_mib: 14000          # VRAM the turn claim asks for while the brain answers.
-  turn_wait_s: 3            # longest wait for the turn claim before the brain call; then go ahead.
-  linger_s: 30              # the turn claim is released this long after the reply; a new turn renews it.
+  # on_demand: hold no VRAM while idle. Speech-to-text and the TTS server run on the CPU, and
+  #            each turn asks gpu-light to make room for the brain (it parks background GPU
+  #            jobs in place) and gives the room back gpu.linger_s after the last reply.
+  # resident:  today's behaviour before on_demand: a service claim for the resident models
+  #            for the life of the process, plus an interactive claim for each turn. The
+  #            profile in voice.conf picks the STT and TTS devices.
+  # off:       never contact gpu-light.
+  mode: on_demand
+  resident_mib: 3584        # resident mode only: VRAM claimed for the models kept loaded (gpu-light's unmeasured default).
+  brain_mib: 14000          # VRAM the turn asks for while the brain answers.
+  # Longest wait for the room before the brain call; then go ahead regardless. Parking a 24 GB
+  # batch job with cuda-checkpoint takes about 9 s (measured on gpu-light), so 12 s is that
+  # plus margin. The room is requested when you start speaking, so most of it overlaps with
+  # transcription.
+  turn_wait_s: 12
+  linger_s: 30              # the room is given back this long after the reply; a new turn inside it keeps it.
 
 # ---- Speech-to-text ---------------------------------------------------------
 stt:
