@@ -7,8 +7,14 @@ pack = "voice"
 # {root} is this manifest's directory; its parent is the checkout with the .venv
 exec = ["{root}/../.venv/bin/python", "-m", "halvoice.hubtool"]
 protocol = "oneshot"
+
 # `hal ext add voice` runs this: the venv, the speech models and GPT-SoVITS (several GB).
-install = ["{root}/../setup-voice.sh", "--yes", "--with-wake"]
+[[install]]
+id = "setup"
+summary = "Build the voice venv and download the speech models and GPT-SoVITS (several GB)"
+run = ["{root}/../setup-voice.sh", "--yes", "--with-wake"]
+timeout = 7200  # the hub's ceiling: several GB of downloads must not be cut off
+network = true
 
 [[tools]]
 name = "voice_say"

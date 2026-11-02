@@ -24,6 +24,25 @@ def test_manifest_is_schema_2_exec_through_hubtool(path):
     assert m["module"]["protocol"] == "oneshot"
 
 
+# the schema 2 keys hal-hub accepts at the top and in [module]; anything else skips the module
+TOP_KEYS = {"schema", "module", "tools", "install", "units", "desktop"}
+MODULE_KEYS = {
+    "name", "pack", "summary", "version", "python", "exec", "protocol", "interpreter", "inprocess",
+    "requires", "calls", "requires_hal", "env", "domains", "secrets", "startup_timeout",
+    "max_workers", "keywords",
+}  # fmt: skip
+
+
+@pytest.mark.parametrize("path", MANIFESTS, ids=lambda p: p.parent.name)
+def test_manifest_uses_only_keys_the_hub_accepts(path):
+    # regression: a schema 1 `module.install` key made the hub skip the voice module
+    m = tomllib.loads(path.read_text())
+    assert set(m) <= TOP_KEYS
+    assert set(m["module"]) <= MODULE_KEYS
+    for step in m.get("install", []):
+        assert {"id", "summary", "run"} <= set(step)
+
+
 @pytest.mark.parametrize("path", MANIFESTS, ids=lambda p: p.parent.name)
 def test_every_manifest_tool_has_policy_fields_and_a_worker_function(path):
     for tool in tomllib.loads(path.read_text())["tools"]:
