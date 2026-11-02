@@ -230,7 +230,10 @@ It still runs on its own (`git clone https://github.com/NotEoin/hal-voice.git`, 
 | **Also needed** | A [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS) checkout with its pretrained models |
 
 `setup-voice.sh` reads your GPU and proposes a profile; `--profile <name>` overrides it. This is
-about **VRAM only** - it does not change which model does the thinking.
+about **VRAM only** - it does not change which model does the thinking. The profile applies only
+with `gpu.mode: resident` or `off`. The default, `on_demand`, keeps speech recognition and the
+voice on the CPU unless you set `stt.device` or `tts.device` yourself; see
+[Sharing the GPU](docs/user/voice.md#sharing-the-gpu).
 
 | Profile | Speech recognition | Voice synthesis | |
 |---|---|---|---|

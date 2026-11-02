@@ -41,6 +41,11 @@ All notable changes to hal-voice are listed here. The format follows
   the daemon for room when you start speaking, `resident` keeps the old service and turn
   claims, `off` never contacts gpu-light. `gpu.turn_wait_s` is now 12 s (it was 3 s): parking
   a 24 GB batch job takes about 9 s. A request that ends with no words now gives its room back.
+- With `gpu.mode: on_demand` (the default) speech-to-text and the TTS server run on the CPU
+  and hold no VRAM, in host and container mode alike. The new `tts.device` and `tts.half`
+  settings, like `stt.device`, ask for a GPU; the `voice.conf` profile now applies only in
+  `resident` and `off` mode (`./hal-voice` exports it as `HALVOICE_PROFILE_*`). A TTS container
+  on the CPU has no `--gpus` and no gpu-light claim marker. See `halvoice/placement.py`.
 - Docs are split into `docs/user`, `docs/howto` and `docs/dev` with an index in `docs/README.md`;
   `VOICE-BUILD.md` and `VOICE-TUNING.md` moved there.
 - The voice build stops with `GpuBusy` when the GPU stays busy for 30 minutes; it used to carry

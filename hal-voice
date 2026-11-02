@@ -13,15 +13,28 @@ PY="$VENV/bin/python"
 if [ ! -x "$PY" ]; then PY="$(command -v python3 || true)"; fi
 if [ -z "${PY:-}" ]; then echo "No Python found. Run ./setup-voice.sh first."; exit 1; fi
 
-# Voice profile from setup-voice.sh: decides whether speech recognition runs on the GPU
-# or the CPU. Exported as HALVOICE_STT_* so config.py's env-override mechanism applies it
-# over the config files. Anything already in your shell still wins.
+# Voice profile from setup-voice.sh. Its device choices are exported as HALVOICE_PROFILE_*,
+# not as the settings themselves: halvoice/placement.py applies them only when gpu.mode is
+# resident or off, so the default on_demand mode keeps speech recognition and the voice on the
+# CPU. A HALVOICE_STT_DEVICE or HALVOICE_TTS_DEVICE already in your shell is kept as it is.
 VOICE_CONF="${HALVOICE_CONF:-$VOICE_ROOT/voice.conf}"
 if [ -f "$VOICE_CONF" ]; then
+  _shell_env="$(export -p)"
   # shellcheck disable=SC1090
   . "$VOICE_CONF"
-  export HALVOICE_PROFILE HALVOICE_STT_DEVICE HALVOICE_STT_COMPUTE_TYPE \
-         HALVOICE_TTS_DEVICE HALVOICE_TTS_HALF
+  export HALVOICE_PROFILE
+  export HALVOICE_PROFILE_STT_DEVICE="${HALVOICE_STT_DEVICE-}" \
+         HALVOICE_PROFILE_STT_COMPUTE_TYPE="${HALVOICE_STT_COMPUTE_TYPE-}" \
+         HALVOICE_PROFILE_TTS_DEVICE="${HALVOICE_TTS_DEVICE-}" \
+         HALVOICE_PROFILE_TTS_HALF="${HALVOICE_TTS_HALF-}"
+  # Sourcing voice.conf overwrote same-named shell variables; put the shell's own back.
+  for _v in HALVOICE_STT_DEVICE HALVOICE_STT_COMPUTE_TYPE HALVOICE_TTS_DEVICE HALVOICE_TTS_HALF; do
+    if grep -q "^declare -x $_v=" <<<"$_shell_env"; then
+      eval "$(grep "^declare -x $_v=" <<<"$_shell_env")"
+    else
+      unset "$_v"
+    fi
+  done
 fi
 
 export HALVOICE_ROOT="$VOICE_ROOT"

@@ -1,8 +1,8 @@
 """Speech-to-text: record one utterance from the mic and transcribe it on the CPU.
 
 Pipeline: capture 16 kHz mono frames -> webrtcvad trims to the spoken segment ->
-faster-whisper transcribes. Device and precision come from the profile chosen by
-setup-voice.sh -- CPU on the `12gb` and `cloud` profiles, so the GPU stays free.
+faster-whisper transcribes. Device and precision come from `halvoice.placement`: the CPU
+unless you ask for a GPU, so the card stays free for background work.
 `record_utterance()` blocks until speech stops (trailing silence) or the
 max-utterance cap is reached.
 """
@@ -15,7 +15,7 @@ import time
 
 import numpy as np
 
-from . import config
+from . import config, placement
 from .util import get_logger
 
 log = get_logger(__name__)
@@ -155,8 +155,9 @@ class Transcriber:
     def __init__(self) -> None:
         cfg = config.load()
         self.model_name = str(cfg.get("stt.model", "small.en"))
-        self.device = str(cfg.get("stt.device", "cpu"))
-        self.compute_type = str(cfg.get("stt.compute_type", "int8"))
+        placed = placement.resolve(cfg)
+        self.device = placed.stt_device
+        self.compute_type = placed.stt_compute
         self.cpu_model = str(cfg.get("stt.cpu_model", "small.en"))
         self.beam_size = int(cfg.get("stt.beam_size", 1))
         self.language = cfg.get("stt.language", "en")

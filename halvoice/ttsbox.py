@@ -1,4 +1,4 @@
-"""Runs the GPT-SoVITS server in a GPU container and bridges its socket to a TCP port.
+"""Runs the GPT-SoVITS server in a container and bridges its socket to a TCP port.
 
 `hal-voice tts-server` (tts.server.isolation: container, the default) calls `serve`.
 Design decisions:
@@ -6,6 +6,9 @@ Design decisions:
   run directory, and `Forwarder` publishes that on 127.0.0.1 so `hal-say` keeps working.
 - The `nvidia` runtime is runc-based and reaches a bind-mounted unix socket; plain runsc
   would need `--host-uds=open`. `runsc-gpu` fails on the target host (08, "TTS isolation").
+- The container gets a GPU only when the device is not `cpu` (`halvoice/placement.py`): the
+  default keeps the card free for background work, and the launcher applies the device to a
+  copy of `tts_infer.yaml`, because the mounted checkout is read-only.
 - Missing docker or runtime is an error that names the piece; there is no fallback to
   host mode, because host mode loads pickle checkpoints outside a box.
 """
@@ -60,8 +63,9 @@ def run_dir() -> Path:
     return path
 
 
-def preflight() -> None:
-    """Raises `TtsBoxError` naming the missing piece: docker, its daemon or the nvidia runtime."""
+def preflight(device: str = "cuda") -> None:
+    """Raises `TtsBoxError` naming the missing piece: docker, its daemon or, for a GPU, the
+    nvidia runtime."""
     if shutil.which("docker") is None:
         raise TtsBoxError(
             "docker is not installed or not on PATH (needed for tts.server.isolation: container)"
@@ -82,7 +86,7 @@ def preflight() -> None:
         raise TtsBoxError(
             f"docker daemon unreachable: {done.stderr.strip() or 'docker info failed'}"
         )
-    if '"nvidia"' not in done.stdout:
+    if device != "cpu" and '"nvidia"' not in done.stdout:
         raise TtsBoxError(
             "docker has no `nvidia` runtime; install the NVIDIA Container Toolkit "
             "(`nvidia-ctk runtime configure --runtime=docker`)"
@@ -100,13 +104,30 @@ def box_flags(sock_dir: str, uid: int, gid: int) -> list[str]:
 
 
 def docker_argv(
-    gsv_dir: str, weights_dir: str, sock_dir: str, uid: int, gid: int, tag: str
+    gsv_dir: str,
+    weights_dir: str,
+    sock_dir: str,
+    uid: int,
+    gid: int,
+    tag: str,
+    *,
+    device: str = "cuda",
+    half: bool = True,
+    claim: str | None = "hal-voice",
 ) -> list[str]:
-    """The `docker run` argv for the locked-down GPU container."""
+    """The `docker run` argv for the locked-down container.
+
+    A `cpu` device gets no GPU at all. `claim` names the gpu-light claim that owns the
+    container's VRAM (resident mode); None leaves the container unmarked.
+    """
+    gpu_flags = [] if device == "cpu" else ["--runtime=nvidia", "--gpus", "all"]
+    claim_flags = ["-e", f"GPU_LIGHT_CLAIM={claim}"] if claim and device != "cpu" else []
     return [
-        "docker", "run", "--name", "hal-voice-tts", "--runtime=nvidia", "--gpus", "all",
+        "docker", "run", "--name", "hal-voice-tts", *gpu_flags,
         *box_flags(sock_dir, uid, gid),
-        "-e", "GPU_LIGHT_CLAIM=hal-voice",
+        *claim_flags,
+        "-e", f"HALVOICE_TTS_DEVICE={device}",
+        "-e", f"HALVOICE_TTS_HALF={'true' if half and device != 'cpu' else 'false'}",
         "-v", f"{gsv_dir}:/opt/gsv:ro",
         "-v", f"{weights_dir}:/weights:ro",
         tag,
@@ -194,12 +215,30 @@ def build_image(gsv_dir: str, docker_dir: Path) -> int:
         ).returncode
 
 
-def serve(gsv_dir: str, weights_dir: str, port: int) -> int:
+def serve(
+    gsv_dir: str,
+    weights_dir: str,
+    port: int,
+    *,
+    device: str = "cuda",
+    half: bool = True,
+    claim: str | None = "hal-voice",
+) -> int:
     """Runs the container and the forwarder until the container exits or a signal arrives."""
-    preflight()
+    preflight(device)
     sock_dir = run_dir()
     sock = sock_dir / SOCKET_NAME
-    argv = docker_argv(gsv_dir, weights_dir, str(sock_dir), os.getuid(), os.getgid(), image_tag())
+    argv = docker_argv(
+        gsv_dir,
+        weights_dir,
+        str(sock_dir),
+        os.getuid(),
+        os.getgid(),
+        image_tag(),
+        device=device,
+        half=half,
+        claim=claim,
+    )
     fwd = Forwarder(str(sock), port)
     fwd.start()
     # no timeout: the server runs until stopped; SIGTERM below ends it (see POPEN_ALLOWED)

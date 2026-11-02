@@ -136,7 +136,7 @@ def _tts_server(args: list[str]) -> int:
     if isolation != "host":
         print(f"tts.server.isolation must be container or host, not {isolation!r}", file=sys.stderr)
         return 1
-    from . import ttspins
+    from . import placement, ttspins
 
     weights = config.resolve(str(cfg.get("tts.server.weights_dir", "")))
     try:
@@ -145,6 +145,9 @@ def _tts_server(args: list[str]) -> int:
         print(f"hal-voice: refusing to start the host TTS server: {e}", file=sys.stderr)
         return 1
     script = config.root_dir() / "gptsovits" / "run-api.sh"
+    placed = placement.resolve(cfg)
+    os.environ["HALVOICE_RESOLVED_TTS_DEVICE"] = placed.tts_device
+    os.environ["HALVOICE_RESOLVED_TTS_HALF"] = "true" if placed.tts_half else "false"
     os.environ["GPTSOVITS_DIR"] = server_dir
     # host mode keeps torch.load(weights_only=True); the pins above are what makes that enough
     os.environ.pop("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", None)
@@ -152,15 +155,20 @@ def _tts_server(args: list[str]) -> int:
 
 
 def _tts_container(cfg, server_dir: str) -> int:
-    """Runs the TTS server in its GPU container; exits 1 naming a missing docker piece."""
+    """Runs the TTS server in its container; exits 1 naming a missing docker piece."""
     from urllib.parse import urlparse
 
-    from . import config, ttsbox
+    from . import config, placement, ttsbox
 
     port = urlparse(str(cfg.get("tts.api_url", "http://127.0.0.1:9880"))).port or 9880
     weights = config.resolve(str(cfg.get("tts.server.weights_dir", "")))
+    placed = placement.resolve(cfg)
+    # the container's VRAM belongs to the resident claim only in resident mode
+    claim = "hal-voice" if placed.mode == "resident" else None
     try:
-        return ttsbox.serve(server_dir, weights, port)
+        return ttsbox.serve(
+            server_dir, weights, port, device=placed.tts_device, half=placed.tts_half, claim=claim
+        )
     except ttsbox.TtsBoxError as e:
         print(f"hal-voice: {e}", file=sys.stderr)
         return 1

@@ -69,7 +69,10 @@ stt:
   model: medium.en          # tiny.en|base.en|small.en|medium.en. medium.en takes ~0.1 s per utterance on a GPU.
   cpu_model: small.en       # used instead when the GPU is unavailable.
   hotwords: Hal             # biases recognition towards HAL's name.
-  device: cpu               # cpu | cuda | auto (GPU when CUDA works). voice.conf overrides this.
+  # cpu | cuda | auto (GPU when CUDA works). With gpu.mode on_demand this is the device, and
+  # voice.conf is ignored; with resident or off the voice.conf profile overrides it
+  # (halvoice/placement.py). Using the GPU here keeps its VRAM while hal-voice idles.
+  device: cpu
   compute_type: int8        # int8 on CPU; use float16/int8_float16 if you move it to GPU.
   beam_size: 5              # 1 misheard more requests (17.5% against 20.4% word errors).
   language: en
@@ -89,6 +92,10 @@ tts:
     # the host; allowed only when set in a user override file (see docs/howto/tts-isolation.md).
     isolation: container
     weights_dir: "gptsovits/weights"   # mounted read-only at /weights in container mode
+  # Where the TTS server runs, under the same rule as stt.device. cpu keeps the card free
+  # (measured 1.1x to 1.7x realtime on an i9-12900K, 2026-11-02); cuda holds VRAM while idle.
+  device: cpu               # cpu | cuda. Host and container mode both follow it.
+  half: false               # fp16; only with device cuda (the CPU has none).
   text_lang: en
   prompt_lang: en
   # The voice. ./make-hal-voice builds it from the film (see docs/howto/build-the-voice.md) and writes these

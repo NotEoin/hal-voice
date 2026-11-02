@@ -35,6 +35,81 @@ def test_docker_argv_is_the_locked_down_gpu_run():
     assert argv[-1] == "hal-voice-tts:9"
 
 
+def test_cpu_docker_argv_has_no_gpu_and_no_claim():
+    argv = ttsbox.docker_argv(
+        "/g", "/w", "/run/u/hal-voice", 1000, 1001, "t:1", device="cpu", half=True, claim=None
+    )
+    joined = " ".join(argv)
+    assert "--gpus" not in joined
+    assert "--runtime" not in joined
+    assert "GPU_LIGHT_CLAIM" not in joined
+    assert "-e HALVOICE_TTS_DEVICE=cpu" in joined
+    assert "-e HALVOICE_TTS_HALF=false" in joined  # the CPU has no fp16
+
+
+def test_gpu_docker_argv_without_a_claim_is_unmarked():
+    argv = ttsbox.docker_argv("/g", "/w", "/r", 1, 1, "t:1", claim=None)
+    assert "--gpus all" in " ".join(argv)
+    assert "GPU_LIGHT_CLAIM" not in " ".join(argv)
+
+
+def test_cpu_preflight_does_not_need_the_nvidia_runtime(monkeypatch):
+    monkeypatch.setattr(ttsbox.shutil, "which", lambda name: "/usr/bin/docker")
+    monkeypatch.setattr(ttsbox.subprocess, "run", fake_info('{"runc":{}}'))
+    ttsbox.preflight("cpu")
+
+
+def tts_cfg(tmp_path, isolation, **tts):
+    (tmp_path / "gsv").mkdir(exist_ok=True)
+    tree = {
+        "tts": {
+            "api_url": "http://127.0.0.1:9999",
+            "server": {
+                "gptsovits_dir": str(tmp_path / "gsv"),
+                "weights_dir": str(tmp_path / "w"),
+                "isolation": isolation,
+            },
+            **tts,
+        },
+        "gpu": {"mode": "on_demand"},
+    }
+    return config.Cfg(tree)
+
+
+def test_container_tts_server_runs_on_the_cpu_by_default(monkeypatch, tmp_path):
+    seen = {}
+    monkeypatch.setattr(config, "load", lambda force=False: tts_cfg(tmp_path, "container"))
+    monkeypatch.setattr(ttsbox, "serve", lambda *a, **k: seen.update(args=a, kwargs=k) or 0)
+    assert cli.main(["tts-server"]) == 0
+    assert seen["args"][2] == 9999
+    assert seen["kwargs"] == {"device": "cpu", "half": False, "claim": None}
+
+
+def test_container_tts_server_on_a_gpu_in_resident_mode_is_claimed(monkeypatch, tmp_path):
+    seen = {}
+    tree = tts_cfg(tmp_path, "container", device="cuda", half=True)
+    tree["gpu"]["mode"] = "resident"
+    monkeypatch.setattr(config, "load", lambda force=False: tree)
+    monkeypatch.setattr(ttsbox, "serve", lambda *a, **k: seen.update(kwargs=k) or 0)
+    assert cli.main(["tts-server"]) == 0
+    assert seen["kwargs"] == {"device": "cuda", "half": True, "claim": "hal-voice"}
+
+
+def test_host_tts_server_is_told_the_cpu_by_default(monkeypatch, tmp_path):
+    from halvoice import ttspins
+
+    monkeypatch.setattr(config, "load", lambda force=False: tts_cfg(tmp_path, "host"))
+    monkeypatch.setattr(ttspins, "verify", lambda *a: None)
+    started = {}
+    monkeypatch.setattr(cli.os, "execv", lambda path, argv: started.update(path=path))
+    for key in ("HALVOICE_RESOLVED_TTS_DEVICE", "HALVOICE_RESOLVED_TTS_HALF"):
+        monkeypatch.delenv(key, raising=False)
+    cli.main(["tts-server"])
+    assert str(started["path"]).endswith("gptsovits/run-api.sh")
+    assert cli.os.environ["HALVOICE_RESOLVED_TTS_DEVICE"] == "cpu"
+    assert cli.os.environ["HALVOICE_RESOLVED_TTS_HALF"] == "false"
+
+
 def test_preflight_without_docker_names_docker(monkeypatch):
     monkeypatch.setattr(ttsbox.shutil, "which", lambda name: None)
     with pytest.raises(ttsbox.TtsBoxError, match="docker is not installed"):

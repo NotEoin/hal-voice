@@ -22,15 +22,20 @@ if [ ! -d "$GPTSOVITS_DIR" ]; then
   exit 1
 fi
 
-# Voice profile (written by ../setup-voice.sh). Decides whether the engine runs on the
-# GPU or the CPU -- GPT-SoVITS ships configured for CUDA and cannot start without it.
+# `hal-voice tts-server` decides the device (halvoice/placement.py: the CPU unless gpu.mode or
+# your settings say otherwise) and passes it as HALVOICE_RESOLVED_TTS_*. Run by hand, this
+# script falls back to the voice profile (written by ../setup-voice.sh) as it always did.
+# GPT-SoVITS ships configured for CUDA and cannot start without it, so the device is applied
+# to its tts_infer.yaml below.
+RESOLVED_DEVICE="${HALVOICE_RESOLVED_TTS_DEVICE:-}"
+RESOLVED_HALF="${HALVOICE_RESOLVED_TTS_HALF:-}"
 VOICE_CONF="${HALVOICE_CONF:-$HERE/../voice.conf}"
 if [ -f "$VOICE_CONF" ]; then
   # shellcheck disable=SC1090
   . "$VOICE_CONF"
 fi
-TTS_DEVICE="${HALVOICE_TTS_DEVICE:-cuda}"
-TTS_HALF="${HALVOICE_TTS_HALF:-true}"
+TTS_DEVICE="${RESOLVED_DEVICE:-${HALVOICE_TTS_DEVICE:-cuda}}"
+TTS_HALF="${RESOLVED_HALF:-${HALVOICE_TTS_HALF:-true}}"
 
 cd "$GPTSOVITS_DIR" || exit 1
 
