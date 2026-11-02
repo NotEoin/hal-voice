@@ -9,7 +9,7 @@
 
 Talk to Hal and have it answer out loud, in the voice of HAL 9000, with a red lens watching you
 from the corner of the screen. Speech recognition and synthesis always run on your own machine; the
-thinking is done by core Hal's local brain with the tools of your installed extensions, or by
+thinking is done by core Hal's local brain with the tools of your installed packs, or by
 whatever [Claude Code](https://claude.ai/code) you already have.
 
 ![The eye reacting to what it's doing](./media/eye.gif)
@@ -183,17 +183,18 @@ until you have recorded those takes. The clips are your voice, so they stay out 
 
 ## Installation
 
-hal-voice is a Hal ecosystem extension: it lives in `extensions/hal-voice` and is installed by the
-ecosystem installer, which also renders its systemd units:
+hal-voice is a Hal pack with its own environment. Install it with Hal, or from a checkout, then run
+its setup script:
 
 ```bash
-hal ext add voice
-cd <ecosystem>/extensions/hal-voice
-./setup-voice.sh          # the virtualenv, GPT-SoVITS and the voice profile
+hal packs add voice               # from the catalogue; or: hal packs add --local PATH
+hal units install                 # renders its systemd units
+cd PATH/TO/hal-voice
+./setup-voice.sh                  # the virtualenv, GPT-SoVITS and the voice profile
 ```
 
-The units in `systemd/` are templates: the installer replaces `@ROOT@` with this folder and `@CORE@`
-with core Hal's, and copies them to `~/.config/systemd/user`. `hal-tts.service` runs the GPT-SoVITS
+The units in `systemd/` are templates: `hal units install` renders them from the registered pack
+(`@ROOT@` is this folder) and copies them to `~/.config/systemd/user`. `hal-tts.service` runs the GPT-SoVITS
 server and `hal-voice.service` the hands-free loop; both belong to `hal.target`. They carry no
 `X-HalGPU` mark, because in the default `gpu.mode: on_demand` they use no GPU while idle: `hal off`
 leaves them running, and they start on a busy card. With `resident` mode, or a GPU `tts.device`,
