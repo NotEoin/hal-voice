@@ -178,7 +178,7 @@ def gate_edges(audio: np.ndarray, sr: int) -> np.ndarray:
 
 def synth(text: str) -> tuple[np.ndarray, int]:
     """Synthesize the whole text (joined) + HAL FX. Returns (audio, sr)."""
-    client = GPTSoVITSClient()
+    client = _shared_client()
     parts = []
     sr = 32000
     for chunk in split_sentences(text) or [text]:

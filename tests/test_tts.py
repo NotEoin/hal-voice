@@ -98,3 +98,24 @@ def test_empty_sampling_settings_leave_server_defaults(isolated_config, monkeypa
     for key in ("top_k", "top_p", "temperature", "speed_factor"):
         assert key not in sent
     assert config.load().get("tts.speed") == ""
+
+
+def test_whole_text_synth_sends_the_weights_once_per_process(monkeypatch):
+    # regression: each `synth` call built a new client and swapped both checkpoints again
+    import numpy as np
+
+    made = []
+
+    class Client:
+        def __init__(self) -> None:
+            made.append(self)
+
+        def synth_raw(self, text):
+            return np.zeros(320, dtype=np.float32), 32000
+
+    monkeypatch.setattr(tts, "GPTSoVITSClient", Client)
+    monkeypatch.setattr(tts, "_client", None)
+    monkeypatch.setattr(tts.hal_fx, "apply", lambda audio, sr: audio)
+    tts.synth("One.")
+    tts.synth("Two.")
+    assert len(made) == 1

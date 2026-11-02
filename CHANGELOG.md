@@ -61,3 +61,8 @@ All notable changes to hal-voice are listed here. The format follows
   on and run out of memory.
 - A missing core Hal no longer starts Claude Code silently; `brain.mode: claude` is the only way.
 - `voicetest brain` asks any OpenAI-compatible endpoint and no longer needs core Hal.
+
+### Fixed
+
+- `hal-voice say` and the MCP server send HAL's checkpoints to the TTS server once per
+  process. Each whole-text synthesis used to swap both checkpoints again.
