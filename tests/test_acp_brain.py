@@ -10,7 +10,7 @@ import pytest
 
 from halvoice import config
 from halvoice.brains import BrainError, BrainUnavailable, TurnTimeout, make_brain
-from halvoice.brains.acp import AcpBrain, is_approval
+from halvoice.brains.acp import AcpBrain, is_approval, spoken_request
 
 FAKE = Path(__file__).parent / "fakes" / "fake_hal_acp.py"
 
@@ -111,10 +111,32 @@ def test_voice_approvals_off_cancels_broker_requests(sent):
 
 @pytest.mark.parametrize(
     ("reply", "ok"),
-    [("yes", True), ("Allow.", True), ("yes please", False), ("no", False), ("", False)],
+    [
+        ("yes", True),
+        ("Allow.", True),
+        ("Yes, please.", True),
+        ("Hal, go ahead.", True),
+        ("yes but delete everything", False),
+        ("no", False),
+        ("", False),
+    ],
 )
-def test_only_a_whole_yes_or_allow_approves(reply, ok):
+def test_only_a_whole_approval_phrase_approves(reply, ok):
+    # regression: "yes please" was refused, so a spoken approval almost never went through
     assert is_approval(reply) is ok
+
+
+def test_the_approval_question_is_spoken_as_a_sentence():
+    # regression: the terminal summary "Allow jobs_open (act, pack jobs)?" was read aloud verbatim
+    params = {"toolCall": {"title": "jobs_open [act] jobs"}}
+    said = spoken_request(params, "Allow jobs_open (act, pack jobs)?")
+    assert (
+        said
+        == "I need your OK to use jobs open, from your jobs tools. Say yes to go ahead, or no to stop."
+    )
+    assert (
+        spoken_request({"toolCall": {"title": "odd title"}}, "Send the email?") == "Send the email?"
+    )
 
 
 def test_turn_timeout_cancels_and_raises(sent):

@@ -12,8 +12,9 @@ Design decisions:
 - A reader thread owns the child's stdout, so a turn deadline and `cancel` work while the
   agent is silent.
 - Approval: only a broker request (`_meta["hal/origin"] == "broker"`) can be approved, and only
-  by a whole reply of "yes" or "allow" to the host-made `hal/summary` text. Everything else is
-  answered `cancelled`.
+  by a whole reply that is one of `APPROVAL_PHRASES` ("yes", "yes please", "go ahead", ...). The
+  question is spoken as a sentence built from the host-made tool title, or the host-made
+  `hal/summary` when the title is unexpected. Everything else is answered `cancelled`.
 """
 
 from __future__ import annotations
@@ -41,8 +42,17 @@ DEFAULT_COMMAND = ["hal", "acp", "--channel", "voice", "--toolset", "assistant"]
 HANDSHAKE_TIMEOUT_S = 30.0  # first start boots the box, which can take a while
 DRAIN_TIMEOUT_S = 5.0  # a cancelled turn answers well inside this
 CLOSE_TIMEOUT_S = 5.0
-APPROVAL_WORDS = frozenset({"yes", "allow"})  # REQ-VOICE-05: the whole reply, nothing longer
+# REQ-VOICE-05: the whole reply must be one of these fixed phrases, nothing longer, so a reply
+# such as "yes but delete it" is never an approval; people say "yes please" or "go ahead" more
+# often than a bare "yes" (heard in use, 2026-11-02)
+APPROVAL_PHRASES = frozenset(
+    {"yes", "yeah", "yep", "allow", "yes please", "go ahead", "yes go ahead", "do it", "ok", "okay"}
+)
+TOOL_TITLE = re.compile(
+    r"^([a-z][a-z0-9_]*) \[[a-z_-]+\] ([A-Za-z0-9_.-]+)$"
+)  # Hal's "name [tier] pack"
 BROKER_ORIGIN = "broker"
+APPROVAL_LOG_CHARS = 60  # enough to see why a reply was refused, short enough for a log line
 MAX_RESTARTS = 1
 _EOF = object()
 
@@ -56,9 +66,27 @@ def work_dir() -> Path:
 
 
 def is_approval(reply: str) -> bool:
-    """True when the whole spoken reply is "yes" or "allow"."""
-    words = re.sub(r"[^a-z ]", "", reply.lower()).split()
-    return len(words) == 1 and words[0] in APPROVAL_WORDS
+    """True when the whole spoken reply is one of `APPROVAL_PHRASES`, ignoring case and punctuation."""
+    words = re.sub(r"[^a-z ]", " ", reply.lower()).split()
+    if words[:1] == ["hal"]:
+        words = words[1:]  # "Hal, yes" addresses Hal; the name is not part of the answer
+    return " ".join(words) in APPROVAL_PHRASES
+
+
+def spoken_request(params: dict, summary: str) -> str:
+    """The approval question as a sentence, from the tool call's `name [tier] pack` title.
+
+    Hal's summary ("Allow jobs_open (act, pack jobs)?") reads well on a terminal but sounds broken
+    aloud; an unexpected title falls back to the summary, so nothing is ever left unsaid.
+    """
+    title = str((params.get("toolCall") or {}).get("title") or "")
+    match = TOOL_TITLE.match(title)
+    if not match:
+        return summary
+    tool, pack = match.group(1).replace("_", " "), match.group(2).replace("_", " ")
+    return (
+        f"I need your OK to use {tool}, from your {pack} tools. Say yes to go ahead, or no to stop."
+    )
 
 
 def _allow_option(params: dict) -> str | None:
@@ -253,7 +281,8 @@ class AcpBrain:
             self._send(
                 {"jsonrpc": "2.0", "id": msg["id"], "result": {"outcome": {"outcome": "cancelled"}}}
             )
-        return summary
+            return ""
+        return spoken_request(params, summary)
 
     # -- the Brain interface ---------------------------------------------------
     def ask(self, text: str) -> Iterator[str]:
@@ -326,7 +355,11 @@ class AcpBrain:
             outcome: dict = {"outcome": "selected", "optionId": allow}
         else:
             outcome = {"outcome": "cancelled"}
-        log.info("brain: spoken approval answered %s", outcome["outcome"])
+        log.info(
+            "brain: spoken approval heard %r, answered %s",
+            reply[:APPROVAL_LOG_CHARS],
+            outcome["outcome"],
+        )
         self._send({"jsonrpc": "2.0", "id": msg["id"], "result": {"outcome": outcome}})
 
     def _drain_stale(self) -> None:

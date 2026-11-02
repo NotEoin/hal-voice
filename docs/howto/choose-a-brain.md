@@ -48,8 +48,11 @@ transcribed. This page shows how to pick one, point it at a project, and check t
 
 ## Rules each mode follows
 
-- `hal`: when a tool call needs approval, hal-voice reads out the host's summary and accepts only a
-  spoken "yes" or "allow" as the whole reply. Anything else denies, and so does
+- `hal`: when a tool call needs approval, hal-voice asks in a sentence naming the tool and its
+  pack ("I need your OK to use jobs open, from your jobs tools...") and accepts only a whole
+  reply from a fixed list: "yes", "yeah", "yep", "allow", "yes please", "go ahead", "do it", "ok"
+  or "okay" (a leading "Hal" is ignored). Anything longer, such as "yes but delete it", denies,
+  and so does
   `brain.voice_approvals: false`. If `hal` is missing or exits twice, hal-voice stops with an
   error. It never falls back to another brain. Checked by `tests/test_acp_brain.py`.
 - `openai`: the last `brain.history_turns` exchanges are kept (8 when empty).
@@ -67,7 +70,7 @@ transcribed. This page shows how to pick one, point it at a project, and check t
 | --- | --- |
 | hal-voice stops and names `brain.base_url` | Set `brain.base_url` in `openai` mode. |
 | hal-voice stops because `hal` is missing | Install Hal and check that `hal` is on the `PATH`, or choose another `brain.mode`. |
-| A tool call is denied | Answer with the single word "yes" or "allow" when the approval is read out. |
+| A tool call is denied | Answer with just "yes" or "go ahead", nothing more. The log line `spoken approval heard ...` shows what was heard. |
 | Claude Code cannot edit files | Set `claude.permission_mode: acceptEdits`, knowing it then changes files without asking. |
 | `hal-voice.service` cannot find `claude` | The unit sets no `PATH`; set `claude.command` to its absolute path. |
 | A config key is rejected | The key was removed. Keys such as `brain.ollama_url` and `brain.num_ctx` are Hal's settings now. |
