@@ -80,6 +80,7 @@ class VoiceLoop:
         if hasattr(self.brain, "listen"):
             self.brain.listen = self._listen_for_approval  # spoken approvals (REQ-VOICE-05)
         self.player = tts.Player()
+        self.recorder = Recorder()  # every mode needs it: spoken approvals record one reply
         self._ui_thread = None
         self.ears = None
         self.activator = None
@@ -90,7 +91,6 @@ class VoiceLoop:
             self.ears.on_request = self.claims.turn_started
         if self.cfg.get("activation.mode", "both") in ("push_to_talk", "both") or not self.ears:
             self.activator = Activator(keyword=False)
-            self.recorder = Recorder()
         self._speak_lock = threading.Lock()
         self._pending_audio = 0  # segments queued or playing; read by `_speaking_now`
 

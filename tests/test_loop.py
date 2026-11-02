@@ -1,8 +1,10 @@
 """Tests for halvoice.loop: what the loop does around the brain."""
 
+from types import SimpleNamespace
+
 import pytest
 
-from halvoice import loop
+from halvoice import handsfree, loop
 from halvoice.brains import BrainUnavailable, TurnTimeout
 from halvoice.gpu import VoiceClaims
 
@@ -77,3 +79,20 @@ def test_finished_reply_does_not_cancel():
     brain = FakeBrain()
     bare_loop(brain, finished=True)._handle_turn("Hal, hello")
     assert not brain.cancelled
+
+
+def test_hands_free_only_loop_can_record_a_spoken_approval(monkeypatch):
+    """Regression: with `activation.mode = "keyword"` the loop had no `recorder`, so every
+    spoken approval raised `AttributeError` and was answered `cancelled`."""
+    cfg = {"activation.keyword.enabled": True, "activation.mode": "keyword"}
+    monkeypatch.setattr(loop.config, "load", lambda: cfg)
+    monkeypatch.setattr(loop, "Transcriber", lambda: SimpleNamespace(transcribe=None))
+    monkeypatch.setattr(loop, "make_brain", FakeBrain)
+    monkeypatch.setattr(loop.tts, "Player", lambda: None)
+    monkeypatch.setattr(handsfree, "Ears", lambda transcribe: SimpleNamespace(on_request=None))
+    monkeypatch.setattr(
+        VoiceClaims, "from_config", classmethod(lambda cls, cfg: VoiceClaims("off", 0, 0, 0))
+    )
+    voice = loop.VoiceLoop()
+    assert voice.activator is None
+    assert isinstance(voice.recorder, loop.Recorder)
