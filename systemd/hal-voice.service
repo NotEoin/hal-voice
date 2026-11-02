@@ -1,4 +1,6 @@
 [Unit]
+# `hal off` stops this unit and keeps it from starting until `hal on` (Hal's X-HalOff marker)
+X-HalOff=yes
 Description=Hal voice loop, hands-free
 PartOf=hal.target graphical-session.target
 After=hal-tts.service graphical-session.target

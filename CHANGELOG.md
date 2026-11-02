@@ -64,5 +64,8 @@ All notable changes to hal-voice are listed here. The format follows
 
 ### Fixed
 
+- The voice and TTS units carry Hal's `X-HalOff=yes`, so `hal off` still stops them and keeps
+  them off now that they are no longer GPU units.
+
 - `hal-voice say` and the MCP server send HAL's checkpoints to the TTS server once per
   process. Each whole-text synthesis used to swap both checkpoints again.
