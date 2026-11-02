@@ -66,6 +66,7 @@ DEFAULTS = {"speed": 0.9, "fragment_interval": 0.5, "temperature": 0.7, "top_k":
 
 
 def transcripts() -> dict[str, str]:
+    """Returns the reference transcript of each clip, by clip name."""
     with (CLIPS / "transcripts.csv").open(newline="", encoding="utf-8") as fh:
         return {
             r[0].strip(): r[1].strip() for r in csv.reader(fh) if r and not r[0].startswith("#")
@@ -73,6 +74,7 @@ def transcripts() -> dict[str, str]:
 
 
 def load(path: Path | str, sr: int = SR) -> np.ndarray:
+    """Loads a clip as mono audio, trims the silence and scales the peak to 1."""
     y, _ = librosa.load(str(path), sr=sr, mono=True)
     y, _ = librosa.effects.trim(y, top_db=35)
     return y / (np.abs(y).max() or 1.0)
@@ -120,6 +122,7 @@ class Judge:
         )
 
     def wer(self, y: np.ndarray, text: str) -> float:
+        """Returns the word error rate of `text` spoken as `y`, as heard by Whisper."""
         segs, _ = self.asr.transcribe(y.astype(np.float32), language="en", beam_size=1)
         said = re.findall(r"[a-z']+", " ".join(s.text for s in segs).lower())
         want = re.findall(r"[a-z']+", text.lower())
@@ -131,6 +134,7 @@ class Judge:
         return float(d[-1] / max(len(want), 1))
 
     def score(self, takes: list[np.ndarray], novel: list[np.ndarray]) -> dict:
+        """Returns the mean voice-match and word-error scores of a set of takes."""
         parts = [self.av.match(t.astype(np.float64), self.fp, self.film_fr) for t in takes]
         avg = {k: float(np.mean([p[k] for p in parts])) for k in parts[0]}
         avg["wer"] = float(
@@ -148,6 +152,7 @@ class Judge:
 
 
 def set_weights(gpt: str, sovits: str) -> None:
+    """Loads a GPT and SoVITS checkpoint pair into the running GPT-SoVITS server."""
     requests.get(
         f"{API}/set_gpt_weights", params={"weights_path": gpt}, timeout=180
     ).raise_for_status()
@@ -157,6 +162,7 @@ def set_weights(gpt: str, sovits: str) -> None:
 
 
 def synth(text: str, ref: tuple[Path, str], p: dict) -> np.ndarray:
+    """Synthesises `text` with the loaded weights and returns the audio."""
     r = requests.post(
         f"{API}/tts",
         timeout=300,
@@ -196,6 +202,7 @@ def evaluate(
     takes: int = 3,
     save: bool = False,
 ) -> dict:
+    """Scores one checkpoint pair with one parameter set and appends the result to the results file."""
     lines = [synth(judge.text, ref, p) for _ in range(takes)]
     novel = [synth(s, ref, p) for s in NOVEL]
     result = {
@@ -263,6 +270,7 @@ def search(judge: Judge, label: str, pairs: list[tuple[str, str]]) -> dict:
 
 
 def run_pairs(run: str) -> list[tuple[str, str]]:
+    """Returns every GPT and SoVITS checkpoint pair of a training run."""
     gpts = sorted(glob.glob(str(GSV / "GPT_weights_*" / f"{run}-e*.ckpt")))
     sovs = sorted(glob.glob(str(GSV / "SoVITS_weights_*" / f"{run}_e*.pth")))
     return [(g, s) for g in gpts for s in sovs]
@@ -300,6 +308,7 @@ def train(name: str, version: str, sovits_epochs: int, gpt_epochs: int, source: 
 
 
 def report() -> None:
+    """Prints the saved results, best first."""
     rows = (
         [json.loads(line) for line in RESULTS.read_text().splitlines()] if RESULTS.exists() else []
     )
@@ -313,6 +322,7 @@ def report() -> None:
 
 
 def main() -> None:
+    """Runs the command line."""
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )

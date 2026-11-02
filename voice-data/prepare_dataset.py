@@ -75,6 +75,7 @@ def pick_reference(transcripts: dict[str, tuple[str, int]]) -> str:
 
 
 def find_clip(stem: str) -> Path | None:
+    """Returns the audio file for a clip name, or None."""
     for suffix in AUDIO_SUFFIXES:
         candidate = AUDIO / f"{stem}{suffix}"
         if candidate.exists():
@@ -115,6 +116,7 @@ AUDIO = SRC
 
 
 def main() -> None:
+    """Runs the command line."""
     global AUDIO, SRC, TRANSCRIPTS_FILE
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(

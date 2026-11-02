@@ -32,16 +32,20 @@ NAMES = {"hal", "hall", "how", "al", "howl", "hell", "hale", "haul", "hull", "ow
 
 @dataclass
 class Region:
+    """A stretch of a recording that holds speech."""
+
     start: float
     end: float
     text: str = ""
 
     @property
     def tokens(self) -> list[str]:
+        """Returns the words of the region's text, with the assistant's name normalised."""
         return [("hal" if w in NAMES else w) for w in script.words(self.text)]
 
 
 def frame_db(y: np.ndarray, sr: int) -> np.ndarray:
+    """Returns the loudness of each frame in decibels."""
     hop, win = int(HOP_S * sr), int(WIN_S * sr)
     n = max(1, (len(y) - win) // hop + 1)
     idx = np.arange(win)[None, :] + hop * np.arange(n)[:, None]
@@ -101,6 +105,7 @@ def regions(y: np.ndarray, sr: int) -> tuple[list[Region], float]:
 
 
 def transcribe_regions(y: np.ndarray, sr: int, regs: list[Region], model) -> None:
+    """Fills in the text of each region."""
     for r in regs:
         seg = y[int(max(0, r.start - 0.2) * sr) : int((r.end + 0.2) * sr)]
         segs, _ = model.transcribe(
@@ -208,6 +213,7 @@ def active_level(y: np.ndarray, sr: int, floor: float) -> float:
 
 
 def slug(text: str) -> str:
+    """Returns a file-name-safe form of a text."""
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:40] or "chat"
 
 

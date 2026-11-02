@@ -121,6 +121,7 @@ def summary(rows: list[dict]) -> dict[str, dict]:
 
 
 def fmt(v) -> str:
+    """Formats a score or a (hits, total) pair for the report."""
     if isinstance(v, tuple):
         return f"{v[0]}/{v[1]} ({100 * v[0] / v[1]:.0f}%)" if v[1] else "-"
     return "-" if v is None else str(v)

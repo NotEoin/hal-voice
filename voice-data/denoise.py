@@ -70,6 +70,7 @@ def finish(wav: np.ndarray, sr: int) -> np.ndarray:
 
 
 def main() -> None:
+    """Runs the command line."""
     p = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )

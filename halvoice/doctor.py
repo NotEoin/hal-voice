@@ -267,6 +267,7 @@ def _gpu_sharing():
 
 
 def main() -> None:
+    """Runs every check, prints the results and exits 1 when an essential one fails."""
     print("hal-voice doctor\n----------------")
     on_wsl = hostplatform.detect_platform() == hostplatform.WSL2
     results = [

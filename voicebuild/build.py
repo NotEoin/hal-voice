@@ -52,6 +52,8 @@ SAMPLING = {"top_k": 15, "top_p": 0.9, "temperature": 0.8}
 
 @dataclass
 class Build:
+    """The settings and state of one voice build."""
+
     films: list[Path]
     subtitles: list[Path]
     work: Path
@@ -69,10 +71,12 @@ class Build:
     log: list[str] = field(default_factory=list)
 
     def say(self, msg: str) -> None:
+        """Prints a timestamped progress line and keeps it in the build log."""
         print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
         self.log.append(msg)
 
     def path(self, *parts: str) -> Path:
+        """Returns a path under the work folder and creates its parent folder."""
         p = self.work.joinpath(*parts)
         p.parent.mkdir(parents=True, exist_ok=True)
         return p
@@ -123,6 +127,7 @@ def release_gpu() -> None:
 
 
 def slug(path: Path) -> str:
+    """Returns a file-name-safe form of a file's stem."""
     return re.sub(r"[^a-z0-9]+", "-", path.stem.lower()).strip("-")[:40] or "film"
 
 
@@ -397,10 +402,12 @@ def dataset(b: Build) -> None:
 
 
 def experiment(b: Build) -> str:
+    """Returns the GPT-SoVITS experiment name of a build."""
     return f"hal-film-{b.version.lower()}" + ("-holdout" if b.hold_out else "")
 
 
 def gpt_python() -> str:
+    """Returns the Python interpreter that runs the GPT-SoVITS scripts."""
     return sys.executable
 
 
@@ -549,10 +556,12 @@ class Server:
         raise RuntimeError("the GPT-SoVITS server did not start")
 
     def stop(self) -> None:
+        """Sends SIGTERM to the server and its process group."""
         os.killpg(self.proc.pid, signal.SIGTERM)
 
 
 def checkpoints(b: Build) -> list[tuple[Path, Path]]:
+    """Returns the GPT and SoVITS checkpoint pairs a build has trained."""
     gsv, exp = GPTSOVITS / "GPT-SoVITS", experiment(b)
     gpts = sorted(gsv.glob(f"GPT_weights_{b.version}/{exp}-e*.ckpt"))
     sovs = sorted(gsv.glob(f"SoVITS_weights_{b.version}/{exp}_e*.pth"))
@@ -582,6 +591,7 @@ def references(b: Build, n: int = 4) -> list[tuple[Path, str]]:
 
 
 def synth(server: Server, text: str, ref: tuple[Path, str], speed: float) -> object:
+    """Asks the server to speak `text` in the reference voice and returns the audio."""
     import io
 
     import librosa

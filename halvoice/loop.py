@@ -69,6 +69,8 @@ def _with_timeout_notice(deltas):
 
 
 class VoiceLoop:
+    """The voice loop: wake, listen, transcribe, ask the brain, speak."""
+
     def __init__(self) -> None:
         self.cfg = config.load()
         self.bus = StateBus()
@@ -243,6 +245,7 @@ class VoiceLoop:
 
     # -- main ------------------------------------------------------------------
     def run(self) -> None:
+        """Runs the loop until interrupted."""
         self._start_ui()
         self.claims.start_service()
         self.transcriber._load()

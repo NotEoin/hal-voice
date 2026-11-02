@@ -222,9 +222,11 @@ class Player:
         self.level = 0.0
 
     def stop(self) -> None:
+        """Interrupts playback."""
         self._stop.set()
 
     def reset(self) -> None:
+        """Clears the interrupt flag before the next playback."""
         self._stop.clear()
 
     def play(self, audio: np.ndarray, sr: int, on_level=None) -> bool:
@@ -261,6 +263,7 @@ def speak(text: str, player: Player | None = None, on_level=None) -> None:
 
 def main() -> None:
     # `python -m halvoice.tts --say "..."`
+    """Speaks the text after `--say`, or all arguments; exits 2 when there is no text."""
     args = sys.argv[1:]
     if "--say" in args:
         text = " ".join(args[args.index("--say") + 1 :]).strip()

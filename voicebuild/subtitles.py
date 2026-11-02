@@ -22,6 +22,8 @@ from . import media
 
 @dataclass
 class Cue:
+    """One subtitle cue with its start and end times in seconds."""
+
     start: float
     end: float
     text: str
@@ -34,6 +36,7 @@ class Cue:
 
 
 def read_text(path: Path) -> str:
+    """Reads a subtitle file in UTF-8 or UTF-16, falling back to Windows-1252."""
     raw = path.read_bytes()
     for enc in ("utf-8-sig", "utf-16"):
         try:
@@ -283,6 +286,7 @@ def fix_ocr(text: str) -> str:
 
 
 def clean(text: str) -> str:
+    """Removes markup and sound descriptions from a cue's text."""
     t = html.unescape(re.sub(r"<[^>]+>", "", text))
     t = _SOUND.sub(" ", t)
     return re.sub(r"\s+", " ", t).strip()

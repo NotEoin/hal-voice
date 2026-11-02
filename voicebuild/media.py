@@ -47,6 +47,8 @@ ENGLISH = {"eng", "en", "english", "und", ""}
 
 @dataclass
 class Stream:
+    """One audio or subtitle stream of a film, as `ffprobe` reports it."""
+
     index: int
     kind: str  # audio | subtitle
     codec: str
@@ -192,6 +194,7 @@ def extract_audio(video: Path, s: Stream, out: Path, rate: int) -> Path:
 
 
 def duration(path: Path) -> float:
+    """Returns the length of a media file in seconds."""
     out = subprocess.run(
         ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
         capture_output=True,

@@ -55,6 +55,7 @@ BANDS = [
 
 
 def load(path: Path) -> np.ndarray:
+    """Loads a clip as mono audio, trims the silence and scales the peak to 1."""
     y, _ = librosa.load(str(path), sr=SR, mono=True)
     y, _ = librosa.effects.trim(y, top_db=40)
     return (y / (np.abs(y).max() or 1.0)).astype(np.float64)
@@ -64,6 +65,7 @@ def load(path: Path) -> np.ndarray:
 
 
 def voice(y: np.ndarray) -> dict:
+    """Measures pitch, loudness and timbre statistics of one clip."""
     snd = parselmouth.Sound(y, SR)
     pitch = snd.to_pitch_ac(time_step=0.01, pitch_floor=60, pitch_ceiling=250)
     f0 = pitch.selected_array["frequency"]
@@ -181,6 +183,7 @@ def speech_level(fr: dict) -> float:
 
 
 def word_stats(fr: dict, start: int, end: int, line_db: float) -> dict:
+    """Returns pitch and loudness statistics for one word's frames."""
     st = fr["st"][start:end]
     voiced = st[np.isfinite(st)]
     third = max(1, voiced.size // 3)
@@ -195,6 +198,7 @@ def word_stats(fr: dict, start: int, end: int, line_db: float) -> dict:
 
 
 def melody(film: dict, cand: dict, m: np.ndarray) -> dict:
+    """Compares the pitch contour of a candidate with the film line it was aligned to."""
     a, b = film["st"][: len(m)], cand["st"][m]
     ok = np.isfinite(a) & np.isfinite(b)
     if ok.sum() < 10:
@@ -258,6 +262,7 @@ NAMES = {
 
 
 def compare(name: str, y: np.ndarray, fp: dict, film_fr: dict) -> dict:
+    """Scores one candidate clip against the film line."""
     v = voice(y)
     fr = frames(y)
     m = mapping(film_fr, fr)
@@ -411,6 +416,7 @@ def match(y: np.ndarray, fp: dict, film_fr: dict, film_words: list | None = None
 
 
 def main() -> None:
+    """Runs the command line."""
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )

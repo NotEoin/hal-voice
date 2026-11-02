@@ -84,6 +84,7 @@ def denoise_python(given: str | None) -> str:
 
 
 def hal_is_on() -> bool:
+    """True when `hal status` reports Hal running, which would hold the GPU."""
     if not shutil.which("hal"):
         return False
     try:
@@ -197,6 +198,7 @@ def report(b: build.Build) -> Path:
 
 
 def main() -> int:
+    """Runs the command line."""
     ap = argparse.ArgumentParser(
         prog="make-hal-voice",
         description=__doc__,

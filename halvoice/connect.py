@@ -69,6 +69,7 @@ class Connection:
         return not self.base_url and not self.model
 
     def describe(self) -> str:
+        """Returns a one-line description of the brain connection for logs and `doctor`."""
         where = f"in {self.project_dir}"
         if not self.is_cloud:
             return f"{self.model or 'default model'} via {self.base_url or 'default endpoint'}, {where}"

@@ -42,6 +42,7 @@ def conversations(lines: dict[str, script.Line], expect: dict) -> list[list[str]
 
 
 def judge(want: dict, greetings: dict, turn: dict) -> list[str]:
+    """Returns the problems found in one turn compared with what the script expects; empty means it passed."""
     names = [t["name"] for t in turn.get("tools", []) if t["name"] not in ALWAYS]
     problems = []
     tools = want.get("tools", [])
@@ -191,6 +192,7 @@ def _cell(r: dict) -> str:
 
 
 def markdown(take: str, results: list[dict], lines: dict) -> str:
+    """Returns a Markdown report of the results."""
     by = {(r["id"], r["variant"]): r for r in results}
     ids = list(dict.fromkeys(r["id"] for r in results))
     ok = {

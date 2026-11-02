@@ -29,6 +29,7 @@ def value(text: str):
 
 
 def cmd_split(args) -> int:
+    """Handles `split`: cuts a recording into clips."""
     from faster_whisper import WhisperModel
 
     from halvoice.stt import _preload_cuda
@@ -48,6 +49,7 @@ def cmd_split(args) -> int:
 
 
 def cmd_run(args) -> int:
+    """Handles `run`: replays the clips through the voice loop."""
     import logging
 
     from . import replay
@@ -98,6 +100,7 @@ def cmd_run(args) -> int:
 
 
 def cmd_compare(args) -> int:
+    """Handles `compare`: prints saved runs side by side."""
     runs = {}
     for label in args.labels:
         runs[label] = json.loads((TESTS / "runs" / f"{label}.json").read_text())["rows"]
@@ -106,6 +109,7 @@ def cmd_compare(args) -> int:
 
 
 def cmd_brain(args) -> int:
+    """Handles `brain`: judges the brain's answers to a saved run."""
     from . import brain
 
     rows = json.loads((TESTS / "runs" / f"{args.label}.json").read_text())["rows"]
@@ -117,6 +121,7 @@ def cmd_brain(args) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Runs the command line."""
     ap = argparse.ArgumentParser(
         prog="hal-voice voicetest",
         description=__doc__,

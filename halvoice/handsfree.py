@@ -88,6 +88,8 @@ def addressed(text: str, how_is_name: bool = True) -> tuple[bool, str]:
 
 @dataclass
 class Heard:
+    """One transcribed utterance and whether it was addressed to the assistant."""
+
     text: str  # the request, with the name removed
     named: bool  # HAL's name was in it
     raw: str  # the full transcript
@@ -209,6 +211,7 @@ class Ears:
         self._armed_until = self.clock() + self.followup_s
 
     def disarm(self) -> None:
+        """Ends the window in which speech needs no name."""
         self._armed_until = 0.0
 
     def spoke(self, sentence: str) -> None:
@@ -216,6 +219,7 @@ class Ears:
         self._said.append(sentence.lower())
 
     def stopped_speaking(self) -> None:
+        """Marks the moment the assistant stopped talking, to time the echo guard."""
         self._quiet_since = self.clock()
 
     def _is_echo(self, text: str) -> bool:
@@ -229,10 +233,12 @@ class Ears:
 
     # -- threads ----------------------------------------------------------------
     def start(self) -> None:
+        """Starts the capture and transcription threads."""
         threading.Thread(target=self._capture, name="ears-capture", daemon=True).start()
         threading.Thread(target=self._understand, name="ears-stt", daemon=True).start()
 
     def stop(self) -> None:
+        """Stops both threads."""
         self._stop.set()
 
     def overlapped(self, audio: np.ndarray, lead_s: float) -> bool:
@@ -248,6 +254,7 @@ class Ears:
         return began < tail and ended < tail + ECHO_SPEECH_S
 
     def segmenter(self) -> Segmenter:
+        """Builds a speech segmenter from the audio settings."""
         return Segmenter(
             self.sr,
             self.vad_level,

@@ -201,6 +201,7 @@ def save_note(text: str, title: str = "Transcript") -> str:
 
 
 def recording() -> dict:
+    """Returns whether a recording is running and its details."""
     if not _state().exists():
         return {"recording": False}
     st = json.loads(_state().read_text())

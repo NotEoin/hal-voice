@@ -125,6 +125,7 @@ class Line:
     request: str = ""  # what should reach the brain
 
     def as_dict(self) -> dict:
+        """Returns the line as a plain dict for JSON."""
         return asdict(self)
 
 

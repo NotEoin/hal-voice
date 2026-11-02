@@ -223,6 +223,7 @@ class Activator:
             self.keyword = _Keyword()
 
     def start(self) -> None:
+        """Starts the push-to-talk and wake-word listeners that are enabled."""
         if self.ptt:
             self.ptt.start()
         if self.wake:
@@ -256,6 +257,7 @@ class Activator:
             time.sleep(0.02)
 
     def stop(self) -> None:
+        """Stops the listeners."""
         if self.ptt:
             self.ptt.stop()
         if self.wake:

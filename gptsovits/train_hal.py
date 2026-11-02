@@ -95,6 +95,7 @@ def run_stage(cmd, env=None):
 
 
 def run_step(script, extra_env, shim=False):
+    """Runs one GPT-SoVITS preparation or training script and stops on failure."""
     env = os.environ.copy()
     env.update({k: str(v) for k, v in extra_env.items()})
     print(f"\n=== RUN {script} ===", flush=True)
@@ -105,6 +106,7 @@ def run_step(script, extra_env, shim=False):
 
 
 def base_env():
+    """Returns the environment variables the preparation scripts read."""
     return {
         "inp_text": LIST,
         "inp_wav_dir": WAVDIR,
@@ -228,6 +230,7 @@ if r.returncode != 0:
 
 # ============================================================ collect weights
 def newest(pattern):
+    """Returns the most recently modified file that matches `pattern`, or None."""
     files = glob.glob(pattern)
     return max(files, key=os.path.getmtime) if files else None
 

@@ -88,11 +88,14 @@ class CachedTranscriber:
         return self.cache[k][0], self.cache[k][1]
 
     def save(self) -> None:
+        """Writes the transcript cache to disk."""
         self.cache_path.write_text(json.dumps(self.cache))
 
 
 @dataclass
 class Result:
+    """The outcome of replaying one clip."""
+
     clip: dict
     events: list = field(default_factory=list)  # (seconds after end of speech, kind, text)
     heard: list = field(default_factory=list)  # every transcript, request or not
@@ -117,6 +120,7 @@ def noise_bed(silence: np.ndarray, n: int, rng: np.random.Generator) -> np.ndarr
 
 
 def stream_for(clip_audio: np.ndarray, silence: np.ndarray, sr: int, seed: int) -> np.ndarray:
+    """Returns a microphone stream that holds the clip between silence, with noise added from a seed."""
     rng = np.random.default_rng(seed)
     tail_s = max(TAIL_S, float(config.load().get("audio.max_utterance_s", 30)) + 1.0)
     lead = noise_bed(silence, int(LEAD_S * sr), rng)
@@ -182,6 +186,7 @@ class FakeMic:
         return None
 
     def read(self, frame: int):
+        """Returns the next `frame` samples at real-time pace."""
         due = self.t0 + (self.pos + frame) / self.sr
         delay = due - time.time()
         if delay > 0:

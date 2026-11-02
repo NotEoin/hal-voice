@@ -204,6 +204,7 @@ def _present_stems() -> set[str]:
 
 
 def report_coverage() -> tuple[list[str], list[str]]:
+    """Returns the expected clip names that are missing and the present ones that are not expected."""
     have = _present_stems()
     expected = expected_stems()
     missing = [s for s in expected if s not in have]
@@ -212,6 +213,7 @@ def report_coverage() -> tuple[list[str], list[str]]:
 
 
 def print_coverage() -> int:
+    """Prints the coverage report and returns the exit code."""
     present = len(_present_stems())
     expected = expected_stems()
     missing, extra = report_coverage()
@@ -247,6 +249,7 @@ def _no_source_help() -> None:
 
 
 def main() -> None:
+    """Runs the command line."""
     ap = argparse.ArgumentParser(description="Restore HAL voice clips from a source you supply.")
     ap.add_argument("--source", help="path / archive / http(s) URL / rsync target")
     ap.add_argument("--check", action="store_true", help="only report coverage, fetch nothing")

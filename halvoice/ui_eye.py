@@ -21,6 +21,8 @@ from .util import StateBus
 
 
 class RedEye:
+    """The full-screen indicator that shows the voice loop's state."""
+
     def __init__(self, bus: StateBus) -> None:
         self.bus = bus
         cfg = config.load()
@@ -30,6 +32,7 @@ class RedEye:
         self.color = tuple(cfg.get("ui.eye_color", [220, 30, 20]))
 
     def run(self) -> None:
+        """Draws the indicator until the window closes."""
         import pygame
 
         pygame.init()
@@ -122,6 +125,7 @@ def demo() -> None:
 
 
 def main() -> None:
+    """Runs the indicator, or a demo with `--demo`."""
     if "--demo" in sys.argv:
         demo()
     else:

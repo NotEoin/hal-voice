@@ -200,6 +200,7 @@ class Transcriber:
         return audio
 
     def transcribe(self, audio: np.ndarray, prompt: str | None = None) -> str:
+        """Returns the text of `audio`, or an empty string when it holds no speech."""
         if audio.size == 0:
             return ""
         model = self._load()
@@ -233,6 +234,7 @@ def listen_once(on_first_voice=None, max_utterance_s: float | None = None) -> st
 
 
 def main() -> None:
+    """Transcribes the microphone to the terminal, once with `--once` or until interrupted."""
     once = "--once" in sys.argv
     print("Listening... speak now." if once else "Listening (Ctrl-C to stop)...", file=sys.stderr)
     while True:

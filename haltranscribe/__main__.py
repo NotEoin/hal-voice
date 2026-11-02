@@ -34,6 +34,7 @@ def _show(result) -> None:
 
 
 def main(argv=None) -> int:
+    """Runs the tool named in `argv` with `key=value` arguments, lists the tools with `--list`, or runs `--stdin NAME` with JSON arguments from standard input; returns the exit code."""
     argv = list(sys.argv[1:] if argv is None else argv)
     spec = tomllib.loads(MANIFEST.read_text())
     if argv[:1] == ["--stdin"]:

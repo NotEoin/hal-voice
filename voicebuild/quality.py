@@ -24,6 +24,7 @@ JOIN_GAP_S = 1.5  # HAL's lines this close, with nobody between, make one clip
 
 
 def word_error(ref: list[str], hyp: list[str]) -> float:
+    """Returns the share of reference words that the hypothesis does not match."""
     sm = difflib.SequenceMatcher(None, ref, hyp, autojunk=False)
     same = sum(n for _, _, n in sm.get_matching_blocks())
     return 1 - same / max(len(ref), 1) if ref else 1.0
@@ -97,6 +98,7 @@ def join_runs(lines: list[Line], verdicts: list[dict]) -> list[tuple[Line, dict]
 
 
 def pitch_semitones(seg: np.ndarray, rate: int) -> float | None:
+    """Returns the median pitch of the louder voiced frames in semitones from 100 Hz, or None when fewer than 10 frames qualify."""
     import librosa
 
     f0 = librosa.yin(seg, fmin=55, fmax=250, sr=rate, frame_length=1024)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 
 def main() -> None:
+    """Prints the audio input and output devices."""
     try:
         import sounddevice as sd
     except Exception as e:

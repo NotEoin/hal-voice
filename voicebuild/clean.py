@@ -50,6 +50,7 @@ def clarity(seg: np.ndarray, rate: int) -> tuple[float, float]:
 
 
 def main() -> int:
+    """Runs the command line."""
     import librosa
     import soundfile as sf
     import torch

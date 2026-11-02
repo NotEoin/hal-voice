@@ -40,6 +40,7 @@ def ca_bundle() -> str | None:
 
 
 def get_logger(name: str = "halvoice") -> logging.Logger:
+    """Returns the package logger, configured from the settings on first use."""
     cfg = config.load()
     log = logging.getLogger("halvoice")
     if log.handlers:  # already configured
@@ -72,6 +73,7 @@ class StateBus:
         self.on_change = None  # called with the new state whenever it changes
 
     def set(self, state: State, level: float = 0.0) -> None:
+        """Publishes a new state and audio level."""
         changed = state != self.state
         self.state = state
         self.level = level
@@ -80,6 +82,7 @@ class StateBus:
             self.on_change(state)
 
     def drain(self) -> tuple[State, float]:
+        """Returns the newest queued state and level, or the current ones when none is queued."""
         last = (self.state, self.level)
         try:
             while True:

@@ -25,6 +25,8 @@ MAX_EDGE_WORD_S = 0.8  # longest a line's first or last word may plausibly last
 
 @dataclass
 class Line:
+    """One dialogue line with its aligned times."""
+
     start: float
     end: float
     text: str  # subtitle text with transcript corrections
@@ -36,10 +38,12 @@ class Line:
     words: list[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict:
+        """Returns the line as a plain dict for JSON."""
         return asdict(self)
 
 
 def tokens(text: str) -> list[str]:
+    """Returns the lower-case words of a text."""
     return _WORD.findall(text.lower().replace("-", " "))
 
 
@@ -59,6 +63,7 @@ def theil_sen(xs: list[float], ys: list[float]) -> tuple[float, float]:
 
 
 def rolling_median(values: list[float], width: int) -> list[float]:
+    """Returns the running median of `values` over a window of `width` items."""
     half = width // 2
     return [statistics.median(values[max(0, i - half) : i + half + 1]) for i in range(len(values))]
 

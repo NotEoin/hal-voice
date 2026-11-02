@@ -39,6 +39,7 @@ class Cfg(dict):
         return Cfg(val) if isinstance(val, dict) else val
 
     def get(self, dotted: str, default: Any = None) -> Any:  # type: ignore[override]  # takes a dotted path where dict.get takes a key, on purpose
+        """Returns the value at a dotted path such as `audio.sample_rate`, or `default` when a part is missing."""
         node: Any = self
         for part in dotted.split("."):
             if not isinstance(node, dict) or part not in node:
