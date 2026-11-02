@@ -188,7 +188,7 @@ ecosystem installer, which also renders its systemd units:
 
 ```bash
 hal ext add voice
-cd ~/src/hal-ecosystem/extensions/hal-voice
+cd <ecosystem>/extensions/hal-voice
 ./setup-voice.sh          # the virtualenv, GPT-SoVITS and the voice profile
 ```
 

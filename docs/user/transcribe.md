@@ -16,8 +16,8 @@ made and a checklist of actions.
 hal-transcribe needs ffmpeg, PipeWire's `pw-record`, and a Python environment with faster-whisper:
 
 ```bash
-git clone <url> ~/src/hal-ecosystem/hal-transcribe
-cd ~/src/hal-ecosystem/hal-transcribe
+git clone <url> ~/src/hal-transcribe
+cd ~/src/hal-transcribe
 python3 -m venv .venv && .venv/bin/pip install faster-whisper
 ```
 
