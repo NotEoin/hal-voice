@@ -5,6 +5,14 @@ All notable changes to hal-voice are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The README is shorter. The brain, configuration, service-install and `voicetest` details moved to
+  [Choose a brain](docs/howto/choose-a-brain.md), [Configuration](docs/user/configuration.md),
+  [Install the voice services](docs/howto/install-the-voice-services.md) and
+  [Test hands-free listening](docs/howto/test-hands-free-listening.md).
+- The transcribe pack's fallback vault is `~/notes`, the default of Hal's shared config, when no vault is set.
+
 ### Removed
 
 - The `direct` brain mode, `halvoice/brain.py` and the keys `brain.ollama_url`, `keep_alive`,

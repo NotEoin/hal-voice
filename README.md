@@ -1,280 +1,93 @@
 # hal-voice
 
 ![licence](https://img.shields.io/badge/licence-MIT-blue?style=flat-square)
-![platform](https://img.shields.io/badge/platform-Linux-lightgrey?style=flat-square)
+![platform](https://img.shields.io/badge/platform-Linux%20%7C%20WSL2-lightgrey?style=flat-square)
 ![python](https://img.shields.io/badge/python-3.11--3.12-blue?style=flat-square)
-![voice](https://img.shields.io/badge/voice-100%25%20local-success?style=flat-square)
 
 > *"I am completely operational, and all my circuits are functioning perfectly."*
 
-Talk to Hal and have it answer out loud, in the voice of HAL 9000, with a red lens watching you
-from the corner of the screen. Speech recognition and synthesis always run on your own machine; the
-thinking is done by core Hal's local brain with the tools of your installed packs, or by
-whatever [Claude Code](https://claude.ai/code) you already have.
+Talk to your computer and hear HAL 9000 answer, with a red lens in the corner of the screen that
+watches you while it listens. Speech recognition (faster-whisper) and the voice (GPT-SoVITS) run on
+your own machine. The reply comes from the brain you choose: Hal's local agent, any
+OpenAI-compatible server, or Claude Code.
 
-![The eye reacting to what it's doing](./media/eye.gif)
-
-## Highlights
-
-- **It starts speaking before it's finished thinking.** Replies are synthesised sentence by sentence
-  as they're generated, so you hear the first words in about a second rather than waiting for the
-  whole answer.
-- **Talk at a normal pace.** Say "Hal" at the start or end of a sentence and the request is heard in
-  the same breath; after he answers, carry on for a few seconds without his name.
-- **A boxed local brain with tools.** In `hal` mode (the default) Hal's sandboxed assistant agent
-  answers with a local model and calls tools only through Hal's broker. Claude Code is never called
-  unless you set `brain.mode: claude`.
-- **Interrupt it whenever you like**: say his name while he talks and he stops to listen.
-- **A red eye that reacts** - idle, listening, thinking, speaking.
-- **Your voice never leaves the machine.** Speech recognition and synthesis are both local. What
-  Claude Code does with the transcript is between you and your existing setup.
-- **Works with the Claude Code you already have.** No model to install, nothing to configure -
-  clone it and talk. Point it at a local model later if you want to.
-- **Drop it into a normal session.** Run it as an MCP server and get speak/listen as tools inside a
-  regular Claude Code session, without the full voice loop.
-- **Bring your own voice.** Train it on any voice data you have the rights to.
-- **One config file**, with environment variable overrides for everything in it.
-
-## Overview
+![The eye reacting to what it is doing](./media/eye.gif)
 
 ```
-"Hal, ..."  ->  faster-whisper  ->  core Hal's brain + hal-hub tools (or Claude Code)
+"Hal, ..."  ->  faster-whisper  ->  brain (Hal agent, OpenAI-compatible server or Claude Code)
                                               v
                      speakers  <-  FX chain  <-  GPT-SoVITS
 ```
 
-You say HAL's name (or hold a key), ask a question, and it answers aloud. Underneath, speech is
-transcribed with faster-whisper, handed to the brain, and the reply is streamed back out through
-GPT-SoVITS and a small effects chain that gives it the right weight and room.
+- **It speaks before it has finished thinking.** Replies are synthesised sentence by sentence as
+  they are generated.
+- **Interrupt it any time.** Say "Hal" while it speaks and it stops.
+- **Just talk.** Say "Hal" at the start or end of a request; for a few seconds after an answer you
+  can carry on without the name.
+- **Your voice stays home, and so does your GPU.** By default it listens and speaks on the CPU and
+  holds no GPU memory while it waits.
 
-hal-voice runs **no language model of its own**. It is a voice on the front of a brain: Hal's
-boxed agent in `hal` mode, or a headless Claude Code session in `claude` mode.
+## Part of the Hal suite
 
-### Author
+hal-voice is one part of [Hal](https://github.com/NotEoin/Hal), a modular AI assistant that runs on
+your own machine, built privacy and security first. Around Hal,
+[hal-tools](https://github.com/NotEoin/hal-tools) adds the tools of a desktop assistant,
+[hal-memory](https://github.com/NotEoin/hal-memory) a memory,
+[gpu-light](https://github.com/NotEoin/gpu-light) a fair share of the GPU, and
+[hal-employment](https://github.com/NotEoin/hal-employment) a job-search helper. Each repo
+works on its own; installed together they make one assistant. See [how it fits
+together](https://github.com/NotEoin/Hal#how-it-fits-together).
 
-Built by [@NotEoin](https://github.com/NotEoin).
+## Requirements
 
-### Pointing it at a project
+| | |
+|---|---|
+| OS | Linux with PulseAudio or PipeWire, or Windows 11 through WSL2 ([how-to](docs/howto/run-on-windows-with-wsl2.md)). Native Windows and macOS are unsupported. |
+| Python | 3.11 or 3.12, not 3.13 or later: numpy 1.x has no wheels there. `setup-voice.sh` finds a suitable interpreter or falls back to conda. |
+| System packages | PortAudio and FFmpeg. |
+| Hardware | A microphone and speakers. A GPU is optional: by default hal-voice runs on the CPU and shares the GPU with background jobs ([sharing the GPU](docs/user/voice.md#sharing-the-gpu)). |
+| Also | A [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS) checkout with its pretrained models, and voice data you supply (see below). |
 
-In `claude` mode, Claude Code is launched *inside a directory*, and picks up that directory's
-`CLAUDE.md`, `.mcp.json` and `.claude/` settings automatically. By default that is the vault named in
-`~/.config/hal/config.toml` (`[hal].vault`), else the current directory. To choose another:
-
-```bash
-./hal-voice --project ~/code/my-project   # HAL gains that project's memory and tools
-./hal-voice connection                    # show what it resolved, and why
-```
-
-Set it permanently as `claude.project_dir` in `~/.config/hal-voice/config.yaml` (see
-[Configuration](#configuration)).
-
-### Choosing a brain
-
-`brain.mode` decides who answers:
-
-- `hal` (the default) is an ACP client of `hal acp --channel voice --toolset assistant`: Hal's boxed
-  assistant agent answers, with the local model reached through the gateway and tools through the
-  broker. The command is `brain.hal_command`. When a tool call needs approval, HAL reads out the
-  host's summary and needs a spoken "yes" or "allow" (the whole reply) within 20 s; anything else,
-  or `brain.voice_approvals: false`, denies. If `hal` is missing or exits twice, hal-voice stops
-  with an error; it never falls back to another brain. Checked by `tests/test_acp_brain.py`.
-- `openai` streams the reply from any OpenAI-compatible server (llama-server, Ollama's `/v1`, vLLM, a
-  hosted API) at `brain.base_url`, with no tools. It is for running hal-voice without Hal. There is
-  no default URL: with `base_url` empty, hal-voice stops and says which key to set. A bearer token,
-  if the server needs one, is read from the file `brain.api_key_file`. HAL remembers the last
-  `brain.history_turns` exchanges (8 when empty), and a reply still unfinished after
-  `brain.turn_timeout_s` (300 s) ends with "That took too long".
-- `claude` runs Claude Code for every turn, so HAL has that project's full toolset and memory, at the
-  cost of a few seconds' start-up per turn. Claude Code runs on the host, outside Hal's sandbox, and
-  hal-voice logs a warning saying so at start. `claude.permission_mode` defaults to `default`, so
-  headless Claude Code refuses anything that needs a permission; set `acceptEdits` to let it change
-  files. A turn still running after `brain.turn_timeout_s` (300 s) is killed with its child
-  processes, and HAL says "That took too long".
-
-```yaml
-# ~/.config/hal-voice/config.yaml: a local llama-server, no Hal
-brain:
-  mode: openai
-  base_url: http://127.0.0.1:8080/v1
-```
+## Install
 
 ```bash
-HALVOICE_BRAIN_MODEL=mistral-small3.2:24b ./hal-voice   # another model, for this run only
-HALVOICE_BRAIN_MODE=claude ./hal-voice                  # Claude Code for every turn
+git clone https://github.com/NotEoin/hal-voice.git && cd hal-voice
+./setup-voice.sh        # the virtualenv, GPT-SoVITS and the voice profile
+./hal-voice doctor      # check audio devices, models and the TTS server
 ```
 
-The `direct` mode and the `brain.fallback` idea are gone: a brain that cannot start stops
-hal-voice with an error naming the mode and the fix. The keys `brain.ollama_url`, `keep_alive`,
-`max_tool_rounds`, `tools_per_turn`, `num_ctx`, `temperature`, `hub_path` and `ui.rgb_follow` were
-removed with it; the model and its limits are Hal's settings now.
+To run it as a Hal pack with systemd units, see
+[Install the voice services](docs/howto/install-the-voice-services.md).
 
-In `claude` mode it can also follow a [Hal](https://github.com/NotEoin/Hal) install's profile: point
-`claude.hal_root` at a checkout with a `hal.conf` (or run `./setup-voice.sh --hal auto`). To plug into
-a setup that isn't Hal, set `claude.env_file` to any `KEY=VALUE` file of `ANTHROPIC_*` settings.
-
-## Usage
+## Run
 
 ```bash
-./hal-voice doctor       # check your audio devices, models and TTS server
-./hal-voice              # start the voice loop
+./hal-voice              # start the voice loop; hold space to talk
+./hal-voice doctor       # run this first when something is wrong
 ./hal-voice tts "hello"  # speak one line, no mic or model needed
-./hal-voice mcp          # run just the speak/listen MCP server
+./hal-voice mcp          # run only the speak/listen MCP server
 ./hal-voice eye          # run the eye on its own
 ./hal-voice connection   # show which Claude Code setup it will drive, and why
 bin/hal-say "hello"      # speak a line if the voice server is up; silent in quiet hours
 ```
 
-Through hal-hub, other modules and the brain can speak with the `voice_say` tool.
+Choose who answers with `brain.mode`: see [Choose a brain](docs/howto/choose-a-brain.md). Settings
+and their layers are in [Configuration](docs/user/configuration.md). Through hal-hub, other
+modules and the brain can speak with the `voice_say` tool.
 
-**Run `doctor` first.** Almost every problem in a voice pipeline turns out to be an audio device
-problem, and it'll tell you in two seconds.
+## Give it a voice
 
-Hold **space** to talk, release to send. Speaking again while it's replying interrupts it.
-
-### Configuration
-
-Every setting and its default is in [`halvoice/config.yaml`](halvoice/config.yaml) - audio devices,
-activation, model choices, voice tuning, the effects chain and the eye. Leave that file alone and
-put only the keys you change in your own file, with the same layout:
-
-```yaml
-# ~/.config/hal-voice/config.yaml
-audio:
-  input_device: 3
-stt:
-  model: small.en
-```
-
-Settings load in this order, later wins:
-
-1. `halvoice/config.yaml`, the packaged defaults;
-2. `~/.config/hal-voice/built.yaml`, written by the voice build (`make-hal-voice`) or by
-   `hal-voice config import-built OLDFILE` from an older checkout's `config.yaml`;
-3. `~/.config/hal-voice/config.yaml`, or the file `HALVOICE_CONFIG` names;
-4. environment variables `HALVOICE_<SECTION>_<KEY>`.
-
-`~/.config` stands for `$XDG_CONFIG_HOME` when that is set. A key in either file that the defaults
-do not have stops hal-voice with an error naming the file and the key, so a typo cannot be silently
-ignored. `python -m halvoice.config` prints the merged result and the files it read.
+No audio ships with this repository. You supply the voice data. If you own a copy of
+*2001: A Space Odyssey*, put the film and any subtitle files in `voice-data/film/` and run:
 
 ```bash
-HALVOICE_TTS_SPEED=0.9 ./hal-voice        # slow it down, for this run only
-HALVOICE_STT_MODEL=medium.en ./hal-voice  # more accurate transcription
+./make-hal-voice   # finds the lines HAL speaks, cleans and trains on them, installs the result
 ```
 
-### Testing hands-free listening
-
-`voicetest` replays a recording of you reading [`voicetest/script.txt`](voicetest/script.txt)
-through the same voice detector, name rules and speech recognition the service uses, without the
-voice or the brain, and reports what woke HAL, what reached him and how fast:
-
-```bash
-./hal-voice voicetest split ~/recording.wav    # cut it into lines (kept in voice-data/tests/)
-./hal-voice voicetest run                      # replay on a simulated clock, in a minute or so
-./hal-voice voicetest run --live               # replay at real-time pace through the threads
-./hal-voice voicetest run --simulate --set activation.keyword.end_silence_ms=500 --label e500
-./hal-voice voicetest compare sim e500         # two runs side by side
-./hal-voice voicetest brain --label sim        # send the commands heard to a model; tool calls are recorded, never run (see --manifest)
-```
-
-Record on the microphone HAL uses, with HAL turned off, saying "Marker one" and the take ("Desk,
-take one") first. `--simulate` adds louder fans and a quieter voice, made from your recording,
-until you have recorded those takes. The clips are your voice, so they stay out of git.
-
-## Installation
-
-hal-voice is a Hal pack with its own environment. Install it with Hal, or from a checkout, then run
-its setup script:
-
-```bash
-hal packs add voice               # from the catalogue; or: hal packs add --local PATH
-hal units install                 # renders its systemd units
-cd PATH/TO/hal-voice
-./setup-voice.sh                  # the virtualenv, GPT-SoVITS and the voice profile
-```
-
-The units in `systemd/` are templates: `hal units install` renders them from the registered pack
-(`@ROOT@` is this folder) and copies them to `~/.config/systemd/user`. `hal-tts.service` runs the GPT-SoVITS
-server and `hal-voice.service` the hands-free loop; both belong to `hal.target`. They carry no
-`X-HalGPU` mark, because in the default `gpu.mode: on_demand` they use no GPU while idle: `hal off`
-leaves them running, and they start on a busy card. With `resident` mode, or a GPU `tts.device`,
-mark them yourself (`systemctl --user edit`, add `X-HalGPU=yes` under `[Unit]`).
-
-`hal-tts.service` starts `hal-voice tts-server`, which exits with an error naming
-`tts.server.gptsovits_dir` when the GPT-SoVITS checkout is missing. If the checkout is on a drive
-that mounts late, make the unit wait for it with a drop-in
-(`systemctl --user edit hal-tts.service`, then add `RequiresMountsFor=/path/to/the/drive`).
-
-By default (`tts.server.isolation: container`) the server runs in a GPU container with no network,
-read-only mounts and no capabilities; build its image once with `hal-voice tts-image build`.
-Without docker or its `nvidia` runtime, `tts-server` exits 1 naming the missing piece and does not
-fall back to the host. A forwarder keeps the API on `127.0.0.1:9880`.
-
-Host mode (`tts.server.isolation: host`, set in your own `config.yaml`) needs pinned checkpoints:
-review them, run `hal-voice tts-pins record`, and `tts-server` then verifies them on every start.
-Unverified: that every GPT-SoVITS checkpoint loads with `weights_only=True`; one that does not
-stops the server, and container mode is then the way to run it.
-`hal-voice.service` sets no `PATH`, so a `claude` installed under npm's global prefix needs
-`claude.command` set to its absolute path. Python's CA bundle is found automatically
-(`halvoice.util.ca_bundle`).
-
-It still runs on its own (`git clone https://github.com/NotEoin/hal-voice.git`, then
-`./setup-voice.sh`), in `claude` mode.
-
-**Requirements:**
-
-| | |
-|---|---|
-| **OS** | Linux, with PulseAudio or PipeWire. Windows 11 works through WSL2 ([how-to](docs/howto/run-on-windows-with-wsl2.md)); native Windows and macOS are unsupported |
-| **Python** | 3.11 or 3.12. **Not 3.13+**: numpy 1.x has no wheels there, and parts of the audio stack still need it. `setup-voice.sh` finds a suitable interpreter, or falls back to conda |
-| **System packages** | PortAudio and FFmpeg |
-| **GPU** | Optional. By default hal-voice runs on the CPU and shares the GPU with background jobs ([Sharing the GPU](docs/user/voice.md#sharing-the-gpu)); see the profiles below |
-| **Hardware** | A working microphone and speakers |
-| **Also needed** | A [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS) checkout with its pretrained models |
-
-`setup-voice.sh` reads your GPU and proposes a profile; `--profile <name>` overrides it. This is
-about **VRAM only** - it does not change which model does the thinking. The profile applies only
-with `gpu.mode: resident` or `off`. The default, `on_demand`, keeps speech recognition and the
-voice on the CPU unless you set `stt.device` or `tts.device` yourself; see
-[Sharing the GPU](docs/user/voice.md#sharing-the-gpu).
-
-| Profile | Speech recognition | Voice synthesis | |
-|---|---|---|---|
-| `24gb` | GPU | GPU (fp16) | Fastest |
-| `12gb` | CPU | GPU (fp16) | Leaves room for a local LLM beside it |
-| `cloud` | CPU | CPU | No NVIDIA GPU required at all |
-
-The `cloud` profile is not cosmetic: GPT-SoVITS ships configured for CUDA and won't start without
-it, so this rewrites its device settings. Synthesis on CPU is slower than real time, so expect HAL
-to pause before speaking.
-
-Developed on an RTX 4070 (12GB); originally built on an RTX 3090.
-
-## Giving it a voice
-
-**No audio ships with this repository.** You supply the voice data.
-
-The quickest route is your own copy of *2001: A Space Odyssey*. Put the film (and any subtitle
-files) in `voice-data/film/` and run:
-
-```bash
-./make-hal-voice
-```
-
-It finds every line HAL speaks clearly, cleans and trains on them, and installs the result.
-**-> How it works and what it accepts: [docs/howto/build-the-voice.md](docs/howto/build-the-voice.md)**
-
-To train on clips you already have instead:
-
-1. Put your clips and a `transcripts.csv` somewhere, and point `voice-source.local` at it.
-2. `python voice-data/fetch-voice-lines.py` - imports them.
-3. `python voice-data/prepare_dataset.py` - slices, cleans and labels them.
-4. Fine-tune - see **[gptsovits/train-hal.md](gptsovits/train-hal.md)**.
-
-Around forty clean, well-transcribed clips is enough for a recognisable result. Consistency matters
-more than quantity - same microphone, same room, same delivery.
-
-**-> Full guide: [voice-data/README.md](voice-data/README.md)**
+[Build the voice](docs/howto/build-the-voice.md) explains what it accepts. To train on clips you
+already have, follow [voice-data/README.md](voice-data/README.md) and
+[gptsovits/train-hal.md](gptsovits/train-hal.md). Around forty clean, well-transcribed clips give a
+recognisable result; consistency matters more than quantity.
 
 ## About the film voice pipeline
 
@@ -305,31 +118,36 @@ before you use them.
 
 ## Limitations
 
-- **The trained wake word is unreliable.** openWakeWord detection is disabled by default, and its
-  dependencies aren't installed; run `./setup-voice.sh --with-wake` to experiment. For hands-free
-  use, set `activation.keyword.enabled: true` instead: one microphone stream is cut into utterances,
-  each transcribed once (on the GPU with `stt.device: auto`), and a turn starts when one begins or
-  ends with "Hal", greeting first or not ("Good morning, Hal"). It costs some GPU or CPU time
+- The trained wake word is unreliable. openWakeWord detection is off by default and its
+  dependencies are not installed; `./setup-voice.sh --with-wake` is for experiments. For hands-free
+  use set `activation.keyword.enabled: true`: one microphone stream is cut into utterances, each
+  transcribed once, and a turn starts when one begins or ends with "Hal". It costs CPU or GPU time
   whenever someone is speaking nearby, and "Hey Al" still sounds like "Hey Hal" to it.
-- **The brain needs a model that calls tools reliably.** Smaller models tend to say they did
-  something instead of doing it; a 20B-class model with good tool use is the practical minimum.
-- **It's not instant.** Streaming hides a lot of the delay, but synthesis still has to happen -
-  and on the `cloud` (CPU) profile it runs slower than real time, so HAL pauses before answering.
-- **The voice effects are tuned to one voice.** Treat the defaults as a starting point.
+- The brain needs a model that calls tools reliably. Smaller models tend to say they did something
+  instead of doing it.
+- Synthesis takes time. Streaming hides much of the delay, but on the `cloud` (CPU) profile it runs
+  slower than real time, so there is a pause before the voice speaks.
+- The voice effects are tuned to one voice. Treat the defaults as a starting point.
 - Interrupting can clip the first syllable of your next sentence.
-- Linux only. Windows works through WSL2 (not yet run on a Windows PC); native Windows and macOS are unsupported.
+- Windows through WSL2 has not been run on a Windows PC yet (unverified; `hal-voice doctor` probes
+  each part).
 
-## Related projects
+## Test
 
-- **[Hal](https://github.com/NotEoin/Hal)** - a local assistant with an Obsidian vault as its memory.
-  Its agent answers in `hal` mode, with the tools of the other Hal packs through the broker.
+```bash
+uv run --frozen --extra test pytest -q   # hermetic tests: no GPU, network or audio
+ruff check . && ruff format --check .
+```
 
-## Feedback and contributing
+[Test hands-free listening](docs/howto/test-hands-free-listening.md) covers `voicetest`, which
+replays a recording of you through the detector.
 
-Got it working with a different TTS backend, or trained a wake word that actually fires? Open an
-[issue](https://github.com/NotEoin/hal-voice/issues) or start a
-[discussion](https://github.com/NotEoin/hal-voice/discussions).
+## Documentation
+
+The [docs index](docs/README.md) lists every page. Report a problem or share a result in the
+[issues](https://github.com/NotEoin/hal-voice/issues) or
+[discussions](https://github.com/NotEoin/hal-voice/discussions).
 
 ## Licence
 
-MIT - see [LICENSE](LICENSE). This covers the code only, not any voice data you bring to it.
+MIT, see [LICENSE](LICENSE). This covers the code only, not any voice data you bring to it.

@@ -1,4 +1,4 @@
-# HAL Voice -- Tuning Notes
+# HAL Voice: Tuning Notes
 
 A log of how the HAL voice was dialled in, and why each setting ended up where it did.
 All settings and their defaults are in [`halvoice/config.yaml`](../../halvoice/config.yaml) under `tts:` (sampling +
@@ -37,7 +37,7 @@ All settings and their defaults are in [`halvoice/config.yaml`](../../halvoice/c
 - Refinement round around #3 -> **"3e" won** (#3 but presence brought back to -0.5 and top a touch
   more open at -3 @7500, so it's deep but not muffled).
 
-### 4. Dataset retrain -- weighted toward the flat, polite delivery
+### 4. Dataset retrain: weighted toward the flat, polite delivery
 - `prepare_dataset.py` reads a weight column from `transcripts.csv`: **0 drops a clip**, **n
   oversamples it n times** (copies under distinct names = real oversampling).
 - Dropped the four most strained/emotional takes and tripled fourteen of the calmest. 42 unique

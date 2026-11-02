@@ -342,6 +342,6 @@ Remaining one-time steps (the voice itself):
 
   4) Talk to HAL:
        ./hal-voice           # wake word + push-to-talk -> spoken replies
-     or, inside a normal Claude Code session, register the MCP server (see README)
+     or, inside a normal Claude Code session, register the MCP server (`./hal-voice mcp` runs the server)
      and ask HAL to "say" things.
 EOF

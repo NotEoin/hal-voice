@@ -85,7 +85,7 @@ The following stages run in order:
 
 1. **Transcribe.** faster-whisper transcribes the dialogue track with a time for every word.
 2. **Sync.** Each subtitle source's text is aligned to the transcript across the whole film.
-   The timing differences give a robust fit of a constant offset and a drift (subtitles made for
+   The timing differences are fitted with a constant offset and a drift (subtitles made for
    another frame rate), with a running correction for local jumps at cuts. Each line's times
    then come from its own recognised words, so subtitles out by seconds still cut cleanly.
 3. **Find HAL.** Every line is embedded with GPT-SoVITS's speaker-verification model. Lines the

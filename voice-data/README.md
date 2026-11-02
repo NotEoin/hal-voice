@@ -18,7 +18,7 @@ GPT-SoVITS can fine-tune into an uncanny HAL.
   characters. This is the hard part: in the film his lines sit over music and room tone.
 - **16 kHz or higher, mono, WAV.** GPT-SoVITS resamples internally, but feed it clean PCM.
 
-## Step 1 -- Source the audio
+## Step 1: Source the audio
 
 You have 2 viable options:
 
@@ -28,9 +28,9 @@ You have 2 viable options:
 
 Drop whatever you gather into `voice-data/raw/`.
 
-## Step 2 -- Isolate the voice (stem separation)
+## Step 2: Isolate the voice (stem separation)
 
-Strip music and effects with Demucs (best-in-class open-source separation):
+Strip music and effects with Demucs:
 
 ```bash
 # in the hal-voice venv (or any venv)
@@ -49,7 +49,7 @@ ffmpeg -i vocals.wav -af "highpass=f=85, afftdn=nf=-25" voice-data/clean/hal_cle
 Listen critically. If you can still hear music under his voice, the clone will learn the
 music too. Cut those regions.
 
-## Step 3 -- Slice into utterances
+## Step 3: Slice into utterances
 
 GPT-SoVITS trains on short clips (roughly 3-10 s each) paired with transcripts.
 
@@ -62,7 +62,7 @@ Avoid the few moments where HAL's pitch rises ("I'm afraid, Dave") *unless* you 
 want that colour - for the default unnerving-calm HAL, weight the dataset toward the flat,
 polite lines.
 
-## Step 4 -- Transcribe (labels)
+## Step 4: Transcribe (labels)
 
 Each clip needs its text. Write a `transcripts.csv` and keep it **with your clips**, not in this
 repo - nothing about the dialogue is stored here. Two columns, no header:
@@ -87,7 +87,7 @@ STT - either way you still need to fold the result into `transcripts.csv`.
 
 **Proof-read the transcripts.** Wrong labels are the most common cause of a mushy clone.
 
-## Step 5 -- Pick the runtime reference clip
+## Step 5: Pick the runtime reference clip
 
 Separately from training, GPT-SoVITS conditions each synthesis on a short **reference clip**
 (3-10 s). It sets the tone of every line HAL ever speaks, even after fine-tuning.
