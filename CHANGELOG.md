@@ -14,6 +14,10 @@ All notable changes to hal-voice are listed here. The format follows
 
 ### Added
 
+- WSL2 support: `halvoice/hostplatform.py` detects the platform (`HALVOICE_OSRELEASE` fakes it in
+  tests), the commands refuse to start on native Windows and macOS with a message naming WSL2,
+  and `hal-voice doctor` adds `platform` and, under WSL2, audio server, display and systemd lines.
+  New how-to: `docs/howto/run-on-windows-with-wsl2.md`. A `wsl` CI job runs the test suite.
 - `brain.mode: hal` (the new default): the voice loop is an ACP client of `hal acp --channel voice
   --toolset assistant`, with spoken approvals for broker requests (`brain.voice_approvals`).
 - Host-mode TTS (`tts.server.isolation: host`) is pinned: `hal-voice tts-pins record|verify` hash the

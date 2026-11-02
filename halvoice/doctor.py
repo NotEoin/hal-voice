@@ -2,20 +2,26 @@
 
 Verifies: python deps, audio I/O, the STT model, the brain (`hal` on PATH in hal
 mode; the server in openai mode), the GPT-SoVITS server + HAL weights, the reference
-clip, and Claude Code on PATH. It also reports the GPU mode, whether the gpu-light daemon
+clip, and Claude Code on PATH. Under WSL2 it also checks the WSLg audio server, the
+display and systemd, because each is off or missing in a fresh distro. It also reports the GPU mode, whether the gpu-light daemon
 answers, and the devices speech-to-text and the voice will use. Prints a tidy pass/fail
 report; exits non-zero if anything essential is missing.
 """
 
 from __future__ import annotations
 
+import os
 import shutil
 import sys
 from pathlib import Path
 
-from . import config, gpu, placement
+from . import config, gpu, hostplatform, placement
 
 OK, WARN, BAD = "[x]", "!", "[ ]"
+
+# WSLg serves PulseAudio on this socket; Windows owns the microphone and speakers
+WSLG_PULSE = Path("/mnt/wslg/PulseServer")
+SYSTEMD_RUN_DIR = Path("/run/systemd/system")  # exists only when systemd is PID 1
 
 
 def _check(label, fn):
@@ -33,6 +39,48 @@ def _check(label, fn):
 
 class _Warn(Exception):
     pass
+
+
+def _platform():
+    """Linux or WSL2 passes; anything else fails with where to run hal-voice instead."""
+    found = hostplatform.require_supported()
+    release = hostplatform.osrelease_text() or "unknown kernel"
+    return f"{'WSL2' if found == hostplatform.WSL2 else 'Linux'} ({release})"
+
+
+def _wsl_audio_server():
+    """WSL2 only: the WSLg PulseAudio socket must exist, or sounddevice sees no devices."""
+    pulse = os.environ.get("PULSE_SERVER", "")
+    if pulse.startswith("unix:"):
+        socket_path = Path(pulse[len("unix:") :])
+    else:
+        socket_path = WSLG_PULSE
+    if not socket_path.exists():
+        raise Exception(
+            f"no audio server at {socket_path}: update WSL with `wsl --update` in PowerShell, "
+            f"then `wsl --shutdown` and reopen the distro (see {hostplatform.DOCS_HINT})"
+        )
+    return f"WSLg audio server at {socket_path}"
+
+
+def _wsl_display():
+    """WSL2 only: WSLg sets `DISPLAY` or `WAYLAND_DISPLAY`; the eye UI and pynput need one."""
+    if not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
+        raise _Warn(
+            "no DISPLAY or WAYLAND_DISPLAY: the eye window and push-to-talk keys will not work; "
+            "use hands-free mode, or run `wsl --update` to get WSLg"
+        )
+    return "display set (WSLg)"
+
+
+def _wsl_systemd():
+    """WSL2 only: the voice units need systemd, which a fresh distro leaves off."""
+    if not SYSTEMD_RUN_DIR.is_dir():
+        raise _Warn(
+            "systemd is not running, so hal-voice.service and hal-tts.service cannot start; "
+            "add `[boot]` and `systemd=true` to /etc/wsl.conf, then `wsl --shutdown`"
+        )
+    return "systemd is running"
 
 
 def _imports():
@@ -220,7 +268,18 @@ def _gpu_sharing():
 
 def main() -> None:
     print("hal-voice doctor\n----------------")
+    on_wsl = hostplatform.detect_platform() == hostplatform.WSL2
     results = [
+        _check("platform", _platform),
+        *(
+            [
+                _check("WSL2 audio server", _wsl_audio_server),
+                _check("WSL2 display", _wsl_display),
+                _check("WSL2 systemd", _wsl_systemd),
+            ]
+            if on_wsl
+            else []
+        ),
         _check("python dependencies", _imports),
         _check("audio devices", _audio),
         _check("voice profile", _voice_profile),

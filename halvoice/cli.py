@@ -299,8 +299,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Unknown command: {command}\n", file=sys.stderr)
         print(USAGE, end="", file=sys.stderr)
         return 1
-    from . import config, util  # not at the top: `help` must run without the dependencies
+    from . import config, hostplatform, util  # not at the top: `help` must run without them
 
+    if command != "doctor":  # doctor reports an unsupported platform as a line instead
+        try:
+            hostplatform.require_supported()
+        except hostplatform.UnsupportedPlatform as e:
+            print(f"hal-voice: {e}", file=sys.stderr)
+            return 1
     util.ca_bundle()
     try:
         return handler(args[1:])

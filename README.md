@@ -225,7 +225,7 @@ It still runs on its own (`git clone https://github.com/NotEoin/hal-voice.git`, 
 
 | | |
 |---|---|
-| **OS** | Linux, with PulseAudio or PipeWire |
+| **OS** | Linux, with PulseAudio or PipeWire. Windows 11 works through WSL2 ([how-to](docs/howto/run-on-windows-with-wsl2.md)); native Windows and macOS are unsupported |
 | **Python** | 3.11 or 3.12. **Not 3.13+**: numpy 1.x has no wheels there, and parts of the audio stack still need it. `setup-voice.sh` finds a suitable interpreter, or falls back to conda |
 | **System packages** | PortAudio and FFmpeg |
 | **GPU** | Optional. By default hal-voice runs on the CPU and shares the GPU with background jobs ([Sharing the GPU](docs/user/voice.md#sharing-the-gpu)); see the profiles below |
@@ -317,7 +317,7 @@ before you use them.
   and on the `cloud` (CPU) profile it runs slower than real time, so HAL pauses before answering.
 - **The voice effects are tuned to one voice.** Treat the defaults as a starting point.
 - Interrupting can clip the first syllable of your next sentence.
-- Linux only.
+- Linux only. Windows works through WSL2 (not yet run on a Windows PC); native Windows and macOS are unsupported.
 
 ## Related projects
 
