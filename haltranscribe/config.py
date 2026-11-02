@@ -16,7 +16,7 @@ from halvoice import config as voice_config
 log = logging.getLogger(__name__)
 
 SECTION = "transcribe"
-DEFAULT_VAULT = "~/Documents/vaults/Hal"
+DEFAULT_VAULT = "~/notes"  # the vault default of the shared Hal config, halcore.config.SHARED
 
 
 def config_path() -> Path:

@@ -70,6 +70,10 @@ def test_vault_falls_back_to_the_hal_table(data_home):
     assert tconfig.vault() == data_home / "v"
 
 
+def test_vault_defaults_to_the_shared_hal_default_without_any_config(data_home):
+    assert tconfig.vault() == Path("~/notes").expanduser()
+
+
 def test_record_stop_does_not_signal_a_reused_pid(data_home, monkeypatch):
     """Regression: a recorder pid reused by another program used to be sent SIGINT."""
     killed = []

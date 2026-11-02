@@ -41,7 +41,7 @@ Settings live in the `transcribe:` section of hal-voice's config (`~/.config/hal
 transcribe:
   model: medium.en     # Whisper model; small.en is used on the CPU fallback
   folder: Transcripts  # note folder inside the vault
-  vault: ""            # empty = [hal].vault of ~/.config/hal/config.toml
+  vault: ""            # empty = [hal].vault of ~/.config/hal/config.toml, else ~/notes
 ```
 
 A `[transcribe]` table in `~/.config/hal/config.toml` is still read, with a deprecation warning, for
