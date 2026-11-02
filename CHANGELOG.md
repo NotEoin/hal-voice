@@ -36,6 +36,9 @@ All notable changes to hal-voice are listed here. The format follows
 - `hal-voice doctor` has a "GPU sharing" line: the `gpu.mode`, whether the gpu-light daemon
   answers, and the devices speech-to-text and the voice will use. A missing daemon is a warning.
 
+- "Sharing the GPU" in `docs/user/voice.md`: the modes, what happens on "Hal", the CPU voice
+  speed (measured 2026-11-02, i9-12900K) and a symptom table.
+
 ### Changed
 
 - GPU sharing talks to the gpu-light daemon with a small stdlib client; hal-voice no longer

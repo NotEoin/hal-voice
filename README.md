@@ -227,7 +227,7 @@ It still runs on its own (`git clone https://github.com/NotEoin/hal-voice.git`, 
 | **OS** | Linux, with PulseAudio or PipeWire |
 | **Python** | 3.11 or 3.12. **Not 3.13+**: numpy 1.x has no wheels there, and parts of the audio stack still need it. `setup-voice.sh` finds a suitable interpreter, or falls back to conda |
 | **System packages** | PortAudio and FFmpeg |
-| **GPU** | Optional - see the profiles below. Voice synthesis wants ~2GB of VRAM but will run on CPU |
+| **GPU** | Optional. By default hal-voice runs on the CPU and shares the GPU with background jobs ([Sharing the GPU](docs/user/voice.md#sharing-the-gpu)); see the profiles below |
 | **Hardware** | A working microphone and speakers |
 | **Also needed** | A [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS) checkout with its pretrained models |
 
