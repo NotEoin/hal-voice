@@ -33,6 +33,9 @@ All notable changes to hal-voice are listed here. The format follows
   (`gpu:` keys in the config), and Whisper in `haltranscribe` waits up to 120 s for the card.
   The voice build runs each GPU stage as a `gpu-light run` batch job when the daemon answers.
 
+- `hal-voice doctor` has a "GPU sharing" line: the `gpu.mode`, whether the gpu-light daemon
+  answers, and the devices speech-to-text and the voice will use. A missing daemon is a warning.
+
 ### Changed
 
 - GPU sharing talks to the gpu-light daemon with a small stdlib client; hal-voice no longer

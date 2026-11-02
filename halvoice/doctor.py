@@ -2,8 +2,9 @@
 
 Verifies: python deps, audio I/O, the STT model, the brain (`hal` on PATH in hal
 mode; the server in openai mode), the GPT-SoVITS server + HAL weights, the reference
-clip, and Claude Code on PATH. Prints a tidy pass/fail report; exits non-zero if anything
-essential is missing.
+clip, and Claude Code on PATH. It also reports the GPU mode, whether the gpu-light daemon
+answers, and the devices speech-to-text and the voice will use. Prints a tidy pass/fail
+report; exits non-zero if anything essential is missing.
 """
 
 from __future__ import annotations
@@ -12,7 +13,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from . import config
+from . import config, gpu, placement
 
 OK, WARN, BAD = "[x]", "!", "[ ]"
 
@@ -189,13 +190,32 @@ def _voice_profile():
     import os
 
     profile = os.environ.get("HALVOICE_PROFILE")
-    cfg = config.load()
-    stt_dev = cfg.get("stt.device", "cpu")
-    tts_dev = os.environ.get("HALVOICE_TTS_DEVICE", "cuda")
-    detail = f"speech recognition on {stt_dev}, voice on {tts_dev}"
+    placed = placement.resolve(config.load())
+    detail = f"speech recognition on {placed.stt_device}, voice on {placed.tts_device}"
+    if placed.mode == "on_demand" and profile:
+        return f"{profile} profile ignored in on_demand mode - {detail}"
     if not profile:
         raise _Warn(f"no voice.conf yet (run ./setup-voice.sh) - defaults: {detail}")
     return f"{profile} - {detail}"
+
+
+def _gpu_sharing():
+    """The gpu.mode, whether the gpu-light daemon answers, and the devices that will be used."""
+    placed = placement.resolve(config.load())
+    devices = (
+        f"speech recognition on {placed.stt_device}, voice on {placed.tts_device} "
+        f"(from {placed.source})"
+    )
+    if placed.mode == "off":
+        return f"gpu.mode off: gpu-light is not contacted; {devices}"
+    try:
+        daemon = gpu.probe()
+    except gpu.GpuLightError as e:
+        raise _Warn(
+            f"gpu.mode {placed.mode}, but no gpu-light daemon answers ({e}); the loop runs "
+            f"without GPU sharing; {devices}"
+        ) from e
+    return f"gpu.mode {placed.mode}, gpu-light {daemon.get('version', '?')} answers; {devices}"
 
 
 def main() -> None:
@@ -204,6 +224,7 @@ def main() -> None:
         _check("python dependencies", _imports),
         _check("audio devices", _audio),
         _check("voice profile", _voice_profile),
+        _check("GPU sharing", _gpu_sharing),
         _check("speech-to-text", _stt_model),
         _check("brain", _brain),
         _check("Claude Code", _claude),
