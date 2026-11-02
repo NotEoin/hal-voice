@@ -1,10 +1,11 @@
 [Unit]
 Description=Hal voice server (GPT-SoVITS)
 PartOf=hal.target
-X-HalGPU=yes
 
 [Service]
-Environment=GPU_LIGHT_CLAIM=hal-voice
+# No GPU mark and no gpu-light claim marker: with gpu.mode on_demand (the default) the server runs on
+# the CPU, so `hal off` leaves it running and it does not wait for Hal's boot GPU claim.
+# A GPU device (tts.device: cuda) holds VRAM while idle; mark the unit yourself then.
 WorkingDirectory=@ROOT@
 ExecStart=@ROOT@/hal-voice tts-server
 Restart=on-failure

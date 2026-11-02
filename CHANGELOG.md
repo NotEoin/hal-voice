@@ -46,6 +46,9 @@ All notable changes to hal-voice are listed here. The format follows
   settings, like `stt.device`, ask for a GPU; the `voice.conf` profile now applies only in
   `resident` and `off` mode (`./hal-voice` exports it as `HALVOICE_PROFILE_*`). A TTS container
   on the CPU has no `--gpus` and no gpu-light claim marker. See `halvoice/placement.py`.
+- `hal-voice.service` and `hal-tts.service` no longer carry `X-HalGPU=yes` or
+  `GPU_LIGHT_CLAIM=hal-voice`: in `on_demand` mode they use no GPU while idle, so `hal off` leaves
+  them running and they start on a busy card.
 - Docs are split into `docs/user`, `docs/howto` and `docs/dev` with an index in `docs/README.md`;
   `VOICE-BUILD.md` and `VOICE-TUNING.md` moved there.
 - The voice build stops with `GpuBusy` when the GPU stays busy for 30 minutes; it used to carry

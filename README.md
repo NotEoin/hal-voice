@@ -194,8 +194,10 @@ cd ~/src/hal-ecosystem/extensions/hal-voice
 
 The units in `systemd/` are templates: the installer replaces `@ROOT@` with this folder and `@CORE@`
 with core Hal's, and copies them to `~/.config/systemd/user`. `hal-tts.service` runs the GPT-SoVITS
-server and `hal-voice.service` the hands-free loop; both belong to `hal.target` and use the GPU, so
-`hal off` stops them.
+server and `hal-voice.service` the hands-free loop; both belong to `hal.target`. They carry no
+`X-HalGPU` mark, because in the default `gpu.mode: on_demand` they use no GPU while idle: `hal off`
+leaves them running, and they start on a busy card. With `resident` mode, or a GPU `tts.device`,
+mark them yourself (`systemctl --user edit`, add `X-HalGPU=yes` under `[Unit]`).
 
 `hal-tts.service` starts `hal-voice tts-server`, which exits with an error naming
 `tts.server.gptsovits_dir` when the GPT-SoVITS checkout is missing. If the checkout is on a drive
