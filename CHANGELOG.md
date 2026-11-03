@@ -76,6 +76,8 @@ All notable changes to hal-voice are listed here. The format follows
 
 ### Fixed
 
+- `voice_say` declares network: it speaks through hal-tts on 127.0.0.1:9880, which a tool
+  without network cannot reach under Hal's tool sandbox, so it always said the server was down.
 - Hands-free listening no longer hears a request in background noise. Whisper repeats its
   prompt back on noise, and the prompt was two requests ("Hal, read me the headlines"), so Hal
   read the news unasked every few minutes. The prompt now holds no request, and a transcript made

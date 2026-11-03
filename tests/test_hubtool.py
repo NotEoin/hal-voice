@@ -80,3 +80,9 @@ def test_subprocess_round_trip_fails_loudly_on_empty_text():
     assert done.returncode == hubtool.USAGE_EXIT
     assert "nothing to say" in done.stderr
     assert done.stdout == ""
+
+
+def test_voice_say_declares_network_to_reach_the_tts_server():
+    """Regression: under Hal's tool sandbox voice_say could not see hal-tts on 127.0.0.1:9880."""
+    tools = tomllib.loads(MANIFESTS[0].read_text())["tools"]
+    assert next(t for t in tools if t["name"] == "voice_say")["network"] is True

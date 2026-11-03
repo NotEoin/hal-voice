@@ -23,7 +23,8 @@ description = "Say a line aloud in HAL's voice through the speakers. Does nothin
 keywords = "say speak aloud out loud voice announce read"
 timeout = 120
 tier = "act"
-network = false
+# the GPT-SoVITS server is TCP on 127.0.0.1:9880; a tool without network has its own loopback
+network = true
 untrusted_output = false
 reviewable = true
 reversible = true
