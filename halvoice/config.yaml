@@ -79,7 +79,7 @@ stt:
   # Whisper takes a quiet "Hal" for "How" or drops it; a prompt that addresses him lifts names
   # heard (59% to 95% on voicetest with an earlier, request-shaped prompt). On noise Whisper
   # repeats the prompt back, so it must hold no request: an echo of it is dropped (stt.py).
-  initial_prompt: "Hey Hal. Hal, one moment."
+  initial_prompt: "Hal, one moment."
 
 # ---- Text-to-speech: GPT-SoVITS + the HAL effect ----------------------------
 tts:

@@ -7,7 +7,7 @@ import pytest
 
 from halvoice import stt
 
-PROMPT = "Hey Hal. Hal, one moment."
+PROMPT = "Hal, one moment."
 
 
 def seg(text, no_speech=0.1, logprob=-0.2):
@@ -28,12 +28,29 @@ def transcriber(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "echo", ["Hey Hal.", "Hal, one moment.", "Hey Hal. Hal, one moment.", "hal one moment"]
+    "echo",
+    [
+        "Hal, one moment.",
+        "hal one moment",
+        "Hey Hal. Hal, one moment.",
+        # near-echoes heard live on 2026-11-03 with music playing
+        "Hal. Hal, one moment.",
+        "Hal, one minute.",
+        "Hal Hi Hal. Hal Hi Hal. Hal Hi Hal. Hal Hi Hal.",
+    ],
 )
 def test_an_echo_of_the_initial_prompt_is_not_heard_as_speech(transcriber, echo):
     """Regression: noise came back as the prompt "Hal, read me the headlines." and Hal acted on it."""
     transcriber.fake.segments = [seg(echo)]
     assert transcriber.transcribe(np.ones(160, np.float32)) == ""
+
+
+@pytest.mark.parametrize(
+    "speech", ["Hal.", "Hey Hal.", "Hal, set a timer for one minute.", "Hal, turn it off."]
+)
+def test_a_bare_name_or_a_real_request_is_kept(transcriber, speech):
+    transcriber.fake.segments = [seg(speech)]
+    assert transcriber.transcribe(np.ones(160, np.float32)) == speech
 
 
 def test_real_speech_is_kept_and_an_appended_prompt_echo_dropped(transcriber):
@@ -46,4 +63,4 @@ def test_the_shipped_prompt_holds_no_request():
     from halvoice import config
 
     prompt = config.load().get("stt.initial_prompt")
-    assert stt.prompt_sentences(prompt) == {"hey hal", "hal one moment"}
+    assert stt.prompt_sentences(prompt) == {"hal one moment"}

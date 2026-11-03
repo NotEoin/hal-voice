@@ -79,7 +79,8 @@ All notable changes to hal-voice are listed here. The format follows
 - Hands-free listening no longer hears a request in background noise. Whisper repeats its
   prompt back on noise, and the prompt was two requests ("Hal, read me the headlines"), so Hal
   read the news unasked every few minutes. The prompt now holds no request, and a transcript made
-  only of prompt sentences is dropped.
+  only of prompt sentences, close variants of them ("Hal, one minute") and calls of his name is
+  dropped, as is one sentence repeated three or more times. A bare "Hal" still wakes him.
 - The voice and TTS units carry Hal's `X-HalOff=yes`, so `hal off` still stops them and keeps
   them off now that they are no longer GPU units.
 

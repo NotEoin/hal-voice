@@ -10,6 +10,7 @@ max-utterance cap is reached.
 from __future__ import annotations
 
 import collections
+import difflib
 import re
 import sys
 import time
@@ -25,6 +26,13 @@ _FRAME_MS = 30  # webrtcvad accepts 10/20/30 ms frames
 NO_SPEECH_MAX = 0.5  # segments Whisper thinks are more likely silence than speech are dropped
 MIN_LOGPROB = -1.0  # and so are segments it was very unsure of
 _WORDS = re.compile(r"[a-z0-9']+")
+NAME_WORDS = frozenset(
+    {"hal", "hey", "hi", "hello", "ok", "okay"}
+)  # a sentence of these only calls him
+ECHO_SIMILARITY = (
+    0.75  # "hal one minute" vs "hal one moment" is 0.79; "hal set a timer for one minute" 0.5
+)
+REPEATS_MAX = 3  # one sentence three times over is Whisper looping on noise, not a person
 
 
 def _normal(text: str) -> str:
@@ -33,7 +41,7 @@ def _normal(text: str) -> str:
 
 def prompt_sentences(prompt: str | None) -> set[str]:
     """The normalised sentences of `prompt`; Whisper repeats them back when it hears only noise."""
-    return {n for part in re.split(r"[.!?]+", prompt or "") if (n := _normal(part))}
+    return set(_sentences(prompt or ""))
 
 
 class Recorder:
@@ -239,10 +247,30 @@ class Transcriber:
         return " ".join(kept).strip()
 
 
+def _sentences(text: str) -> list[str]:
+    return [n for part in re.split(r"[.!?]+", text) if (n := _normal(part))]
+
+
+def _like_prompt(sentence: str, echoes: set[str]) -> bool:
+    return any(
+        difflib.SequenceMatcher(None, sentence, e).ratio() >= ECHO_SIMILARITY for e in echoes
+    )
+
+
 def _only_echo(text: str, echoes: set[str]) -> bool:
-    """True when every sentence of `text` is a prompt sentence (an empty text is not an echo)."""
-    parts = prompt_sentences(text)
-    return bool(parts) and parts <= echoes
+    """True when `text` is Whisper hearing noise, not a person.
+
+    That is one sentence repeated `REPEATS_MAX` times or more, or only prompt sentences (or
+    close variants) with nothing else but calls of his name. A bare "Hal" on its own is kept:
+    it is how a person wakes him.
+    """
+    parts = _sentences(text)
+    if not parts:
+        return False
+    if max(collections.Counter(parts).values()) >= REPEATS_MAX:
+        return True
+    echoed = [p for p in parts if _like_prompt(p, echoes)]
+    return bool(echoed) and all(p in echoed or set(p.split()) <= NAME_WORDS for p in parts)
 
 
 def listen_once(on_first_voice=None, max_utterance_s: float | None = None) -> str:
