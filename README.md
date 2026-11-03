@@ -22,9 +22,9 @@ OpenAI-compatible server, or Claude Code.
 - **It speaks before it has finished thinking.** Replies are synthesised sentence by sentence as
   they are generated.
 - **Interrupt it any time.** Say "Hal" while it speaks and it stops.
-- **Just talk.** Say "Hal" at the start or end of a request; for a few seconds after an answer you
+- **No push-to-talk.** Say "Hal" at the start or end of a request; for a few seconds after an answer you
   can carry on without the name.
-- **Your voice stays home, and so does your GPU.** By default it listens and speaks on the CPU and
+- **Local, and light on the GPU.** By default it listens and speaks on the CPU and
   holds no GPU memory while it waits.
 
 ## Part of the Hal suite
