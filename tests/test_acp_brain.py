@@ -68,6 +68,17 @@ def test_persona_is_sent_once_in_the_first_prompt(sent):
     assert len(prompts[1]["params"]["prompt"]) == 1
 
 
+def test_persona_addresses_the_configured_user_name(sent):
+    """Regression: brain.user_name was read nowhere, so the persona called everyone Dave."""
+    brain = make(sent, persona="The person speaking to you is {user}.", user_name="Sam")
+    try:
+        list(brain.ask("one"))
+    finally:
+        brain.close()
+    prompts = [m for m in messages(sent) if m.get("method") == "session/prompt"]
+    assert "The person speaking to you is Sam." in prompts[0]["params"]["prompt"][0]["text"]
+
+
 def answers(sent):
     return [json.loads(x[7:]) for x in sent.read_text().splitlines() if x.startswith("ANSWER ")]
 

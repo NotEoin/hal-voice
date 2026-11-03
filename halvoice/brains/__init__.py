@@ -58,6 +58,15 @@ class Brain(Protocol):
         ...
 
 
+DEFAULT_USER = "Dave"  # the film's name for the person HAL talks to
+
+
+def persona(cfg: config.Cfg) -> str:
+    """`brain.persona` with each `{user}` replaced by `brain.user_name` (Dave when unset)."""
+    name = str(cfg.get("brain.user_name") or "").strip() or DEFAULT_USER
+    return str(cfg.get("brain.persona") or "").strip().replace("{user}", name)
+
+
 def make_brain(cfg: config.Cfg | None = None) -> Brain:
     """Returns the brain `brain.mode` names; raises `BrainUnavailable` when it cannot start."""
     cfg = cfg if cfg is not None else config.load()

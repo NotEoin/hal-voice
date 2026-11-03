@@ -29,4 +29,12 @@ HALVOICE_TTS_SPEED=0.9 ./hal-voice        # slower speech, this run only
 HALVOICE_STT_MODEL=medium.en ./hal-voice  # more accurate transcription
 ```
 
+HAL calls you Dave, as in the film. Set `brain.user_name` to change it: every `{user}` in
+`brain.persona` becomes that name (tested by `test_persona_addresses_the_configured_user_name`).
+
+```yaml
+brain:
+  user_name: Sam
+```
+
 Related pages: [choose a brain](../howto/choose-a-brain.md), [sharing the GPU](voice.md#sharing-the-gpu).

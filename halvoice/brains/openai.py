@@ -28,7 +28,7 @@ from urllib.parse import urlsplit
 
 from .. import config
 from ..util import get_logger
-from . import BrainError, BrainUnavailable, TurnTimeout
+from . import BrainError, BrainUnavailable, TurnTimeout, persona
 
 log = get_logger(__name__)
 
@@ -86,7 +86,7 @@ class OpenAIBrain:
         self._port = parts.port
         self._prefix = parts.path.rstrip("/")
         self.model = str(cfg.get("brain.model") or "")
-        self.persona = str(cfg.get("brain.persona") or "").strip()
+        self.persona = persona(cfg)
         self.connect_timeout = float(
             cfg.get("brain.connect_timeout_s") or DEFAULT_CONNECT_TIMEOUT_S
         )

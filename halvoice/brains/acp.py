@@ -33,7 +33,7 @@ from typing import Any
 
 from .. import config
 from ..util import get_logger
-from . import BrainError, BrainUnavailable, TurnTimeout
+from . import BrainError, BrainUnavailable, TurnTimeout, persona
 
 log = get_logger(__name__)
 
@@ -111,7 +111,7 @@ class AcpBrain:
             raise BrainUnavailable("brain.hal_command must be a list of strings")
         self.command: list[str] = command
         self.turn_timeout = float(cfg.get("brain.turn_timeout_s", 300))
-        self.persona = str(cfg.get("brain.persona") or "").strip()
+        self.persona = persona(cfg)
         self.voice_approvals = bool(cfg.get("brain.voice_approvals", True))
         #: Returns the next spoken reply; set by the loop. None answers every request `cancelled`.
         self.listen = listen

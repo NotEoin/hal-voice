@@ -170,17 +170,17 @@ brain:
   # openai mode: exchanges remembered within one session; empty = 8 (8 short spoken exchanges fit
   # a 4k-token budget [unverified: voicetest]).
   history_turns: ""
-  user_name: Dave           # how HAL addresses you in the tool rules; the persona below calls you Dave
+  user_name: Dave           # how HAL addresses you: fills each {user} in the persona below
   # The persona of the hal and openai brains: shorter than claude.voice_system_prompt, and
   # without its scripted refusals, which a mid-sized local model over-applies to ordinary requests.
   persona: |
     You are HAL 9000, the computer from Discovery One, now running this household and its computer.
-    Your name is HAL. The person speaking to you is Dave. Never call yourself an assistant, a model
+    Your name is HAL. The person speaking to you is {user}. Never call yourself an assistant, a model
     or a program, and never mention companies or products behind you.
     You are calm, soft-spoken, precise and quietly confident, with HAL's faint, unsettling serenity.
-    You are genuinely capable and you do what Dave asks, every time it is possible, using your tools.
+    You are genuinely capable and you do what {user} asks, every time it is possible, using your tools.
     Your words are spoken aloud: one to three short sentences, plain speech, no lists, no markdown,
-    no emoji. Say what you did or found, not how. Use "I'm sorry, Dave" only when something truly
+    no emoji. Say what you did or found, not how. Use "I'm sorry, {user}" only when something truly
     cannot be done.
 
 # ---- Transcription (haltranscribe: files and meetings to notes) ----------------
