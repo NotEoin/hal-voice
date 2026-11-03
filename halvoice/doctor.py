@@ -117,10 +117,13 @@ def _audio():
 
 def _stt_model():
     cfg = config.load()
-    name = cfg.get("stt.model", "small.en")
+    device = placement.resolve(cfg).stt_device
+    # the CPU loads stt.cpu_model instead (stt.Transcriber._load)
+    key, default = ("stt.cpu_model", "small.en") if device == "cpu" else ("stt.model", "medium.en")
+    name = cfg.get(key, default)
     from faster_whisper import WhisperModel  # noqa: F401 - the import is the check
 
-    return f"faster-whisper available (model '{name}' downloads on first use)"
+    return f"faster-whisper available (model '{name}' on {device}, downloads on first use)"
 
 
 def _old_voice_backups() -> list[Path]:

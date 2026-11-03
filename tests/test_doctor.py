@@ -36,3 +36,9 @@ def test_doctor_shows_the_profile_devices_in_resident_mode(monkeypatch):
     monkeypatch.setenv("HALVOICE_PROFILE_TTS_DEVICE", "cuda")
     assert "voice on cuda" in doctor._voice_profile()
     assert gpu.MODES  # the mode names stay in one place
+
+
+def test_doctor_names_the_speech_model_that_runs_on_the_cpu():
+    """Regression: the line named stt.model (medium.en) while the CPU loads stt.cpu_model (small.en)."""
+    line = doctor._stt_model()
+    assert "'small.en'" in line and "on cpu" in line
