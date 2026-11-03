@@ -10,6 +10,7 @@ max-utterance cap is reached.
 from __future__ import annotations
 
 import collections
+import re
 import sys
 import time
 
@@ -23,6 +24,16 @@ log = get_logger(__name__)
 _FRAME_MS = 30  # webrtcvad accepts 10/20/30 ms frames
 NO_SPEECH_MAX = 0.5  # segments Whisper thinks are more likely silence than speech are dropped
 MIN_LOGPROB = -1.0  # and so are segments it was very unsure of
+_WORDS = re.compile(r"[a-z0-9']+")
+
+
+def _normal(text: str) -> str:
+    return " ".join(_WORDS.findall(text.lower()))
+
+
+def prompt_sentences(prompt: str | None) -> set[str]:
+    """The normalised sentences of `prompt`; Whisper repeats them back when it hears only noise."""
+    return {n for part in re.split(r"[.!?]+", prompt or "") if (n := _normal(part))}
 
 
 class Recorder:
@@ -215,13 +226,23 @@ class Transcriber:
             condition_on_previous_text=False,
         )
         # Noise and silence come back as confident-sounding words; Whisper's own scores
-        # say which segments were really speech.
+        # say which segments were really speech. On noise it also echoes the prompt it was
+        # given, so a segment made only of prompt sentences is dropped too.
+        echoes = prompt_sentences(prompt or self.prompt)
         kept = [
             s.text.strip()
             for s in segments
-            if s.no_speech_prob < NO_SPEECH_MAX and s.avg_logprob > MIN_LOGPROB
+            if s.no_speech_prob < NO_SPEECH_MAX
+            and s.avg_logprob > MIN_LOGPROB
+            and not _only_echo(s.text, echoes)
         ]
         return " ".join(kept).strip()
+
+
+def _only_echo(text: str, echoes: set[str]) -> bool:
+    """True when every sentence of `text` is a prompt sentence (an empty text is not an echo)."""
+    parts = prompt_sentences(text)
+    return bool(parts) and parts <= echoes
 
 
 def listen_once(on_first_voice=None, max_utterance_s: float | None = None) -> str:

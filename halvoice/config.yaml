@@ -76,9 +76,10 @@ stt:
   compute_type: int8        # int8 on CPU; use float16/int8_float16 if you move it to GPU.
   beam_size: 5              # 1 misheard more requests (17.5% against 20.4% word errors).
   language: en
-  # Whisper takes a quiet "Hal" for "How" or drops it; a prompt in the shape of a request to
-  # him lifts names heard from 59% to 95% (voicetest), without waking him on other speech.
-  initial_prompt: "Hal, check the oven. Hal, read me the headlines."
+  # Whisper takes a quiet "Hal" for "How" or drops it; a prompt that addresses him lifts names
+  # heard (59% to 95% on voicetest with an earlier, request-shaped prompt). On noise Whisper
+  # repeats the prompt back, so it must hold no request: an echo of it is dropped (stt.py).
+  initial_prompt: "Hey Hal. Hal, one moment."
 
 # ---- Text-to-speech: GPT-SoVITS + the HAL effect ----------------------------
 tts:
